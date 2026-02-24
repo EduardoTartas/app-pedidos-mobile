@@ -19,9 +19,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import dev.fslab.pedidos.ui.screens.EsqueciSenhaScreen
-import dev.fslab.pedidos.ui.screens.LoginScreen
-import dev.fslab.pedidos.ui.screens.CadastroScreen
+import dev.fslab.pedidos.ui.screens.auth.EsqueciSenhaScreen
+import dev.fslab.pedidos.ui.screens.auth.LoginScreen
+import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
 import dev.fslab.pedidos.ui.screens.HomeScreen
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 
