@@ -182,7 +182,7 @@ fun LoginScreen(
 
             // Título
             Text(
-                text = "Fila Cidadã",
+                text = "APP - Delivery",
                 color = colors.textOnPrimary,
                 style = MaterialTheme.typography.displaySmall
             )
