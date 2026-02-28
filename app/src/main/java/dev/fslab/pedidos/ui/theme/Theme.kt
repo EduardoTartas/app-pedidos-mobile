@@ -12,6 +12,13 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import android.app.Activity
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+
 
 /**
  * Cores customizadas para a aplicação que mudam conforme o tema
@@ -53,8 +60,8 @@ data class PedidosColors(
  * Cores para tema claro — Paleta Purple/Violet premium
  */
 val LightPedidosColors = PedidosColors(
-    background = PrimaryLightBlue,
-    backgroundGradientStart = PrimaryLightBlue,
+    background = PrimaryLightWhite,
+    backgroundGradientStart = PrimaryLightWhite,
     backgroundGradientEnd = SurfaceLight,
     surface = SurfaceWhite,
     textPrimary = TextPrimary,
@@ -62,7 +69,7 @@ val LightPedidosColors = PedidosColors(
     textTertiary = TextTertiary,
     textOnPrimary = TextOnPrimary,
     textInput = TextBlack,
-    primary = PrimaryBlue,
+    primary = PrimaryGreen,
     primaryDark = PrimaryBlueDark,
     iconGray = IconGray,
     inputBorder = InputBorderGray,
@@ -98,8 +105,8 @@ val DarkPedidosColors = PedidosColors(
     textTertiary = Color(0xFF7B779A),
     textOnPrimary = Color.White,
     textInput = Color(0xFFEEEDF5),
-    primary = Color(0xFF7C6AF6),
-    primaryDark = Color(0xFF5B4CCF),
+    primary = Color(0xFF14B822),
+    primaryDark = Color(0xFF0F172A),
     iconGray = Color(0xFF9B97B8),
     inputBorder = Color(0xFF2E2A4A),
     mediumGray = Color(0xFF5C587A),
@@ -149,10 +156,10 @@ private val DarkColorScheme = darkColorScheme(
  * LightColorScheme - Paleta Material 3 para tema claro (Purple/Violet)
  */
 private val LightColorScheme = lightColorScheme(
-    primary = PrimaryBlue,
+    primary = PrimaryGreen,
     secondary = SecondaryGray,
     tertiary = PrimaryBlueDark,
-    background = PrimaryLightBlue,
+    background = PrimaryLightWhite,
     surface = SurfaceWhite,
     onPrimary = Color.White,
     onSecondary = Color.White,
@@ -170,19 +177,53 @@ fun PedidosTheme(
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
+
+    // Material Color Scheme
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            if (darkTheme)
+                dynamicDarkColorScheme(context)
+            else
+                dynamicLightColorScheme(context)
         }
+
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
 
-    // Seleciona as cores customizadas baseado no tema
-    val PedidosColors = if (darkTheme) DarkPedidosColors else LightPedidosColors
+    // Suas cores customizadas
+    val filaColors =
+        if (darkTheme) DarkPedidosColors
+        else LightPedidosColors
 
-    CompositionLocalProvider(LocalPedidosColors provides PedidosColors) {
+    // Controle da System UI
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+
+            // Cor da Status Bar
+            window.statusBarColor = filaColors.background.toArgb()
+
+            // Cor da Navigation Bar
+            window.navigationBarColor = filaColors.background.toArgb()
+
+            val insetsController =
+                WindowCompat.getInsetsController(window, view)
+
+            // Define cor dos ícones:
+            // true = ícones escuros
+            // false = ícones claros
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
+        }
+    }
+
+    // Aplica tema
+    CompositionLocalProvider(
+        LocalPedidosColors provides filaColors
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
