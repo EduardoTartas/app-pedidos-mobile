@@ -95,57 +95,38 @@ fun CadastroScreen(
                 .imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Botão voltar
-            Box(
+            // Header: Botão voltar + Título
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 8.dp, top = 16.dp),
-                contentAlignment = Alignment.CenterStart
+                    .padding(start = 16.dp, end = 16.dp, top = 24.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBackToLogin) {
+                // Botão voltar com fundo circular
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(colors.textOnPrimary.copy(alpha = 0.15f))
+                        .clickable { onBackToLogin() },
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Voltar",
-                        tint = colors.textOnPrimary
+                        tint = colors.textOnPrimary,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Ícone
-            Box(
-                modifier = Modifier
-                    .size(90.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(colors.primary),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PersonAdd,
-                    contentDescription = "Cadastrar",
-                    tint = colors.textOnPrimary,
-                    modifier = Modifier.size(50.dp)
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = "Criar Conta",
+                    color = colors.textOnPrimary,
+                    style = MaterialTheme.typography.displaySmall
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Título
-            Text(
-                text = "Criar Conta",
-                color = colors.textOnPrimary,
-                style = MaterialTheme.typography.displaySmall
-            )
-
-            // Subtítulo
-            Text(
-                text = "Preencha seus dados para cadastro",
-                color = colors.textOnPrimary.copy(alpha = 0.8f),
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             // Card com formulário
             Card(
