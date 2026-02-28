@@ -2,6 +2,7 @@ package dev.fslab.pedidos.ui.screens.auth
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,22 +15,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
@@ -46,15 +41,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.fslab.pedidos.ui.theme.PedidosTheme
-import dev.fslab.pedidos.ui.theme.PedidosColors
-import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 
 /**
  * CadastroScreen - Tela de cadastro de novo usuário
@@ -64,8 +57,6 @@ fun CadastroScreen(
     modifier: Modifier = Modifier,
     onBackToLogin: () -> Unit = {}
 ) {
-    val colors = LocalPedidosColors.current
-
     var nome by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var telefone by remember { mutableStateOf("") }
@@ -75,332 +66,307 @@ fun CadastroScreen(
     var confirmarSenhaVisivel by remember { mutableStateOf(false) }
     var aceitaTermos by remember { mutableStateOf(false) }
 
-    val gradientBrush = Brush.verticalGradient(
-        colors = listOf(
-            colors.primaryDark,
-            colors.primary,
-            colors.primary.copy(alpha = 0.7f)
-        )
-    )
+    // Cores do layout escuro
+    val backgroundColor = Color(0xFF1A1A2E)
+    val surfaceColor = Color(0xFF16213E)
+    val inputBorderColor = Color(0xFF2A2A4A)
+    val labelColor = Color(0xFFB0B0C0)
+    val placeholderColor = Color(0xFF6B6B80)
+    val greenAccent = Color(0xFF2ECC71)
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(gradientBrush)
+            .background(backgroundColor)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .imePadding(),
+                .imePadding()
+                .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(48.dp))
+
             // Header: Botão voltar + Título
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 24.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Botão voltar com fundo circular
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(RoundedCornerShape(50))
-                        .background(colors.textOnPrimary.copy(alpha = 0.15f))
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.1f))
                         .clickable { onBackToLogin() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Voltar",
-                        tint = colors.textOnPrimary,
-                        modifier = Modifier.size(22.dp)
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
                     text = "Criar Conta",
-                    color = colors.textOnPrimary,
+                    color = Color.White,
                     style = MaterialTheme.typography.displaySmall
                 )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Card com formulário
-            Card(
+            // Campo Nome Completo
+            Text(
+                text = "Nome Completo",
+                style = MaterialTheme.typography.titleMedium,
+                color = labelColor,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = colors.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    .padding(bottom = 8.dp)
+            )
+            OutlinedTextField(
+                value = nome,
+                onValueChange = { nome = it },
+                placeholder = {
+                    Text("Digite seu nome completo", color = placeholderColor)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = inputBorderColor,
+                    focusedBorderColor = greenAccent,
+                    cursorColor = greenAccent,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    unfocusedContainerColor = surfaceColor,
+                    focusedContainerColor = surfaceColor
+                )
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Campo E-mail
+            Text(
+                text = "E-mail",
+                style = MaterialTheme.typography.titleMedium,
+                color = labelColor,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            )
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                placeholder = {
+                    Text("seu@email.com", color = placeholderColor)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = inputBorderColor,
+                    focusedBorderColor = greenAccent,
+                    cursorColor = greenAccent,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    unfocusedContainerColor = surfaceColor,
+                    focusedContainerColor = surfaceColor
+                )
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Campo Telefone
+            Text(
+                text = "Telefone",
+                style = MaterialTheme.typography.titleMedium,
+                color = labelColor,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            )
+            OutlinedTextField(
+                value = telefone,
+                onValueChange = { telefone = it },
+                placeholder = {
+                    Text("(00) 00000-0000", color = placeholderColor)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = inputBorderColor,
+                    focusedBorderColor = greenAccent,
+                    cursorColor = greenAccent,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    unfocusedContainerColor = surfaceColor,
+                    focusedContainerColor = surfaceColor
+                )
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Campo Senha
+            Text(
+                text = "Senha",
+                style = MaterialTheme.typography.titleMedium,
+                color = labelColor,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            )
+            OutlinedTextField(
+                value = senha,
+                onValueChange = { senha = it },
+                placeholder = {
+                    Text("••••••••", color = placeholderColor)
+                },
+                trailingIcon = {
+                    IconButton(onClick = { senhaVisivel = !senhaVisivel }) {
+                        Icon(
+                            imageVector = if (senhaVisivel) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                            contentDescription = if (senhaVisivel) "Ocultar senha" else "Mostrar senha",
+                            tint = greenAccent
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                visualTransformation = if (senhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = inputBorderColor,
+                    focusedBorderColor = greenAccent,
+                    cursorColor = greenAccent,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    unfocusedContainerColor = surfaceColor,
+                    focusedContainerColor = surfaceColor
+                )
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Campo Confirmar Senha
+            Text(
+                text = "Confirmar Senha",
+                style = MaterialTheme.typography.titleMedium,
+                color = labelColor,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            )
+            OutlinedTextField(
+                value = confirmarSenha,
+                onValueChange = { confirmarSenha = it },
+                placeholder = {
+                    Text("••••••••", color = placeholderColor)
+                },
+                trailingIcon = {
+                    IconButton(onClick = { confirmarSenhaVisivel = !confirmarSenhaVisivel }) {
+                        Icon(
+                            imageVector = if (confirmarSenhaVisivel) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                            contentDescription = if (confirmarSenhaVisivel) "Ocultar senha" else "Mostrar senha",
+                            tint = greenAccent
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                visualTransformation = if (confirmarSenhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = inputBorderColor,
+                    focusedBorderColor = greenAccent,
+                    cursorColor = greenAccent,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    unfocusedContainerColor = surfaceColor,
+                    focusedContainerColor = surfaceColor
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Aceitar termos
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                ) {
-                    // Campo Nome completo
-                    Text(
-                        text = "Nome completo",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = colors.textPrimary
+                Checkbox(
+                    checked = aceitaTermos,
+                    onCheckedChange = { aceitaTermos = it },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = greenAccent,
+                        uncheckedColor = placeholderColor,
+                        checkmarkColor = Color.White
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    OutlinedTextField(
-                        value = nome,
-                        onValueChange = { nome = it },
-                        placeholder = {
-                            Text("Seu nome completo", color = colors.mediumGray)
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Filled.Person,
-                                contentDescription = "Nome",
-                                tint = colors.primary
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = colors.inputBorder,
-                            focusedBorderColor = colors.primary,
-                            cursorColor = colors.primary,
-                            focusedTextColor = colors.textInput,
-                            unfocusedTextColor = colors.textInput
-                        )
-                    )
+                )
+                Text(
+                    text = "Li e aceito os ",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = labelColor
+                )
+                Text(
+                    text = "Termos de Uso",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = greenAccent,
+                    modifier = Modifier.clickable { /* TODO */ }
+                )
+            }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-                    // Campo Email
-                    Text(
-                        text = "Email",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = colors.textPrimary
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        placeholder = {
-                            Text("seu@email.com", color = colors.mediumGray)
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Filled.Email,
-                                contentDescription = "Email",
-                                tint = colors.primary
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = colors.inputBorder,
-                            focusedBorderColor = colors.primary,
-                            cursorColor = colors.primary,
-                            focusedTextColor = colors.textInput,
-                            unfocusedTextColor = colors.textInput
-                        )
-                    )
+            // Botão CRIAR CONTA
+            Button(
+                onClick = { /* TODO */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(14.dp),
+                enabled = aceitaTermos,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = greenAccent,
+                    disabledContainerColor = greenAccent.copy(alpha = 0.4f)
+                )
+            ) {
+                Text(
+                    text = "CRIAR CONTA",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White
+                )
+            }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-                    // Campo Telefone
-                    Text(
-                        text = "Telefone",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = colors.textPrimary
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    OutlinedTextField(
-                        value = telefone,
-                        onValueChange = { telefone = it },
-                        placeholder = {
-                            Text("(00) 00000-0000", color = colors.mediumGray)
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Filled.Phone,
-                                contentDescription = "Telefone",
-                                tint = colors.primary
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = colors.inputBorder,
-                            focusedBorderColor = colors.primary,
-                            cursorColor = colors.primary,
-                            focusedTextColor = colors.textInput,
-                            unfocusedTextColor = colors.textInput
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Campo Senha
-                    Text(
-                        text = "Senha",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = colors.textPrimary
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    OutlinedTextField(
-                        value = senha,
-                        onValueChange = { senha = it },
-                        placeholder = {
-                            Text("Mínimo 6 caracteres", color = colors.mediumGray)
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Filled.Lock,
-                                contentDescription = "Senha",
-                                tint = colors.primary
-                            )
-                        },
-                        trailingIcon = {
-                            IconButton(onClick = { senhaVisivel = !senhaVisivel }) {
-                                Icon(
-                                    imageVector = if (senhaVisivel) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                    contentDescription = if (senhaVisivel) "Ocultar senha" else "Mostrar senha",
-                                    tint = colors.iconGray
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        visualTransformation = if (senhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = colors.inputBorder,
-                            focusedBorderColor = colors.primary,
-                            cursorColor = colors.primary,
-                            focusedTextColor = colors.textInput,
-                            unfocusedTextColor = colors.textInput
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Campo Confirmar Senha
-                    Text(
-                        text = "Confirmar senha",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = colors.textPrimary
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    OutlinedTextField(
-                        value = confirmarSenha,
-                        onValueChange = { confirmarSenha = it },
-                        placeholder = {
-                            Text("Repita sua senha", color = colors.mediumGray)
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Filled.Lock,
-                                contentDescription = "Confirmar senha",
-                                tint = colors.primary
-                            )
-                        },
-                        trailingIcon = {
-                            IconButton(onClick = { confirmarSenhaVisivel = !confirmarSenhaVisivel }) {
-                                Icon(
-                                    imageVector = if (confirmarSenhaVisivel) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                    contentDescription = if (confirmarSenhaVisivel) "Ocultar senha" else "Mostrar senha",
-                                    tint = colors.iconGray
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        visualTransformation = if (confirmarSenhaVisivel) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = colors.inputBorder,
-                            focusedBorderColor = colors.primary,
-                            cursorColor = colors.primary,
-                            focusedTextColor = colors.textInput,
-                            unfocusedTextColor = colors.textInput
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Aceitar termos
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = aceitaTermos,
-                            onCheckedChange = { aceitaTermos = it },
-                            colors = CheckboxDefaults.colors(
-                                checkedColor = colors.primary
-                            )
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Li e aceito os ",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = colors.textSecondary
-                        )
-                        Text(
-                            text = "Termos de Uso",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = colors.primary,
-                            modifier = Modifier.clickable { /* TODO */ }
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // Botão Cadastrar
-                    Button(
-                        onClick = { /* TODO */ },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        enabled = aceitaTermos,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.primary
-                        )
-                    ) {
-                        Text(
-                            text = "Cadastrar",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = colors.textOnPrimary
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Já tem conta? Entrar
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center
-                    ) {
-                        Text(
-                            text = "Já tem conta?  ",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colors.textSecondary
-                        )
-                        Text(
-                            text = "Entrar",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = colors.primary,
-                            modifier = Modifier.clickable { onBackToLogin() }
-                        )
-                    }
-                }
+            // Já tem uma conta? Faça login
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Já tem uma conta? ",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = labelColor
+                )
+                Text(
+                    text = "Faça login",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = greenAccent,
+                    modifier = Modifier.clickable { onBackToLogin() }
+                )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
