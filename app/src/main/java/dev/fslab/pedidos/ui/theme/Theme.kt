@@ -193,7 +193,7 @@ fun PedidosTheme(
     }
 
     // Suas cores customizadas
-    val filaColors =
+    val pedidosColors =
         if (darkTheme) DarkPedidosColors
         else LightPedidosColors
 
@@ -204,10 +204,10 @@ fun PedidosTheme(
             val window = (view.context as Activity).window
 
             // Cor da Status Bar
-            window.statusBarColor = filaColors.background.toArgb()
+            window.statusBarColor = pedidosColors.background.toArgb()
 
             // Cor da Navigation Bar
-            window.navigationBarColor = filaColors.background.toArgb()
+            window.navigationBarColor = pedidosColors.background.toArgb()
 
             val insetsController =
                 WindowCompat.getInsetsController(window, view)
@@ -222,7 +222,7 @@ fun PedidosTheme(
 
     // Aplica tema
     CompositionLocalProvider(
-        LocalPedidosColors provides filaColors
+        LocalPedidosColors provides pedidosColors
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
