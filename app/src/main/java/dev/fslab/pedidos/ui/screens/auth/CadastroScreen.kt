@@ -41,13 +41,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.fslab.pedidos.ui.theme.PedidosTheme
+import dev.fslab.pedidos.ui.theme.LocalPedidosColors
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
+
 
 /**
  * CadastroScreen - Tela de cadastro de novo usuário
@@ -57,6 +63,8 @@ fun CadastroScreen(
     modifier: Modifier = Modifier,
     onBackToLogin: () -> Unit = {}
 ) {
+    val colors = LocalPedidosColors.current
+
     var nome by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var telefone by remember { mutableStateOf("") }
@@ -66,18 +74,17 @@ fun CadastroScreen(
     var confirmarSenhaVisivel by remember { mutableStateOf(false) }
     var aceitaTermos by remember { mutableStateOf(false) }
 
-    // Cores do layout escuro
-    val backgroundColor = Color(0xFF1A1A2E)
-    val surfaceColor = Color(0xFF16213E)
-    val inputBorderColor = Color(0xFF2A2A4A)
-    val labelColor = Color(0xFFB0B0C0)
-    val placeholderColor = Color(0xFF6B6B80)
-    val greenAccent = Color(0xFF2ECC71)
+    val gradientBrush = Brush.verticalGradient(
+        colors = listOf(
+            colors.backgroundGradientStart,
+            colors.backgroundGradientEnd
+        )
+    )
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .background(gradientBrush)
     ) {
         Column(
             modifier = Modifier
@@ -99,21 +106,21 @@ fun CadastroScreen(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.1f))
+                        .background(colors.textOnPrimary.copy(alpha = 0.1f))
                         .clickable { onBackToLogin() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Voltar",
-                        tint = Color.White,
+                        tint = colors.textOnPrimary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
                     text = "Criar Conta",
-                    color = Color.White,
+                    color = colors.textOnPrimary,
                     style = MaterialTheme.typography.displaySmall
                 )
             }
@@ -124,7 +131,7 @@ fun CadastroScreen(
             Text(
                 text = "Nome Completo",
                 style = MaterialTheme.typography.titleMedium,
-                color = labelColor,
+                color = colors.textPrimary,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
@@ -133,20 +140,21 @@ fun CadastroScreen(
                 value = nome,
                 onValueChange = { nome = it },
                 placeholder = {
-                    Text("Digite seu nome completo", color = placeholderColor)
+                    Text("Digite seu nome completo", color = colors.mediumGray)
+                },
+                leadingIcon = {
+                    Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(18.dp), tint = colors.primary)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = inputBorderColor,
-                    focusedBorderColor = greenAccent,
-                    cursorColor = greenAccent,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    unfocusedContainerColor = surfaceColor,
-                    focusedContainerColor = surfaceColor
+                    unfocusedBorderColor = colors.inputBorder,
+                    focusedBorderColor = colors.primary,
+                    cursorColor = colors.primary,
+                    focusedTextColor = colors.textInput,
+                    unfocusedTextColor = colors.textInput
                 )
             )
 
@@ -156,7 +164,7 @@ fun CadastroScreen(
             Text(
                 text = "E-mail",
                 style = MaterialTheme.typography.titleMedium,
-                color = labelColor,
+                color = colors.textPrimary,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
@@ -165,20 +173,21 @@ fun CadastroScreen(
                 value = email,
                 onValueChange = { email = it },
                 placeholder = {
-                    Text("seu@email.com", color = placeholderColor)
+                    Text("seu@email.com", color = colors.mediumGray)
+                },
+                leadingIcon = {
+                    Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(18.dp), tint = colors.primary)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = inputBorderColor,
-                    focusedBorderColor = greenAccent,
-                    cursorColor = greenAccent,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    unfocusedContainerColor = surfaceColor,
-                    focusedContainerColor = surfaceColor
+                    unfocusedBorderColor = colors.inputBorder,
+                    focusedBorderColor = colors.primary,
+                    cursorColor = colors.primary,
+                    focusedTextColor = colors.textInput,
+                    unfocusedTextColor = colors.textInput
                 )
             )
 
@@ -188,7 +197,7 @@ fun CadastroScreen(
             Text(
                 text = "Telefone",
                 style = MaterialTheme.typography.titleMedium,
-                color = labelColor,
+                color = colors.textPrimary,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
@@ -197,20 +206,21 @@ fun CadastroScreen(
                 value = telefone,
                 onValueChange = { telefone = it },
                 placeholder = {
-                    Text("(00) 00000-0000", color = placeholderColor)
+                    Text("(00) 00000-0000", color = colors.mediumGray)
+                },
+                leadingIcon = {
+                    Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(18.dp), tint = colors.primary)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = inputBorderColor,
-                    focusedBorderColor = greenAccent,
-                    cursorColor = greenAccent,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    unfocusedContainerColor = surfaceColor,
-                    focusedContainerColor = surfaceColor
+                    unfocusedBorderColor = colors.inputBorder,
+                    focusedBorderColor = colors.primary,
+                    cursorColor = colors.primary,
+                    focusedTextColor = colors.textInput,
+                    unfocusedTextColor = colors.textInput
                 )
             )
 
@@ -220,7 +230,7 @@ fun CadastroScreen(
             Text(
                 text = "Senha",
                 style = MaterialTheme.typography.titleMedium,
-                color = labelColor,
+                color = colors.textPrimary,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
@@ -229,14 +239,17 @@ fun CadastroScreen(
                 value = senha,
                 onValueChange = { senha = it },
                 placeholder = {
-                    Text("••••••••", color = placeholderColor)
+                    Text("••••••••", color = colors.mediumGray)
+                },
+                leadingIcon = {
+                    Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp), tint = colors.primary)
                 },
                 trailingIcon = {
                     IconButton(onClick = { senhaVisivel = !senhaVisivel }) {
                         Icon(
                             imageVector = if (senhaVisivel) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                             contentDescription = if (senhaVisivel) "Ocultar senha" else "Mostrar senha",
-                            tint = greenAccent
+                            tint = colors.iconGray
                         )
                     }
                 },
@@ -246,13 +259,11 @@ fun CadastroScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = inputBorderColor,
-                    focusedBorderColor = greenAccent,
-                    cursorColor = greenAccent,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    unfocusedContainerColor = surfaceColor,
-                    focusedContainerColor = surfaceColor
+                    unfocusedBorderColor = colors.inputBorder,
+                    focusedBorderColor = colors.primary,
+                    cursorColor = colors.primary,
+                    focusedTextColor = colors.textInput,
+                    unfocusedTextColor = colors.textInput
                 )
             )
 
@@ -262,7 +273,7 @@ fun CadastroScreen(
             Text(
                 text = "Confirmar Senha",
                 style = MaterialTheme.typography.titleMedium,
-                color = labelColor,
+                color = colors.textPrimary,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
@@ -271,14 +282,17 @@ fun CadastroScreen(
                 value = confirmarSenha,
                 onValueChange = { confirmarSenha = it },
                 placeholder = {
-                    Text("••••••••", color = placeholderColor)
+                    Text("••••••••", color = colors.mediumGray)
+                },
+                leadingIcon = {
+                    Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp), tint = colors.primary)
                 },
                 trailingIcon = {
                     IconButton(onClick = { confirmarSenhaVisivel = !confirmarSenhaVisivel }) {
                         Icon(
                             imageVector = if (confirmarSenhaVisivel) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                             contentDescription = if (confirmarSenhaVisivel) "Ocultar senha" else "Mostrar senha",
-                            tint = greenAccent
+                            tint = colors.iconGray
                         )
                     }
                 },
@@ -288,13 +302,11 @@ fun CadastroScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = inputBorderColor,
-                    focusedBorderColor = greenAccent,
-                    cursorColor = greenAccent,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    unfocusedContainerColor = surfaceColor,
-                    focusedContainerColor = surfaceColor
+                    unfocusedBorderColor = colors.inputBorder,
+                    focusedBorderColor = colors.primary,
+                    cursorColor = colors.primary,
+                    focusedTextColor = colors.textInput,
+                    unfocusedTextColor = colors.textInput
                 )
             )
 
@@ -309,20 +321,20 @@ fun CadastroScreen(
                     checked = aceitaTermos,
                     onCheckedChange = { aceitaTermos = it },
                     colors = CheckboxDefaults.colors(
-                        checkedColor = greenAccent,
-                        uncheckedColor = placeholderColor,
-                        checkmarkColor = Color.White
+                        checkedColor = colors.primary,
+                        uncheckedColor = colors.mediumGray,
+                        checkmarkColor = colors.textOnPrimary
                     )
                 )
                 Text(
                     text = "Li e aceito os ",
                     style = MaterialTheme.typography.labelMedium,
-                    color = labelColor
+                    color = colors.textSecondary
                 )
                 Text(
                     text = "Termos de Uso",
                     style = MaterialTheme.typography.labelLarge,
-                    color = greenAccent,
+                    color = colors.primary,
                     modifier = Modifier.clickable { /* TODO */ }
                 )
             }
@@ -338,14 +350,14 @@ fun CadastroScreen(
                 shape = RoundedCornerShape(14.dp),
                 enabled = aceitaTermos,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = greenAccent,
-                    disabledContainerColor = greenAccent.copy(alpha = 0.4f)
+                    containerColor = colors.primary,
+                    disabledContainerColor = colors.primary.copy(alpha = 0.4f)
                 )
             ) {
                 Text(
                     text = "CRIAR CONTA",
                     style = MaterialTheme.typography.titleLarge,
-                    color = Color.White
+                    color = colors.textOnPrimary
                 )
             }
 
@@ -359,12 +371,12 @@ fun CadastroScreen(
                 Text(
                     text = "Já tem uma conta? ",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = labelColor
+                    color = colors.textSecondary
                 )
                 Text(
                     text = "Faça login",
                     style = MaterialTheme.typography.labelLarge,
-                    color = greenAccent,
+                    color = colors.primary,
                     modifier = Modifier.clickable { onBackToLogin() }
                 )
             }
