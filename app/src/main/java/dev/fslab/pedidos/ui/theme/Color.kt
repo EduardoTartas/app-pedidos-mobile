@@ -19,20 +19,20 @@ import androidx.compose.ui.graphics.Color
 
 
 
-// Cores Primárias - Roxo/Violeta (Cor principal da marca)
+// Cores Primárias - Verde/Azul (Cor principal da marca)
 
-val PrimaryBlue = Color(0xFF7C6AF6)        // Roxo vibrante - botões principais
-val PrimaryBlueDark = Color(0xFF5B4CCF)    // Roxo escuro - estado pressionado
-val PrimaryLightBlue = Color(0xFFF5F3FF)   // Roxo claro - fundos e backgrounds
+val PrimaryGreen = Color(0xFF14B822)       // Verde - botões principais
+val PrimaryBlueDark = Color(0xFF0F172A)    // Azul - fundos e backgrounds tema escuro
+val PrimaryLightWhite = Color(0xFFF3F4F6)  // Branco - fundos e backgrounds tema claro
 
 
 
 // Cores de Texto
 
-val TextPrimary = Color(0xFF111827)        // Texto principal - títulos e labels
+val TextPrimary = Color(0xFF1A1A1A)        // Texto principal - títulos e labels
 val TextSecondary = Color(0xFF6B7280)      // Texto secundário - descrições
 val TextTertiary = Color(0xFF4B5563)       // Texto terciário - links e detalhes
-val TextOnPrimary = Color.White            // Texto sobre fundo primário (azul)
+val TextOnPrimary = Color(0xFF1A1A1A)      // Texto sobre fundo primário (azul)
 val TextBlack = Color.Black                // Texto preto - campos de input
 
 
@@ -53,7 +53,7 @@ val IconGray = Color(0xFF374151)           // Cinza para ícones
 
 val SurfaceWhite = Color.White             // Fundo de cards
 val SurfaceLight = Color(0xFFEDE9FE)       // Fundo gradiente secundário (violeta claro)
-val BackgroundGradientStart = PrimaryLightBlue  // Início do gradiente de fundo
+val BackgroundGradientStart = PrimaryLightWhite  // Início do gradiente de fundo
 val BackgroundGradientEnd = Color(0xFFEDE9FE)   // Fim do gradiente de fundo (violeta claro)
 
 
