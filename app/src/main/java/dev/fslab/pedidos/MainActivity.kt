@@ -91,7 +91,7 @@ fun PedidosApp() {
 
                 composable("user") {
                     UserScreen(
-                        onBack = { navController.popBackStack() }
+                      onBack = { navController.popBackStack() }
                     )
                 }
             }
