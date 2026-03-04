@@ -8,11 +8,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -23,6 +19,7 @@ import dev.fslab.pedidos.ui.screens.auth.EsqueciSenhaScreen
 import dev.fslab.pedidos.ui.screens.auth.LoginScreen
 import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
 import dev.fslab.pedidos.ui.screens.HomeScreen
+import dev.fslab.pedidos.ui.screens.auth.UserScreen
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 
 class MainActivity : ComponentActivity() {
@@ -47,8 +44,9 @@ fun PedidosApp() {
             NavHost(
                 navController = navController,
                 startDestination = "login",
-                modifier = Modifier.padding(innerPadding)
+                modifier = Modifier.padding(innerPadding),
             ) {
+
                 composable("login") {
                     LoginScreen(
                         isDarkTheme = isDarkTheme,
@@ -60,6 +58,7 @@ fun PedidosApp() {
                         onLogin = { navController.navigate("home") }
                     )
                 }
+
                 composable(
                     route = "esqueci_senha?email={email}",
                     arguments = listOf(
@@ -75,16 +74,24 @@ fun PedidosApp() {
                         onBackToLogin = { navController.popBackStack() }
                     )
                 }
+
                 composable("cadastro") {
                     CadastroScreen(
                         onBackToLogin = { navController.popBackStack() }
                     )
                 }
+
                 composable("home") {
                     HomeScreen(
                         onLogout = {
                             navController.popBackStack("login", inclusive = false)
                         }
+                    )
+                }
+
+                composable("user") {
+                    UserScreen(
+                        onBack = { navController.popBackStack() }
                     )
                 }
             }
