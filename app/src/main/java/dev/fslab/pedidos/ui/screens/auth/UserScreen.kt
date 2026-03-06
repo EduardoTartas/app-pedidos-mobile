@@ -1,6 +1,7 @@
 package dev.fslab.pedidos.ui.screens.auth
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -30,7 +31,10 @@ fun UserScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundColor)
-            .padding(16.dp)
+            .padding(horizontal = 20.dp, vertical = 24.dp)
+            .padding(bottom = 80.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
 
         // HEADER
@@ -39,27 +43,53 @@ fun UserScreen(
             colors = CardDefaults.cardColors(containerColor = cardColor),
             shape = RoundedCornerShape(24.dp)
         ) {
+
             Column(
-                modifier = Modifier.padding(vertical = 32.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
+                // Avatar
                 Box(
-                    modifier = Modifier
-                        .size(90.dp)
-                        .clip(CircleShape)
-                        .background(Color.Gray),
-                    contentAlignment = Alignment.Center
+                    modifier = Modifier.size(90.dp),
+                    contentAlignment = Alignment.BottomEnd
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Person,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(40.dp)
-                    )
+
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clip(CircleShape)
+                            .background(Color.Gray)
+                            .border(3.dp, greenColor, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Person,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(greenColor),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
                     text = "Ricardo Silva",
@@ -68,7 +98,7 @@ fun UserScreen(
                     fontWeight = FontWeight.Bold
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = "Editar Perfil",
@@ -87,6 +117,8 @@ fun UserScreen(
         UserOptionItem("Segurança", Icons.Outlined.Security, greenColor)
         UserOptionItem("Ajuda", Icons.Outlined.HelpOutline, greenColor)
     }
+
+
 }
 
 @Composable
@@ -96,6 +128,7 @@ fun UserOptionItem(
     iconColor: Color
 ) {
 
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -104,22 +137,36 @@ fun UserOptionItem(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1B263B)),
         shape = RoundedCornerShape(18.dp)
     ) {
+
         Row(
-            modifier = Modifier.padding(18.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
 
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconColor
-            )
+            // Ícone
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF0D1B2A)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Text(
                 text = title,
                 color = Color.White,
+                fontSize = 15.sp,
                 modifier = Modifier.weight(1f)
             )
 
@@ -130,4 +177,6 @@ fun UserOptionItem(
             )
         }
     }
+
+
 }

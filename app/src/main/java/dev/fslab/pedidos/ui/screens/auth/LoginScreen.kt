@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Science
@@ -62,8 +64,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.fslab.pedidos.R
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 import dev.fslab.pedidos.ui.theme.StatusOperational
@@ -101,9 +106,8 @@ fun LoginScreen(
 
     val gradientBrush = Brush.verticalGradient(
         colors = listOf(
-            colors.primaryDark,
-            colors.primary,
-            colors.primary.copy(alpha = 0.7f)
+            colors.backgroundGradientStart,
+            colors.backgroundGradientEnd
         )
     )
 
@@ -170,10 +174,9 @@ fun LoginScreen(
                     .background(colors.primary),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Person,
+                Image(
+                    painter = painterResource(id = R.drawable.iguana_icon),
                     contentDescription = "Ícone usuários",
-                    tint = colors.textOnPrimary,
                     modifier = Modifier.size(50.dp)
                 )
             }
@@ -181,17 +184,31 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Título
-            Text(
-                text = "APP - Delivery",
-                color = colors.textOnPrimary,
-                style = MaterialTheme.typography.displaySmall
-            )
+            Row(
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Text(
+                    text = "RanG",
+                    color = colors.textOnPrimary,
+                    style = MaterialTheme.typography.displaySmall
+                )
+                Icon(
+                    imageVector = Icons.Filled.LocationOn,
+                    contentDescription = "O",
+                    tint = colors.primary,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .offset(x = (-4).dp)
+                        .padding(bottom = 3.dp)
+                )
+            }
 
             // Subtítulo
             Text(
-                text = "Acesse sua conta",
+                text = "Seu rango favorito está aqui",
                 color = colors.textOnPrimary.copy(alpha = 0.8f),
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 16.dp)
             )
 
             Spacer(modifier = Modifier.height(24.dp))

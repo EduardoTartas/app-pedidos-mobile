@@ -43,7 +43,7 @@ fun PedidosApp() {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
             NavHost(
                 navController = navController,
-                startDestination = "login",
+                startDestination = "Login" ,
                 modifier = Modifier.padding(innerPadding),
             ) {
 
