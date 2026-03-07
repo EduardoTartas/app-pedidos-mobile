@@ -24,6 +24,7 @@ import dev.fslab.pedidos.ui.screens.auth.LoginScreen
 import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
 import dev.fslab.pedidos.ui.screens.HomeScreen
 import dev.fslab.pedidos.ui.theme.PedidosTheme
+import dev.fslab.pedidos.ui.viewmodel.AuthViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,7 +58,9 @@ fun PedidosApp() {
                             navController.navigate("esqueci_senha?email=$email")
                         },
                         onRegister = { navController.navigate("cadastro") },
-                        onLogin = { navController.navigate("home") }
+                        onLogin = { email, senha ->
+                            AuthViewModel.loginUser(email, senha)
+                        },
                     )
                 }
                 composable(
@@ -91,3 +94,5 @@ fun PedidosApp() {
         }
     }
 }
+
+fun AuthViewModel.Companion.loginUser(email: String, senha: String) {}

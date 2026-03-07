@@ -65,6 +65,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.Image
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -87,7 +88,10 @@ fun LoginScreen(
     onToggleTheme: () -> Unit = {},
     onEsqueciSenha: (String) -> Unit = {},
     onRegister: () -> Unit = {},
-    onLogin: () -> Unit = {},
+    onLogin: (email: String, senha: String) -> Unit = { _, _ -> },
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
+    onErrorDismiss: () -> Unit = {}
 ) {
     var mostrarTeste by remember { mutableStateOf(false) }
 
@@ -339,20 +343,29 @@ fun LoginScreen(
 
                     // Botão Entrar
                     Button(
-                        onClick = { onLogin() },
+                        onClick = { onLogin(email, senha) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.primary
-                        )
+                        ),
+                        enabled = !isLoading && email.isNotBlank() && senha.isNotBlank()
                     ) {
-                        Text(
-                            text = "Entrar",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = colors.textOnPrimary
-                        )
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = colors.textOnPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = "Entrar",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = colors.textOnPrimary
+                            )
+                        }
                     }
 
 
