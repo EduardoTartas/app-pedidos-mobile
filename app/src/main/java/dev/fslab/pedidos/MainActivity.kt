@@ -8,12 +8,15 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -24,6 +27,7 @@ import dev.fslab.pedidos.ui.screens.auth.LoginScreen
 import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
 import dev.fslab.pedidos.ui.screens.HomeScreen
 import dev.fslab.pedidos.ui.theme.PedidosTheme
+import dev.fslab.pedidos.ui.viewmodel.AuthState
 import dev.fslab.pedidos.ui.viewmodel.AuthViewModel
 
 class MainActivity : ComponentActivity() {
@@ -40,6 +44,10 @@ class MainActivity : ComponentActivity() {
 fun PedidosApp() {
     val systemDark = isSystemInDarkTheme()
     var isDarkTheme by remember { mutableStateOf(systemDark) }
+    val authViewModel: AuthViewModel = viewModel()
+    val authState by authViewModel.authState.collectAsState()
+    val isLoading = authState is AuthState.Loading
+    val errorMessage = (authState as? AuthState.Error)?.message
 
     PedidosTheme(darkTheme = isDarkTheme) {
         val navController = rememberNavController()
@@ -51,6 +59,15 @@ fun PedidosApp() {
                 modifier = Modifier.padding(innerPadding)
             ) {
                 composable("login") {
+                    LaunchedEffect(authState) {
+                        if (authState is AuthState.Success) {
+                            navController.navigate("home") {
+                                popUpTo("login") { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+
                     LoginScreen(
                         isDarkTheme = isDarkTheme,
                         onToggleTheme = { isDarkTheme = !isDarkTheme },
@@ -59,8 +76,11 @@ fun PedidosApp() {
                         },
                         onRegister = { navController.navigate("cadastro") },
                         onLogin = { email, senha ->
-                            AuthViewModel.loginUser(email, senha)
+                            authViewModel.loginUser(email, senha)
                         },
+                        isLoading = isLoading,
+                        errorMessage = errorMessage,
+                        onErrorDismiss = { authViewModel.clearError() }
                     )
                 }
                 composable(
@@ -86,7 +106,11 @@ fun PedidosApp() {
                 composable("home") {
                     HomeScreen(
                         onLogout = {
-                            navController.popBackStack("login", inclusive = false)
+                            authViewModel.logout()
+                            navController.navigate("login") {
+                                popUpTo("login") { inclusive = true }
+                                launchSingleTop = true
+                            }
                         }
                     )
                 }
@@ -94,5 +118,3 @@ fun PedidosApp() {
         }
     }
 }
-
-fun AuthViewModel.Companion.loginUser(email: String, senha: String) {}

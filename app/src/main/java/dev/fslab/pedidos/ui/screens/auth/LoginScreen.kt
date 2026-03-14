@@ -240,7 +240,12 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = email,
-                        onValueChange = { email = it },
+                        onValueChange = {
+                            email = it
+                            if (!errorMessage.isNullOrEmpty()) {
+                                onErrorDismiss()
+                            }
+                        },
                         placeholder = {
                             Text("seu@email.com", color = colors.mediumGray)
                         },
@@ -275,7 +280,12 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = senha,
-                        onValueChange = { senha = it },
+                        onValueChange = {
+                            senha = it
+                            if (!errorMessage.isNullOrEmpty()) {
+                                onErrorDismiss()
+                            }
+                        },
                         placeholder = {
                             Text("••••••••", color = colors.mediumGray)
                         },
@@ -368,8 +378,17 @@ fun LoginScreen(
                         }
                     }
 
-
                     Spacer(modifier = Modifier.height(16.dp))
+
+                    if (!errorMessage.isNullOrBlank()) {
+                        Text(
+                            text = errorMessage,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.error,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
 
                     // Não tem conta? Cadastre-se
                     Row(
@@ -388,10 +407,10 @@ fun LoginScreen(
                             modifier = Modifier.clickable { onRegister() }
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }

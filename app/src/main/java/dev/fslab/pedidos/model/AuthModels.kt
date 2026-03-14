@@ -37,10 +37,27 @@ data class RefreshRequest(
 data class LoginResponse(
     @SerializedName("message") val message: String = "",
     @SerializedName("data") val data: LoginData? = null,
-    @SerializedName("errors") val errors: List<String> = emptyList()
+    @SerializedName("errors") val errors: List<String> = emptyList(),
+    // Fallback fields for APIs that return login payload at the root level.
+    @SerializedName("token") private val token: String? = null,
+    @SerializedName("refresh") private val refresh: String? = null,
+    @SerializedName("expiraEm") private val expiraEm: String? = null,
+    @SerializedName("usuario") private val usuario: LoginUsuario? = null
 ) {
-    fun isSuccess(): Boolean = data != null && data.token.isNotEmpty()
-    fun getLoginData(): LoginData? = data
+    private fun normalizedData(): LoginData? {
+        if (data != null) return data
+        if (token.isNullOrBlank()) return null
+
+        return LoginData(
+            token = token,
+            refresh = refresh.orEmpty(),
+            expiraEm = expiraEm.orEmpty(),
+            usuario = usuario
+        )
+    }
+
+    fun isSuccess(): Boolean = !normalizedData()?.token.isNullOrEmpty()
+    fun getLoginData(): LoginData? = normalizedData()
     fun getErrorMessage(): String = errors.firstOrNull() ?: message
 }
 
