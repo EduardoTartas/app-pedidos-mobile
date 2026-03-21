@@ -1,6 +1,5 @@
 package dev.fslab.pedidos.network
 
-import android.util.Log
 import okhttp3.Interceptor
 import okhttp3.Response
 
@@ -14,11 +13,11 @@ class AuthInterceptor : Interceptor {
 
     companion object {
         private val PUBLIC_PATHS = listOf(
-            "auth/login",
-            "auth/refresh",
-            "auth/recover",
-            "auth/password/reset",
-            "auth/register"
+            "login",
+            "refresh",
+            "recover",
+            "password/reset",
+            "signup"
         )
     }
 

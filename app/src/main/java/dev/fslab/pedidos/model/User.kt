@@ -1,23 +1,33 @@
 package dev.fslab.pedidos.model
 
 /**
- * UserRole - Tipos de usuários do sistema FilaCidadã
- */
-enum class UserRole {
-    ADMIN_PLATAFORMA,
-    ADMIN_INSTITUICAO,
-    OPERADOR,
-    USUARIO_FINAL
-}
-
-/**
- * User - Representa um usuário autenticado
+ * User - Representa o usuário autenticado retornado pela API app-pedidos
  */
 data class User(
     val id: String,
     val nome: String,
     val email: String,
-    val role: UserRole,
-    val avatar: String? = null,
-    val fusoHorario: String = "America/Manaus"
+    val cpf: String?,
+    val telefone: String?,
+    val status: String,
+    val isAdmin: Boolean,
+    val fotoPerfil: String?,
+    val createdAt: String?,
+    val updatedAt: String?
+)
+
+/**
+ * Converte o payload remoto em domínio local
+ */
+fun RemoteUser.toUser(): User = User(
+    id = id,
+    nome = nome,
+    email = email,
+    cpf = cpf,
+    telefone = telefone,
+    status = status.ifBlank { "ativo" },
+    isAdmin = isAdmin,
+    fotoPerfil = fotoPerfil,
+    createdAt = createdAt,
+    updatedAt = updatedAt
 )

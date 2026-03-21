@@ -1,6 +1,5 @@
 package dev.fslab.pedidos.ui.viewmodel
 
-import android.util.Base64
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,7 +11,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 
 /**
  * Estados possíveis da autenticação
@@ -28,9 +26,9 @@ sealed class AuthState {
  * AuthViewModel - Gerencia o estado de autenticação da aplicação
  *
  * Responsável por:
- * - Login via API (POST /auth/login)
- * - Cadastro (POST /auth/register)
- * - Recuperação de senha (POST /auth/recover)
+ * - Login via API (POST /login)
+ * - Cadastro (POST /signup)
+ * - Recuperação de senha (POST /recover)
  * - Gerenciar tokens JWT e estado do usuário
  */
 class AuthViewModel : ViewModel() {
@@ -78,42 +76,25 @@ class AuthViewModel : ViewModel() {
             try {
                 val request = LoginRequest(email = email, senha = password)
                 val response = RetrofitClient.authApi.login(request)
-
-                if (response.isSuccess()) {
-                    val loginData = response.getLoginData()
-                    if (loginData != null) {
-                        TokenManager.saveTokens(loginData.token, loginData.refresh)
-                        _accessToken.value = loginData.token
-
-                        val usuario = loginData.usuario
-                        if (usuario != null && usuario.papeis.isNotEmpty()) {
-                            val user = usuario.toUser()
-                            _currentUser.value = user
-                            _authState.value = AuthState.Success(user)
-                        } else {
-                            // Extrai dados do JWT como fallback
-                            val user = extractUserFromJwt(loginData.token, email)
-                            if (user != null) {
-                                _currentUser.value = user
-                                _authState.value = AuthState.Success(user)
-                            } else {
-                                createBasicUser(email)
-                            }
-                        }
-                    } else {
-                        _authState.value = AuthState.Error("Erro ao processar resposta do login")
-                    }
+                val remoteUser = response.getRemoteUser()
+                if (response.isSuccess() && remoteUser != null) {
+                    handleAuthenticatedUser(remoteUser)
                 } else {
                     val errorMessage = response.getErrorMessage().ifEmpty { "Credenciais inválidas" }
                     _authState.value = AuthState.Error(errorMessage)
                 }
             } catch (e: retrofit2.HttpException) {
-                val errorMessage = when (e.code()) {
+                val errorBody = e.response()?.errorBody()?.string()
+                val apiMessage = try {
+                    gson.fromJson(errorBody, ApiErrorResponse::class.java)?.getErrorMessage()
+                } catch (_: Exception) { null }
+
+                val errorMessage = apiMessage ?: when (e.code()) {
                     401 -> "Email ou senha incorretos"
                     403 -> "Usuário inativo ou bloqueado"
                     404 -> "Usuário não encontrado"
                     500 -> "Erro no servidor. Tente novamente mais tarde."
-                    else -> "Erro de conexão: ${e.message()}"
+                    else -> "Erro ao autenticar (${e.code()})"
                 }
                 _authState.value = AuthState.Error(errorMessage)
             } catch (e: java.net.UnknownHostException) {
@@ -134,6 +115,9 @@ class AuthViewModel : ViewModel() {
         nome: String,
         email: String,
         senha: String,
+        cpf: String,
+        telefone: String,
+        fotoPerfil: String? = null,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -141,23 +125,18 @@ class AuthViewModel : ViewModel() {
             _authState.value = AuthState.Loading
 
             try {
-                val request = RegisterRequest(nome = nome, email = email, senha = senha)
+                val request = RegisterRequest(
+                    nome = nome,
+                    email = email,
+                    senha = senha,
+                    cpf = cpf,
+                    telefone = telefone,
+                    fotoPerfil = fotoPerfil
+                )
                 val response = RetrofitClient.authApi.register(request)
 
                 if (response.isSuccess()) {
-                    // Cadastro retorna tokens — faz login automático
-                    TokenManager.saveTokens(response.token, response.refresh)
-                    _accessToken.value = response.token
-
-                    // Extrai usuário do JWT
-                    val user = extractUserFromJwt(response.token, email) ?: User(
-                        id = "",
-                        nome = nome,
-                        email = email,
-                        role = UserRole.USUARIO_FINAL
-                    )
-                    _currentUser.value = user
-                    _authState.value = AuthState.Success(user)
+                    _authState.value = AuthState.Idle
                     onSuccess()
                 } else {
                     _authState.value = AuthState.Idle
@@ -214,8 +193,8 @@ class AuthViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             try {
-                val request = ResetPasswordByCodeRequest(codigo = codigo, senha = novaSenha)
-                RetrofitClient.authApi.resetPasswordByCode(request)
+                val request = ResetPasswordRequest(senha = novaSenha)
+                RetrofitClient.authApi.resetPasswordByCode(codigo, request)
                 onSuccess()
             } catch (e: retrofit2.HttpException) {
                 val errorMessage = when (e.code()) {
@@ -259,61 +238,23 @@ class AuthViewModel : ViewModel() {
     // UTILITÁRIOS
     // ═══════════════════════════════════════════
 
+    private fun handleAuthenticatedUser(payload: RemoteUser) {
+        if (!payload.hasValidSession()) {
+            _authState.value = AuthState.Error("Sessão inválida retornada pela API")
+            return
+        }
+
+        TokenManager.saveTokens(payload.accessToken, payload.refreshToken)
+        _accessToken.value = payload.accessToken
+
+        val user = payload.toUser()
+        _currentUser.value = user
+        _authState.value = AuthState.Success(user)
+    }
+
     fun clearError() {
         if (_authState.value is AuthState.Error) {
             _authState.value = AuthState.Idle
         }
-    }
-
-    /**
-     * Extrai dados do usuário a partir do payload JWT
-     */
-    private fun extractUserFromJwt(token: String, email: String): User? {
-        return try {
-            val parts = token.split(".")
-            if (parts.size != 3) return null
-
-            val payload = parts[1]
-            val decodedBytes = Base64.decode(payload, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
-            val decodedPayload = String(decodedBytes, Charsets.UTF_8)
-
-            val json = JSONObject(decodedPayload)
-            val id = json.optString("id", "")
-            val papeisArray = json.optJSONArray("papeis")
-            val papeis = mutableListOf<String>()
-            if (papeisArray != null) {
-                for (i in 0 until papeisArray.length()) {
-                    papeis.add(papeisArray.getString(i))
-                }
-            }
-
-            val userRole = when {
-                papeis.any { it.uppercase().contains("ADMIN_PLATAFORMA") } -> UserRole.ADMIN_PLATAFORMA
-                papeis.any { it.uppercase().contains("ADMIN_INSTITUICAO") } -> UserRole.ADMIN_INSTITUICAO
-                papeis.any { it.uppercase().contains("OPERADOR") } -> UserRole.OPERADOR
-                else -> UserRole.USUARIO_FINAL
-            }
-
-            User(
-                id = id,
-                nome = email.substringBefore("@").replaceFirstChar { it.uppercase() },
-                email = email,
-                role = userRole
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Erro ao extrair user do JWT: ${e.message}")
-            null
-        }
-    }
-
-    private fun createBasicUser(email: String) {
-        val user = User(
-            id = "",
-            nome = email.substringBefore("@"),
-            email = email,
-            role = UserRole.USUARIO_FINAL
-        )
-        _currentUser.value = user
-        _authState.value = AuthState.Success(user)
     }
 }

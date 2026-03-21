@@ -1,9 +1,9 @@
 package dev.fslab.pedidos.network
 
 import android.util.Log
-import dev.fslab.pedidos.model.RefreshRequest
-import dev.fslab.pedidos.model.RefreshResponse
 import com.google.gson.Gson
+import dev.fslab.pedidos.model.AuthResponse
+import dev.fslab.pedidos.model.RefreshRequest
 import okhttp3.Authenticator
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -62,11 +62,11 @@ class TokenAuthenticator : Authenticator {
             }
 
             return try {
-                val refreshBody = gson.toJson(RefreshRequest(token = currentRefreshToken))
+                val refreshBody = gson.toJson(RefreshRequest(refreshToken = currentRefreshToken))
                 val mediaType = "application/json; charset=utf-8".toMediaType()
 
                 val refreshRequest = Request.Builder()
-                    .url(RetrofitClient.BASE_URL + "auth/refresh")
+                    .url(RetrofitClient.BASE_URL + "refresh")
                     .post(refreshBody.toRequestBody(mediaType))
                     .build()
 
@@ -74,15 +74,16 @@ class TokenAuthenticator : Authenticator {
 
                 if (refreshResponse.isSuccessful) {
                     val body = refreshResponse.body?.string()
-                    val parsed = gson.fromJson(body, RefreshResponse::class.java)
+                    val parsed = gson.fromJson(body, AuthResponse::class.java)
+                    val refreshedUser = parsed?.getRemoteUser()
 
-                    if (parsed?.isSuccess() == true && parsed.data != null) {
-                        TokenManager.saveTokens(parsed.data.token, parsed.data.refresh)
-                        TokenManager.onTokensRefreshed?.invoke(parsed.data.token)
+                    if (parsed?.isSuccess() == true && refreshedUser != null) {
+                        TokenManager.saveTokens(refreshedUser.accessToken, refreshedUser.refreshToken)
+                        TokenManager.onTokensRefreshed?.invoke(refreshedUser.accessToken)
 
                         Log.d(TAG, "Refresh bem-sucedido!")
                         response.request.newBuilder()
-                            .header("Authorization", "Bearer ${parsed.data.token}")
+                            .header("Authorization", "Bearer ${refreshedUser.accessToken}")
                             .build()
                     } else {
                         Log.w(TAG, "Refresh falhou: resposta inválida")
