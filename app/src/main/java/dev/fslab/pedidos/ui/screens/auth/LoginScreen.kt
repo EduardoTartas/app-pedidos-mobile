@@ -144,7 +144,7 @@ fun LoginScreen(
                     Icon(
                         imageVector = Icons.Filled.Science,
                         contentDescription = "Tela de teste",
-                        tint = colors.textOnPrimary
+                        tint = colors.textPrimary
                     )
                 }
 
@@ -154,7 +154,7 @@ fun LoginScreen(
                     Icon(
                         imageVector = Icons.Filled.Science,
                         contentDescription = "Tela de teste",
-                        tint = colors.textOnPrimary
+                        tint = colors.textPrimary
                     )
                 }
 
@@ -163,7 +163,7 @@ fun LoginScreen(
                     Icon(
                         imageVector = if (isDarkTheme) Icons.Filled.LightMode else Icons.Filled.DarkMode,
                         contentDescription = if (isDarkTheme) "Modo claro" else "Modo escuro",
-                        tint = colors.textOnPrimary
+                        tint = colors.textPrimary
                     )
                 }
             }
@@ -193,7 +193,7 @@ fun LoginScreen(
             ) {
                 Text(
                     text = "RanG",
-                    color = colors.textOnPrimary,
+                    color = colors.textPrimary,
                     style = MaterialTheme.typography.displaySmall
                 )
                 Icon(
@@ -210,7 +210,7 @@ fun LoginScreen(
             // Subtítulo
             Text(
                 text = "Seu rango favorito está aqui",
-                color = colors.textOnPrimary.copy(alpha = 0.8f),
+                color = colors.textSecondary,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 16.dp)
             )

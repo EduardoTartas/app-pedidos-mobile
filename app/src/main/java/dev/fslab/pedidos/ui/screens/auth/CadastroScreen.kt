@@ -49,6 +49,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 import androidx.compose.material.icons.filled.Email
@@ -59,6 +60,7 @@ import androidx.compose.material.icons.filled.Phone
 
 /**
  * CadastroScreen - Tela de cadastro de novo usuário
+ * Segue o design do RanGo App Style Guide, usando cores do tema.
  */
 @Composable
 fun CadastroScreen(
