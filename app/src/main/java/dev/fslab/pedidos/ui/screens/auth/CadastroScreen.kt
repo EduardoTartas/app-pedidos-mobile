@@ -21,12 +21,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,18 +63,25 @@ import androidx.compose.material.icons.filled.Phone
 @Composable
 fun CadastroScreen(
     modifier: Modifier = Modifier,
-    onBackToLogin: () -> Unit = {}
+    onBackToLogin: () -> Unit = {},
+    onRegister: (nome: String, email: String, senha: String, cpf: String, telefone: String) -> Unit = { _, _, _, _, _ -> },
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
+    successMessage: String? = null,
+    onErrorDismiss: () -> Unit = {}
 ) {
     val colors = LocalPedidosColors.current
 
     var nome by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
+    var cpf by remember { mutableStateOf("") }
     var telefone by remember { mutableStateOf("") }
     var senha by remember { mutableStateOf("") }
     var confirmarSenha by remember { mutableStateOf("") }
     var senhaVisivel by remember { mutableStateOf(false) }
     var confirmarSenhaVisivel by remember { mutableStateOf(false) }
     var aceitaTermos by remember { mutableStateOf(false) }
+    var localError by remember { mutableStateOf<String?>(null) }
 
     val gradientBrush = Brush.verticalGradient(
         colors = listOf(
@@ -80,6 +89,45 @@ fun CadastroScreen(
             colors.backgroundGradientEnd
         )
     )
+
+    // Validação local dos campos
+    fun validarCampos(): Boolean {
+        if (nome.isBlank() || email.isBlank() || cpf.isBlank() || telefone.isBlank() || senha.isBlank() || confirmarSenha.isBlank()) {
+            localError = "Preencha todos os campos."
+            return false
+        }
+        if (!email.contains("@") || !email.contains(".")) {
+            localError = "Formato de e-mail inválido."
+            return false
+        }
+        val cpfLimpo = cpf.replace(Regex("[^0-9]"), "")
+        if (cpfLimpo.length != 11) {
+            localError = "CPF deve conter 11 dígitos numéricos."
+            return false
+        }
+        val telLimpo = telefone.replace(Regex("[^0-9]"), "")
+        if (telLimpo.length !in 10..11) {
+            localError = "Telefone deve conter 10 ou 11 dígitos."
+            return false
+        }
+        if (senha.length < 8) {
+            localError = "A senha deve ter pelo menos 8 caracteres."
+            return false
+        }
+        val senhaRegex = Regex("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$")
+        if (!senhaRegex.matches(senha)) {
+            localError = "A senha deve conter pelo menos 1 letra maiúscula, 1 minúscula e 1 número."
+            return false
+        }
+        if (senha != confirmarSenha) {
+            localError = "As senhas não coincidem."
+            return false
+        }
+        localError = null
+        return true
+    }
+
+    val displayError = localError ?: errorMessage
 
     Box(
         modifier = modifier
@@ -138,7 +186,11 @@ fun CadastroScreen(
             )
             OutlinedTextField(
                 value = nome,
-                onValueChange = { nome = it },
+                onValueChange = {
+                    nome = it
+                    localError = null
+                    onErrorDismiss()
+                },
                 placeholder = {
                     Text("Digite seu nome completo", color = colors.mediumGray)
                 },
@@ -171,7 +223,11 @@ fun CadastroScreen(
             )
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = {
+                    email = it
+                    localError = null
+                    onErrorDismiss()
+                },
                 placeholder = {
                     Text("seu@email.com", color = colors.mediumGray)
                 },
@@ -181,6 +237,45 @@ fun CadastroScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = colors.inputBorder,
+                    focusedBorderColor = colors.primary,
+                    cursorColor = colors.primary,
+                    focusedTextColor = colors.textInput,
+                    unfocusedTextColor = colors.textInput
+                )
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Campo CPF
+            Text(
+                text = "CPF",
+                style = MaterialTheme.typography.titleMedium,
+                color = colors.textPrimary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            )
+            OutlinedTextField(
+                value = cpf,
+                onValueChange = {
+                    // Só permite dígitos, limitado a 11
+                    val filtered = it.filter { c -> c.isDigit() }.take(11)
+                    cpf = filtered
+                    localError = null
+                    onErrorDismiss()
+                },
+                placeholder = {
+                    Text("00000000000", color = colors.mediumGray)
+                },
+                leadingIcon = {
+                    Icon(Icons.Default.Badge, contentDescription = null, modifier = Modifier.size(18.dp), tint = colors.primary)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = colors.inputBorder,
@@ -204,9 +299,15 @@ fun CadastroScreen(
             )
             OutlinedTextField(
                 value = telefone,
-                onValueChange = { telefone = it },
+                onValueChange = {
+                    // Só permite dígitos, limitado a 11
+                    val filtered = it.filter { c -> c.isDigit() }.take(11)
+                    telefone = filtered
+                    localError = null
+                    onErrorDismiss()
+                },
                 placeholder = {
-                    Text("(00) 00000-0000", color = colors.mediumGray)
+                    Text("11999999999", color = colors.mediumGray)
                 },
                 leadingIcon = {
                     Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(18.dp), tint = colors.primary)
@@ -237,7 +338,11 @@ fun CadastroScreen(
             )
             OutlinedTextField(
                 value = senha,
-                onValueChange = { senha = it },
+                onValueChange = {
+                    senha = it
+                    localError = null
+                    onErrorDismiss()
+                },
                 placeholder = {
                     Text("••••••••", color = colors.mediumGray)
                 },
@@ -280,7 +385,11 @@ fun CadastroScreen(
             )
             OutlinedTextField(
                 value = confirmarSenha,
-                onValueChange = { confirmarSenha = it },
+                onValueChange = {
+                    confirmarSenha = it
+                    localError = null
+                    onErrorDismiss()
+                },
                 placeholder = {
                     Text("••••••••", color = colors.mediumGray)
                 },
@@ -339,26 +448,62 @@ fun CadastroScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Mensagem de erro
+            if (!displayError.isNullOrBlank()) {
+                Text(
+                    text = displayError,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.error,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Mensagem de sucesso
+            if (!successMessage.isNullOrBlank()) {
+                Text(
+                    text = successMessage,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.success,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
             // Botão CRIAR CONTA
             Button(
-                onClick = { /* TODO */ },
+                onClick = {
+                    if (validarCampos()) {
+                        val cpfLimpo = cpf.replace(Regex("[^0-9]"), "")
+                        val telLimpo = telefone.replace(Regex("[^0-9]"), "")
+                        onRegister(nome.trim(), email.trim(), senha, cpfLimpo, telLimpo)
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
                 shape = RoundedCornerShape(14.dp),
-                enabled = aceitaTermos,
+                enabled = aceitaTermos && !isLoading,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colors.primary,
                     disabledContainerColor = colors.primary.copy(alpha = 0.4f)
                 )
             ) {
-                Text(
-                    text = "CRIAR CONTA",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colors.textOnPrimary
-                )
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = colors.textOnPrimary,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(
+                        text = "CRIAR CONTA",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = colors.textOnPrimary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -393,4 +538,3 @@ fun CadastroScreenPreview() {
         CadastroScreen()
     }
 }
-
