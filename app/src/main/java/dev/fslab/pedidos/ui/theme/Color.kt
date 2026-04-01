@@ -22,11 +22,12 @@ import androidx.compose.ui.graphics.Color
 // Cores Primárias - Verde/Azul (Cor principal da marca)
 
 val PrimaryGreen = Color(0xFF14B822)       // Verde - botões principais
-val PrimaryBlueDark = Color(0xFF0F172A)    // Azul - fundos e backgrounds tema escuro
-val PrimaryLightWhite = Color(0xFFF3F4F6)  // Branco - fundos e backgrounds tema claro
+val PrimaryNavy = Color(0xFF0A0E1A)        // Navy primário - fundos tema escuro
+val SecondaryNavy = Color(0xFF161B2E)      // Navy secundário - cards e superfícies tema escuro
+val PrimaryLightWhite = Color(0xFFFFFFFF)  // Branco - fundos e backgrounds tema claro
 
 
-
+ 
 // Cores de Texto
 
 val TextPrimary = Color(0xFF1A1A1A)        // Texto principal - títulos e labels
@@ -52,9 +53,9 @@ val IconGray = Color(0xFF374151)           // Cinza para ícones
 // Cores de Superfície
 
 val SurfaceWhite = Color.White             // Fundo de cards
-val SurfaceLight = Color(0xFFEDE9FE)       // Fundo gradiente secundário (violeta claro)
+val SurfaceLight = Color(0xFFF9FAFB)       // Fundo gradiente secundário (cinza muito claro)
 val BackgroundGradientStart = PrimaryLightWhite  // Início do gradiente de fundo
-val BackgroundGradientEnd = Color(0xFFEDE9FE)   // Fim do gradiente de fundo (violeta claro)
+val BackgroundGradientEnd = SurfaceLight   // Fim do gradiente de fundo (cinza claro)
 
 
 
