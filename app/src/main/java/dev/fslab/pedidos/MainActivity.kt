@@ -95,12 +95,56 @@ fun PedidosApp() {
                     val email = backStackEntry.arguments?.getString("email") ?: ""
                     EsqueciSenhaScreen(
                         emailInicial = email,
-                        onBackToLogin = { navController.popBackStack() }
+                        onBackToLogin = { navController.popBackStack() },
+                        onRecoverPassword = { emailInput, onSuccess, onError ->
+                            authViewModel.recoverPassword(emailInput, onSuccess, onError)
+                        },
+                        onResetPassword = { token, novaSenha, onSuccess, onError ->
+                            authViewModel.resetPasswordByCode(token, novaSenha, onSuccess, onError)
+                        }
                     )
                 }
                 composable("cadastro") {
+                    // Estado local para mensagem de erro e sucesso do cadastro
+                    var cadastroError by remember { mutableStateOf<String?>(null) }
+                    var cadastroSuccess by remember { mutableStateOf<String?>(null) }
+
+                    // Redireciona ao login após exibir mensagem de sucesso
+                    LaunchedEffect(cadastroSuccess) {
+                        if (cadastroSuccess != null) {
+                            kotlinx.coroutines.delay(2000L)
+                            navController.popBackStack()
+                        }
+                    }
+
                     CadastroScreen(
-                        onBackToLogin = { navController.popBackStack() }
+                        onBackToLogin = { navController.popBackStack() },
+                        onRegister = { nome, email, senha, cpf, telefone ->
+                            cadastroError = null
+                            cadastroSuccess = null
+                            authViewModel.registerUser(
+                                nome = nome,
+                                email = email,
+                                senha = senha,
+                                cpf = cpf,
+                                telefone = telefone,
+                                onSuccess = {
+                                    cadastroSuccess = "Conta criada com sucesso! Faça login."
+                                    cadastroError = null
+                                },
+                                onError = { msg ->
+                                    cadastroError = msg
+                                    cadastroSuccess = null
+                                }
+                            )
+                        },
+                        isLoading = isLoading,
+                        errorMessage = cadastroError,
+                        successMessage = cadastroSuccess,
+                        onErrorDismiss = {
+                            cadastroError = null
+                            authViewModel.clearError()
+                        }
                     )
                 }
                 composable("home") {
