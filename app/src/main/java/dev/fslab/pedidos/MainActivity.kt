@@ -74,7 +74,7 @@ fun PedidosApp() {
                         onEsqueciSenha = { email ->
                             navController.navigate("esqueci_senha?email=$email")
                         },
-                        onRegister = { navController.navigate("cadastro") },
+                        onRegister = { navController.navigate("signup") },
                         onLogin = { email, senha ->
                             authViewModel.loginUser(email, senha)
                         },
@@ -104,7 +104,7 @@ fun PedidosApp() {
                         }
                     )
                 }
-                composable("cadastro") {
+                composable("signup") {
                     // Estado local para mensagem de erro e sucesso do cadastro
                     var cadastroError by remember { mutableStateOf<String?>(null) }
                     var cadastroSuccess by remember { mutableStateOf<String?>(null) }
