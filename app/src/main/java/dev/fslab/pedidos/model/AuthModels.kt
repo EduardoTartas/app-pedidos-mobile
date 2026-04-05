@@ -32,6 +32,10 @@ data class RefreshRequest(
     @SerializedName("refresh_token") val refreshToken: String
 )
 
+data class GoogleLoginRequest(
+    @SerializedName("idToken") val idToken: String
+)
+
 // ══════════════════════════════════════════════
 // RESPONSE models
 // ══════════════════════════════════════════════
@@ -65,7 +69,8 @@ data class RemoteUser(
     @SerializedName("isAdmin") val isAdmin: Boolean = false,
     @SerializedName("foto_perfil") val fotoPerfil: String? = null,
     @SerializedName("createdAt") val createdAt: String? = null,
-    @SerializedName("updatedAt") val updatedAt: String? = null
+    @SerializedName("updatedAt") val updatedAt: String? = null,
+    @SerializedName("profileComplete") val profileComplete: Boolean = true
 ) {
     fun hasValidSession(): Boolean = accessToken.isNotBlank() && refreshToken.isNotBlank()
 }

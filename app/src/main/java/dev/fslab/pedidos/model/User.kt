@@ -12,6 +12,7 @@ data class User(
     val status: String,
     val isAdmin: Boolean,
     val fotoPerfil: String?,
+    val profileComplete: Boolean,
     val createdAt: String?,
     val updatedAt: String?
 )
@@ -28,6 +29,7 @@ fun RemoteUser.toUser(): User = User(
     status = status.ifBlank { "ativo" },
     isAdmin = isAdmin,
     fotoPerfil = fotoPerfil,
+    profileComplete = profileComplete,
     createdAt = createdAt,
     updatedAt = updatedAt
 )

@@ -42,10 +42,15 @@ android {
 
 dependencies {
     // 1. FIREBASE (Gerenciamento de versões via BoM)
-    implementation("com.google.android.gms:play-services-auth:21.0.0")
     implementation(platform("com.google.firebase:firebase-bom:34.11.0"))
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation("com.google.android.gms:play-services-auth:21.0.0")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-messaging")
+
+    // 1.5 GOOGLE SIGN-IN via Credential Manager (API moderna recomendada pelo Google)
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     // 2. JETPACK COMPOSE (UI & Material 3)
     implementation(platform(libs.androidx.compose.bom))
