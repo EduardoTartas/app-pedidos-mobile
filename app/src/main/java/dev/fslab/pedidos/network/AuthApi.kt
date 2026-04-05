@@ -5,6 +5,7 @@ import dev.fslab.pedidos.model.BasicResponse
 import dev.fslab.pedidos.model.LoginRequest
 import dev.fslab.pedidos.model.RecoverPasswordRequest
 import dev.fslab.pedidos.model.RefreshRequest
+import dev.fslab.pedidos.model.GoogleLoginRequest
 import dev.fslab.pedidos.model.RegisterRequest
 import dev.fslab.pedidos.model.RegisterResponse
 import dev.fslab.pedidos.model.ResetPasswordRequest
@@ -26,6 +27,10 @@ interface AuthApi {
     /** POST /auth/register - Cadastrar novo usuário */
     @POST("signup")
     suspend fun register(@Body request: RegisterRequest): RegisterResponse
+
+    /** POST /auth/google - Login com Google */
+    @POST("google")
+    suspend fun googleLogin(@Body request: GoogleLoginRequest): AuthResponse
 
     /** POST /auth/refresh - Renovar tokens */
     @POST("refresh")
