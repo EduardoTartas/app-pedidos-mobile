@@ -19,6 +19,7 @@ sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()
     data class Success(val user: User) : AuthState()
+    data class NeedsProfileCompletion(val user: User) : AuthState()
     data class Error(val message: String) : AuthState()
 }
 
@@ -27,6 +28,7 @@ sealed class AuthState {
  *
  * Responsável por:
  * - Login via API (POST /login)
+ * - Login com Google (POST /auth/google)
  * - Cadastro (POST /signup)
  * - Recuperação de senha (POST /recover)
  * - Gerenciar tokens JWT e estado do usuário
@@ -46,6 +48,9 @@ class AuthViewModel : ViewModel() {
 
     private val _accessToken = MutableStateFlow<String?>(null)
     val accessToken: StateFlow<String?> = _accessToken.asStateFlow()
+
+    private val _profileComplete = MutableStateFlow(true)
+    val profileComplete: StateFlow<Boolean> = _profileComplete.asStateFlow()
 
     init {
         TokenManager.onSessionExpired = {
@@ -103,6 +108,99 @@ class AuthViewModel : ViewModel() {
                 _authState.value = AuthState.Error("Tempo de conexão esgotado")
             } catch (e: Exception) {
                 _authState.value = AuthState.Error("Erro ao conectar: ${e.localizedMessage ?: "Tente novamente"}")
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    // LOGIN COM GOOGLE
+    // ═══════════════════════════════════════════
+
+    fun loginWithGoogle(idToken: String) {
+        viewModelScope.launch {
+            _authState.value = AuthState.Loading
+
+            try {
+                val request = GoogleLoginRequest(idToken = idToken)
+                val response = RetrofitClient.authApi.googleLogin(request)
+                val remoteUser = response.getRemoteUser()
+
+                if (response.isSuccess() && remoteUser != null) {
+                    handleAuthenticatedUser(remoteUser)
+                } else {
+                    val errorMessage = response.getErrorMessage().ifEmpty { "Erro ao autenticar com Google" }
+                    _authState.value = AuthState.Error(errorMessage)
+                }
+            } catch (e: retrofit2.HttpException) {
+                val errorBody = e.response()?.errorBody()?.string()
+                val apiMessage = try {
+                    gson.fromJson(errorBody, ApiErrorResponse::class.java)?.getErrorMessage()
+                } catch (_: Exception) { null }
+
+                val errorMessage = apiMessage ?: when (e.code()) {
+                    401 -> "Token do Google inválido ou expirado"
+                    403 -> "Conta desativada"
+                    500 -> "Erro no servidor. Tente novamente mais tarde."
+                    else -> "Erro ao autenticar com Google (${e.code()})"
+                }
+                _authState.value = AuthState.Error(errorMessage)
+            } catch (e: java.net.UnknownHostException) {
+                _authState.value = AuthState.Error("Sem conexão com a internet")
+            } catch (e: java.net.SocketTimeoutException) {
+                _authState.value = AuthState.Error("Tempo de conexão esgotado")
+            } catch (e: Exception) {
+                Log.e(TAG, "Erro no login com Google", e)
+                _authState.value = AuthState.Error("Erro ao conectar: ${e.localizedMessage ?: "Tente novamente"}")
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════
+    // COMPLETAR PERFIL (CPF + TELEFONE)
+    // ═══════════════════════════════════════════
+
+    fun completeProfile(
+        cpf: String,
+        telefone: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val userId = _currentUser.value?.id ?: run {
+            onError("Usuário não encontrado na sessão")
+            return
+        }
+
+        viewModelScope.launch {
+            _authState.value = AuthState.Loading
+            try {
+                val body = mapOf("cpf" to cpf, "telefone" to telefone)
+                RetrofitClient.usuarioApi.atualizar(userId, body)
+
+                _profileComplete.value = true
+                _currentUser.value = _currentUser.value?.copy(
+                    cpf = cpf,
+                    telefone = telefone,
+                    profileComplete = true
+                )
+                val updatedUser = _currentUser.value
+                if (updatedUser != null) {
+                    _authState.value = AuthState.Success(updatedUser)
+                }
+                onSuccess()
+            } catch (e: retrofit2.HttpException) {
+                _authState.value = AuthState.Idle
+                val errorBody = e.response()?.errorBody()?.string()
+                val msg = try {
+                    gson.fromJson(errorBody, ApiErrorResponse::class.java)?.getErrorMessage()
+                } catch (_: Exception) { null }
+                onError(msg ?: "Erro ao atualizar perfil (${e.code()})")
+            } catch (e: java.net.UnknownHostException) {
+                _authState.value = AuthState.Idle
+                onError("Sem conexão com a internet")
+            } catch (e: Exception) {
+                _authState.value = AuthState.Idle
+                Log.e(TAG, "Erro ao completar perfil", e)
+                onError("Erro de conexão: ${e.localizedMessage ?: "Tente novamente"}")
             }
         }
     }
@@ -220,6 +318,7 @@ class AuthViewModel : ViewModel() {
         TokenManager.clearTokens()
         _accessToken.value = null
         _currentUser.value = null
+        _profileComplete.value = true
         _authState.value = AuthState.Idle
 
         // Invalida token no servidor (best-effort)
@@ -249,7 +348,13 @@ class AuthViewModel : ViewModel() {
 
         val user = payload.toUser()
         _currentUser.value = user
-        _authState.value = AuthState.Success(user)
+        _profileComplete.value = payload.profileComplete
+
+        if (!payload.profileComplete) {
+            _authState.value = AuthState.NeedsProfileCompletion(user)
+        } else {
+            _authState.value = AuthState.Success(user)
+        }
     }
 
     fun clearError() {

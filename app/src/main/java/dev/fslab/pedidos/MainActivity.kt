@@ -1,6 +1,7 @@
 package dev.fslab.pedidos
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -8,20 +9,28 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import dev.fslab.pedidos.ui.screens.auth.CompletarPerfilScreen
 import dev.fslab.pedidos.ui.screens.auth.EsqueciSenhaScreen
 import dev.fslab.pedidos.ui.screens.auth.LoginScreen
 import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
@@ -29,6 +38,7 @@ import dev.fslab.pedidos.ui.screens.HomeScreen
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 import dev.fslab.pedidos.ui.viewmodel.AuthState
 import dev.fslab.pedidos.ui.viewmodel.AuthViewModel
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,6 +50,13 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Google Web Client ID — usado pelo Credential Manager para solicitar o ID Token.
+ * Este é o CLIENT_ID do tipo "Web application" configurado no Google Cloud Console.
+ */
+private const val GOOGLE_WEB_CLIENT_ID =
+    "1053347409082-qb4s3d724bp69hs78kdt38s35brinr7n.apps.googleusercontent.com"
+
 @Composable
 fun PedidosApp() {
     val systemDark = isSystemInDarkTheme()
@@ -48,6 +65,9 @@ fun PedidosApp() {
     val authState by authViewModel.authState.collectAsState()
     val isLoading = authState is AuthState.Loading
     val errorMessage = (authState as? AuthState.Error)?.message
+
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     PedidosTheme(darkTheme = isDarkTheme) {
         val navController = rememberNavController()
@@ -60,11 +80,20 @@ fun PedidosApp() {
             ) {
                 composable("login") {
                     LaunchedEffect(authState) {
-                        if (authState is AuthState.Success) {
-                            navController.navigate("home") {
-                                popUpTo("login") { inclusive = true }
-                                launchSingleTop = true
+                        when (authState) {
+                            is AuthState.Success -> {
+                                navController.navigate("home") {
+                                    popUpTo("login") { inclusive = true }
+                                    launchSingleTop = true
+                                }
                             }
+                            is AuthState.NeedsProfileCompletion -> {
+                                navController.navigate("completar_perfil") {
+                                    popUpTo("login") { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            }
+                            else -> {}
                         }
                     }
 
@@ -77,6 +106,39 @@ fun PedidosApp() {
                         onRegister = { navController.navigate("signup") },
                         onLogin = { email, senha ->
                             authViewModel.loginUser(email, senha)
+                        },
+                        onGoogleSignIn = {
+                            coroutineScope.launch {
+                                try {
+                                    val credentialManager = CredentialManager.create(context)
+                                    val googleIdOption = GetGoogleIdOption.Builder()
+                                        .setFilterByAuthorizedAccounts(false)
+                                        .setServerClientId(GOOGLE_WEB_CLIENT_ID)
+                                        .build()
+
+                                    val request = GetCredentialRequest.Builder()
+                                        .addCredentialOption(googleIdOption)
+                                        .build()
+
+                                    val result = credentialManager.getCredential(
+                                        context = context,
+                                        request = request
+                                    )
+
+                                    val credential = result.credential
+                                    val googleIdTokenCredential =
+                                        GoogleIdTokenCredential.createFrom(credential.data)
+                                    val idToken = googleIdTokenCredential.idToken
+
+                                    authViewModel.loginWithGoogle(idToken)
+                                } catch (e: GetCredentialCancellationException) {
+                                    // Usuário cancelou — não faz nada
+                                    Log.d("PedidosApp", "Google Sign-In cancelado pelo usuário")
+                                } catch (e: Exception) {
+                                    Log.e("PedidosApp", "Erro no Google Sign-In", e)
+                                    authViewModel.clearError()
+                                }
+                            }
                         },
                         isLoading = isLoading,
                         errorMessage = errorMessage,
@@ -147,6 +209,49 @@ fun PedidosApp() {
                         }
                     )
                 }
+
+                // ═══════════════════════════════════════════
+                // COMPLETAR PERFIL (pós-login Google)
+                // ═══════════════════════════════════════════
+                composable("completar_perfil") {
+                    var perfilError by remember { mutableStateOf<String?>(null) }
+
+                    LaunchedEffect(authState) {
+                        if (authState is AuthState.Success) {
+                            navController.navigate("home") {
+                                popUpTo("completar_perfil") { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+
+                    CompletarPerfilScreen(
+                        onComplete = { cpf, telefone ->
+                            perfilError = null
+                            authViewModel.completeProfile(
+                                cpf = cpf,
+                                telefone = telefone,
+                                onSuccess = {
+                                    // AuthState.Success será emitido -> LaunchedEffect navega
+                                },
+                                onError = { msg ->
+                                    perfilError = msg
+                                }
+                            )
+                        },
+                        onSkip = {
+                            // Ir direto para Home sem completar perfil
+                            navController.navigate("home") {
+                                popUpTo("completar_perfil") { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        isLoading = isLoading,
+                        errorMessage = perfilError,
+                        onErrorDismiss = { perfilError = null }
+                    )
+                }
+
                 composable("home") {
                     HomeScreen(
                         onLogout = {
