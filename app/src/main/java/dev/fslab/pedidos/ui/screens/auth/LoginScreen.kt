@@ -74,7 +74,7 @@ fun LoginScreen(
         onToggleTheme: () -> Unit = {},
         onEsqueciSenha: (String) -> Unit = {},
         onRegister: () -> Unit = {},
-        onLogin: (email: String, senha: String) -> Unit = { _, _ -> },
+        onLogin: (email: String, senha: String, lembrarMe: Boolean) -> Unit = { _, _, _ -> },
         onGoogleSignIn: () -> Unit = {},
         isLoading: Boolean = false,
         errorMessage: String? = null,
@@ -315,7 +315,7 @@ fun LoginScreen(
 
                     // Botão Entrar
                     Button(
-                            onClick = { onLogin(email, senha) },
+                            onClick = { onLogin(email, senha, lembrarMe) },
                             modifier = Modifier.fillMaxWidth().height(50.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = colors.primary),

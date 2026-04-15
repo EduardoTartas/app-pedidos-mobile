@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            PedidosApp()
+            PedidosApp(activity = this)
         }
     }
 }
@@ -58,7 +58,7 @@ private const val GOOGLE_WEB_CLIENT_ID =
     "1053347409082-qb4s3d724bp69hs78kdt38s35brinr7n.apps.googleusercontent.com"
 
 @Composable
-fun PedidosApp() {
+fun PedidosApp(activity: ComponentActivity) {
     val systemDark = isSystemInDarkTheme()
     var isDarkTheme by remember { mutableStateOf(systemDark) }
     val authViewModel: AuthViewModel = viewModel()
@@ -66,7 +66,6 @@ fun PedidosApp() {
     val isLoading = authState is AuthState.Loading
     val errorMessage = (authState as? AuthState.Error)?.message
 
-    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
     PedidosTheme(darkTheme = isDarkTheme) {
@@ -104,16 +103,17 @@ fun PedidosApp() {
                             navController.navigate("esqueci_senha?email=$email")
                         },
                         onRegister = { navController.navigate("signup") },
-                        onLogin = { email, senha ->
-                            authViewModel.loginUser(email, senha)
+                        onLogin = { email, senha, lembrarMe ->
+                            authViewModel.loginUser(email, senha, lembrarMe)
                         },
                         onGoogleSignIn = {
                             coroutineScope.launch {
                                 try {
-                                    val credentialManager = CredentialManager.create(context)
+                                    val credentialManager = CredentialManager.create(activity)
                                     val googleIdOption = GetGoogleIdOption.Builder()
                                         .setFilterByAuthorizedAccounts(false)
                                         .setServerClientId(GOOGLE_WEB_CLIENT_ID)
+                                        .setAutoSelectEnabled(true)
                                         .build()
 
                                     val request = GetCredentialRequest.Builder()
@@ -121,7 +121,7 @@ fun PedidosApp() {
                                         .build()
 
                                     val result = credentialManager.getCredential(
-                                        context = context,
+                                        context = activity,
                                         request = request
                                     )
 
@@ -134,8 +134,13 @@ fun PedidosApp() {
                                 } catch (e: GetCredentialCancellationException) {
                                     // Usuário cancelou — não faz nada
                                     Log.d("PedidosApp", "Google Sign-In cancelado pelo usuário")
+                                } catch (e: androidx.credentials.exceptions.NoCredentialException) {
+                                    Log.e("PedidosApp", "Nenhuma conta do Google encontrada no dispositivo", e)
+                                    android.widget.Toast.makeText(activity, "Nenhuma conta Google encontrada no dispositivo.", android.widget.Toast.LENGTH_LONG).show()
+                                    authViewModel.clearError()
                                 } catch (e: Exception) {
                                     Log.e("PedidosApp", "Erro no Google Sign-In", e)
+                                    android.widget.Toast.makeText(activity, "Erro ao tentar usar Google Sign-in:\n${e.message}", android.widget.Toast.LENGTH_LONG).show()
                                     authViewModel.clearError()
                                 }
                             }

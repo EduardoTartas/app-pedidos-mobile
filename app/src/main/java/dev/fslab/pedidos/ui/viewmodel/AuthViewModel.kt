@@ -1,7 +1,8 @@
 package dev.fslab.pedidos.ui.viewmodel
 
 import android.util.Log
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.fslab.pedidos.model.*
 import dev.fslab.pedidos.network.RetrofitClient
@@ -33,7 +34,7 @@ sealed class AuthState {
  * - Recuperação de senha (POST /recover)
  * - Gerenciar tokens JWT e estado do usuário
  */
-class AuthViewModel : ViewModel() {
+class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private const val TAG = "AuthViewModel"
@@ -56,6 +57,7 @@ class AuthViewModel : ViewModel() {
         TokenManager.onSessionExpired = {
             viewModelScope.launch {
                 Log.w(TAG, "Sessão expirada — fazendo logout automático")
+                dev.fslab.pedidos.network.AuthPreferences.clear(getApplication())
                 _accessToken.value = null
                 _currentUser.value = null
                 _authState.value = AuthState.Error("Sessão expirada. Faça login novamente.")
@@ -68,13 +70,37 @@ class AuthViewModel : ViewModel() {
                 _accessToken.value = newAccessToken
             }
         }
+
+        checkSavedSession()
+    }
+
+    private fun checkSavedSession() {
+        val savedToken = dev.fslab.pedidos.network.AuthPreferences.getRefreshToken(getApplication())
+        if (!savedToken.isNullOrEmpty()) {
+            viewModelScope.launch {
+                _authState.value = AuthState.Loading
+                try {
+                    val request = RefreshRequest(refreshToken = savedToken)
+                    val response = RetrofitClient.authApi.refresh(request)
+                    val remoteUser = response.getRemoteUser()
+                    if (response.isSuccess() && remoteUser != null) {
+                        handleAuthenticatedUser(remoteUser, lembrarMe = true)
+                    } else {
+                        throw Exception(response.getErrorMessage().ifEmpty { "Token inválido" })
+                    }
+                } catch (e: Exception) {
+                    dev.fslab.pedidos.network.AuthPreferences.clear(getApplication())
+                    _authState.value = AuthState.Idle
+                }
+            }
+        }
     }
 
     // ═══════════════════════════════════════════
     // LOGIN
     // ═══════════════════════════════════════════
 
-    fun loginUser(email: String, password: String) {
+    fun loginUser(email: String, password: String, lembrarMe: Boolean = false) {
         viewModelScope.launch {
             _authState.value = AuthState.Loading
 
@@ -83,7 +109,7 @@ class AuthViewModel : ViewModel() {
                 val response = RetrofitClient.authApi.login(request)
                 val remoteUser = response.getRemoteUser()
                 if (response.isSuccess() && remoteUser != null) {
-                    handleAuthenticatedUser(remoteUser)
+                    handleAuthenticatedUser(remoteUser, lembrarMe)
                 } else {
                     val errorMessage = response.getErrorMessage().ifEmpty { "Credenciais inválidas" }
                     _authState.value = AuthState.Error(errorMessage)
@@ -126,7 +152,7 @@ class AuthViewModel : ViewModel() {
                 val remoteUser = response.getRemoteUser()
 
                 if (response.isSuccess() && remoteUser != null) {
-                    handleAuthenticatedUser(remoteUser)
+                    handleAuthenticatedUser(remoteUser, lembrarMe = true)
                 } else {
                     val errorMessage = response.getErrorMessage().ifEmpty { "Erro ao autenticar com Google" }
                     _authState.value = AuthState.Error(errorMessage)
@@ -316,6 +342,7 @@ class AuthViewModel : ViewModel() {
 
         // Limpeza local síncrona
         TokenManager.clearTokens()
+        dev.fslab.pedidos.network.AuthPreferences.clear(getApplication())
         _accessToken.value = null
         _currentUser.value = null
         _profileComplete.value = true
@@ -337,13 +364,19 @@ class AuthViewModel : ViewModel() {
     // UTILITÁRIOS
     // ═══════════════════════════════════════════
 
-    private fun handleAuthenticatedUser(payload: RemoteUser) {
+    private fun handleAuthenticatedUser(payload: RemoteUser, lembrarMe: Boolean = false) {
         if (!payload.hasValidSession()) {
             _authState.value = AuthState.Error("Sessão inválida retornada pela API")
             return
         }
 
         TokenManager.saveTokens(payload.accessToken, payload.refreshToken)
+        if (lembrarMe) {
+            dev.fslab.pedidos.network.AuthPreferences.saveRefreshToken(getApplication(), payload.refreshToken)
+        } else {
+            dev.fslab.pedidos.network.AuthPreferences.clear(getApplication())
+        }
+
         _accessToken.value = payload.accessToken
 
         val user = payload.toUser()
