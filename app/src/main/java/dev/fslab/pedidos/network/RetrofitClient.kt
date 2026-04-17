@@ -54,7 +54,6 @@ object RetrofitClient {
     val usuarioApi: UsuarioApi by lazy {
         retrofit.create(UsuarioApi::class.java)
     }
-
     val categoriaApi: CategoriaApi by lazy {
         retrofit.create(CategoriaApi::class.java)
     }
