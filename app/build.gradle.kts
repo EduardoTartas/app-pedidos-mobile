@@ -41,6 +41,9 @@ android {
 }
 
 dependencies {
+    // 0. LOCATION
+    implementation("com.google.android.gms:play-services-location:21.2.0")
+
     // 1. FIREBASE (Gerenciamento de versões via BoM)
     implementation(platform("com.google.firebase:firebase-bom:34.11.0"))
     implementation("com.google.android.gms:play-services-auth:21.0.0")
@@ -58,9 +61,11 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation("dev.chrisbanes.haze:haze:0.6.2")
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui-text-google-fonts:1.7.8")
+    implementation("dev.chrisbanes.haze:haze:1.1.1")
 
     // 3. ANDROID CORE & LIFECYCLE
     implementation(libs.androidx.core.ktx)
@@ -87,6 +92,7 @@ dependencies {
     implementation("androidx.camera:camera-view:1.3.1")
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
     implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("io.coil-kt:coil-svg:2.5.0")
 
     // 7. COROUTINES
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
