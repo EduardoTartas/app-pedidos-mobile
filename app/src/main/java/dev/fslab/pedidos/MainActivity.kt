@@ -35,6 +35,7 @@ import dev.fslab.pedidos.ui.screens.auth.EsqueciSenhaScreen
 import dev.fslab.pedidos.ui.screens.auth.LoginScreen
 import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
 import dev.fslab.pedidos.ui.screens.HomeScreen
+import dev.fslab.pedidos.ui.screens.RestaurantesScreen
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 import dev.fslab.pedidos.ui.viewmodel.AuthState
 import dev.fslab.pedidos.ui.viewmodel.AuthViewModel
@@ -263,6 +264,22 @@ fun PedidosApp(activity: ComponentActivity) {
                             authViewModel.logout()
                             navController.navigate("login") {
                                 popUpTo("login") { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateRestaurantes = {
+                            navController.navigate("restaurantes") {
+                                launchSingleTop = true
+                            }
+                        }
+                    )
+                }
+
+                composable("restaurantes") {
+                    RestaurantesScreen(
+                        onNavigateHome = {
+                            navController.navigate("home") {
+                                popUpTo("home") { inclusive = true }
                                 launchSingleTop = true
                             }
                         }

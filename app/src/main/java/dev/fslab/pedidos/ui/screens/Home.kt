@@ -51,6 +51,7 @@ import dev.fslab.pedidos.utils.LocationService
 @Composable
 fun HomeScreen(
     onLogout: () -> Unit = {},
+    onNavigateRestaurantes: () -> Unit = {},
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -95,7 +96,7 @@ fun HomeScreen(
 
     Scaffold(
         bottomBar = {
-            BottomNavigationBar(cardColor, textColors)
+            BottomNavigationBar(cardColor, textColors, onNavigateRestaurantes)
         },
         containerColor = bgColor
     ) { innerPadding ->
@@ -591,7 +592,7 @@ fun PopularItem(restaurante: Restaurante, cardColor: Color, textColor: Color) {
 }
 
 @Composable
-fun BottomNavigationBar(cardColor: Color, textColor: Color) {
+fun BottomNavigationBar(cardColor: Color, textColor: Color, onNavigateRestaurantes: () -> Unit = {}) {
     NavigationBar(
         containerColor = cardColor.copy(alpha = 0.85f),
         contentColor = textColor,
@@ -615,7 +616,7 @@ fun BottomNavigationBar(cardColor: Color, textColor: Color) {
             icon = { Icon(Icons.Outlined.Storefront, contentDescription = "Restaurantes") },
             label = { Text("Restaurantes", fontSize = 10.sp) },
             selected = false,
-            onClick = { /* TODO */ },
+            onClick = { onNavigateRestaurantes() },
             colors = NavigationBarItemDefaults.colors(
                 unselectedIconColor = textColor.copy(alpha = 0.5f),
                 unselectedTextColor = textColor.copy(alpha = 0.5f)
