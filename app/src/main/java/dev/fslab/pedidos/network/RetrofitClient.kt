@@ -61,4 +61,8 @@ object RetrofitClient {
     val restauranteApi: RestauranteApi by lazy {
         retrofit.create(RestauranteApi::class.java)
     }
+
+    val cardapioApi: CardapioApi by lazy {
+        retrofit.create(CardapioApi::class.java)
+    }
 }

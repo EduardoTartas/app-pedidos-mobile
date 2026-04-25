@@ -51,6 +51,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 fun HomeScreen(
     bottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
     onLogout: () -> Unit = {},
+    onNavigateDetalhes: (String) -> Unit = {},
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -190,13 +191,23 @@ fun HomeScreen(
                             SectionTitle("Recomendados", "Ver todos", textColors)
                         }
                         item {
-                            RecomendadosRow(state.recomendados, cardColor, textColors)
+                            RecomendadosRow(
+                                restaurantes = state.recomendados,
+                                cardColor = cardColor,
+                                textColor = textColors,
+                                onItemClick = { onNavigateDetalhes(it.id) }
+                            )
                         }
                         item {
                             SectionTitle("Populares perto de você", "Ver todos", textColors)
                         }
                         items(state.populares) { restaurante ->
-                            PopularItem(restaurante, cardColor, textColors)
+                            PopularItem(
+                                restaurante = restaurante,
+                                cardColor = cardColor,
+                                textColor = textColors,
+                                onClick = { onNavigateDetalhes(restaurante.id) }
+                            )
                         }
                     }
                     }
@@ -423,24 +434,39 @@ fun SectionTitle(title: String, action: String, textColor: Color) {
 }
 
 @Composable
-fun RecomendadosRow(restaurantes: List<Restaurante>, cardColor: Color, textColor: Color) {
+fun RecomendadosRow(
+    restaurantes: List<Restaurante>,
+    cardColor: Color,
+    textColor: Color,
+    onItemClick: (Restaurante) -> Unit = {}
+) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(restaurantes) { restaurante ->
-            RecomendadoCard(restaurante, cardColor, textColor)
+            RecomendadoCard(
+                restaurante = restaurante,
+                cardColor = cardColor,
+                textColor = textColor,
+                onClick = { onItemClick(restaurante) }
+            )
         }
     }
 }
 
 @Composable
-fun RecomendadoCard(restaurante: Restaurante, cardColor: Color, textColor: Color) {
+fun RecomendadoCard(
+    restaurante: Restaurante,
+    cardColor: Color,
+    textColor: Color,
+    onClick: () -> Unit = {}
+) {
     val colors = LocalPedidosColors.current
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
-        modifier = Modifier.width(280.dp).height(240.dp)
+        modifier = Modifier.width(280.dp).height(240.dp).clickable { onClick() }
     ) {
         Column {
             Box(
@@ -540,7 +566,12 @@ fun RecomendadoCard(restaurante: Restaurante, cardColor: Color, textColor: Color
 }
 
 @Composable
-fun PopularItem(restaurante: Restaurante, cardColor: Color, textColor: Color) {
+fun PopularItem(
+    restaurante: Restaurante,
+    cardColor: Color,
+    textColor: Color,
+    onClick: () -> Unit = {}
+) {
     val colors = LocalPedidosColors.current
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -548,6 +579,7 @@ fun PopularItem(restaurante: Restaurante, cardColor: Color, textColor: Color) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable { onClick() }
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
