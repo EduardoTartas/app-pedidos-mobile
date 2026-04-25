@@ -13,10 +13,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Receipt
-import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,7 +37,7 @@ import dev.fslab.pedidos.ui.viewmodel.RestaurantesViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RestaurantesScreen(
-    onNavigateHome: () -> Unit = {},
+    bottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
     viewModel: RestaurantesViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -55,9 +51,6 @@ fun RestaurantesScreen(
     var showFilterSheet by remember { mutableStateOf(false) }
 
     Scaffold(
-        bottomBar = {
-            RestaurantesBottomNav(cardColor, textColors, onNavigateHome)
-        },
         containerColor = bgColor
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
@@ -80,7 +73,7 @@ fun RestaurantesScreen(
                 is RestaurantesUiState.Success -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(top = 0.dp, bottom = 80.dp)
+                        contentPadding = PaddingValues(top = 0.dp, bottom = bottomPadding + 16.dp)
                     ) {
                         item {
                             RestaurantesHeader(textColors)
@@ -794,59 +787,3 @@ fun RestauranteCard(restaurante: Restaurante, cardColor: Color, textColor: Color
     }
 }
 
-// ═══════════════════════════════════════════
-// BOTTOM NAVIGATION BAR
-// ═══════════════════════════════════════════
-@Composable
-fun RestaurantesBottomNav(cardColor: Color, textColor: Color, onNavigateHome: () -> Unit) {
-    NavigationBar(
-        containerColor = cardColor.copy(alpha = 0.85f),
-        contentColor = textColor,
-        tonalElevation = 0.dp,
-        modifier = Modifier.clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-    ) {
-        NavigationBarItem(
-            icon = { Icon(Icons.Outlined.Home, contentDescription = "Início") },
-            label = { Text("Início", fontSize = 10.sp) },
-            selected = false,
-            onClick = { onNavigateHome() },
-            colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = textColor.copy(alpha = 0.5f),
-                unselectedTextColor = textColor.copy(alpha = 0.5f)
-            )
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Outlined.Storefront, contentDescription = "Restaurantes") },
-            label = { Text("Restaurantes", fontSize = 10.sp) },
-            selected = true,
-            onClick = { /* Já está nesta tela */ },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = Color(0xFF14B822),
-                selectedTextColor = Color(0xFF14B822),
-                indicatorColor = Color.Transparent,
-                unselectedIconColor = textColor.copy(alpha = 0.5f),
-                unselectedTextColor = textColor.copy(alpha = 0.5f)
-            )
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Outlined.Receipt, contentDescription = "Pedidos") },
-            label = { Text("Pedidos", fontSize = 10.sp) },
-            selected = false,
-            onClick = { /* TODO */ },
-            colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = textColor.copy(alpha = 0.5f),
-                unselectedTextColor = textColor.copy(alpha = 0.5f)
-            )
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Outlined.Person, contentDescription = "Perfil") },
-            label = { Text("Perfil", fontSize = 10.sp) },
-            selected = false,
-            onClick = { /* TODO */ },
-            colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = textColor.copy(alpha = 0.5f),
-                unselectedTextColor = textColor.copy(alpha = 0.5f)
-            )
-        )
-    }
-}

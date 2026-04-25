@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
@@ -40,6 +41,12 @@ import dev.fslab.pedidos.ui.theme.PedidosTheme
 import dev.fslab.pedidos.ui.viewmodel.AuthState
 import dev.fslab.pedidos.ui.viewmodel.AuthViewModel
 import kotlinx.coroutines.launch
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.ui.graphics.Color
+import dev.fslab.pedidos.ui.components.BottomNavigationBar
+import dev.fslab.pedidos.ui.components.bottomNavItems
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,6 +65,9 @@ class MainActivity : ComponentActivity() {
 private const val GOOGLE_WEB_CLIENT_ID =
     "1053347409082-qb4s3d724bp69hs78kdt38s35brinr7n.apps.googleusercontent.com"
 
+/** Rotas que exibem a barra de navegação inferior. */
+private val mainScreenRoutes = bottomNavItems.map { it.route }.toSet()
+
 @Composable
 fun PedidosApp(activity: ComponentActivity) {
     val systemDark = isSystemInDarkTheme()
@@ -71,12 +81,41 @@ fun PedidosApp(activity: ComponentActivity) {
 
     PedidosTheme(darkTheme = isDarkTheme) {
         val navController = rememberNavController()
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route
+        val showBottomBar = currentRoute in mainScreenRoutes
 
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+        val hazeState = remember { HazeState() }
+        val cardColor = if (isDarkTheme) Color(0xFF161B2E) else Color.White
+        val textColors = if (isDarkTheme) Color.White else Color.Black
+
+        Scaffold(
+            bottomBar = {
+                if (showBottomBar) {
+                    BottomNavigationBar(
+                        cardColor = cardColor,
+                        textColor = textColors,
+                        hazeState = hazeState,
+                        selectedRoute = currentRoute ?: "home",
+                        onNavigate = { route ->
+                            navController.navigate(route) {
+                                popUpTo("home") { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        ) { innerPadding ->
             NavHost(
                 navController = navController,
                 startDestination = "login",
-                modifier = Modifier.padding(innerPadding)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .haze(state = hazeState)
+                    .padding(top = innerPadding.calculateTopPadding(), bottom = 0.dp)
             ) {
                 composable("login") {
                     LaunchedEffect(authState) {
@@ -260,15 +299,11 @@ fun PedidosApp(activity: ComponentActivity) {
 
                 composable("home") {
                     HomeScreen(
+                        bottomPadding = innerPadding.calculateBottomPadding(),
                         onLogout = {
                             authViewModel.logout()
                             navController.navigate("login") {
                                 popUpTo("login") { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        },
-                        onNavigateRestaurantes = {
-                            navController.navigate("restaurantes") {
                                 launchSingleTop = true
                             }
                         }
@@ -277,12 +312,7 @@ fun PedidosApp(activity: ComponentActivity) {
 
                 composable("restaurantes") {
                     RestaurantesScreen(
-                        onNavigateHome = {
-                            navController.navigate("home") {
-                                popUpTo("home") { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        }
+                        bottomPadding = innerPadding.calculateBottomPadding()
                     )
                 }
             }
