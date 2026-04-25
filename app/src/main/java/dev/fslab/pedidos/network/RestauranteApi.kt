@@ -12,6 +12,10 @@ interface RestauranteApi {
         @Query("limite") limit: Int = 20,
         @Query("status") status: String? = null,
         @Query("nome") nome: String? = null,
-        @Query("categoria") categoria: String? = null
+        @Query("categoria") categoria: String? = null,
+        @Query("ordenar") ordenar: String? = null,
+        @Query("ordem") ordem: String? = null,
+        @Query("entrega_gratis") entregaGratis: String? = null,
+        @Query("avaliacao_min") avaliacaoMin: String? = null
     ): Response<ListaRestaurantesResponse>
 }

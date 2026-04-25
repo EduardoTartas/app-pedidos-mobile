@@ -12,10 +12,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Receipt
-import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,9 +42,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
 import dev.fslab.pedidos.utils.ServicoLocalizacao
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
-import dev.chrisbanes.haze.hazeChild
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -56,6 +49,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    bottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
     onLogout: () -> Unit = {},
     viewModel: HomeViewModel = viewModel()
 ) {
@@ -130,12 +124,8 @@ fun HomeScreen(
     val textColors = colors.textPrimary
 
     val categoriesScrollState = rememberScrollState()
-    val hazeState = remember { HazeState() }
 
     Scaffold(
-        bottomBar = {
-            BottomNavigationBar(cardColor, textColors, hazeState)
-        },
         containerColor = bgColor
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
@@ -172,10 +162,8 @@ fun HomeScreen(
                         }
                     ) {
                         LazyColumn(
-                            modifier = Modifier.fillMaxSize().haze(
-                                state = hazeState
-                            ),
-                            contentPadding = PaddingValues(top = 0.dp, bottom = 80.dp)
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = 0.dp, bottom = bottomPadding + 16.dp)
                         ) {
                         item {
                             HomeHeader(textColors, cardColor, state.cidadeUsuario, state.estadoUsuario)
@@ -652,61 +640,3 @@ fun PopularItem(restaurante: Restaurante, cardColor: Color, textColor: Color) {
     }
 }
 
-@Composable
-fun BottomNavigationBar(cardColor: Color, textColor: Color, hazeState: HazeState? = null) {
-    val colors = LocalPedidosColors.current
-    NavigationBar(
-        containerColor = if (hazeState != null) Color.Transparent else cardColor.copy(alpha = 0.90f),
-        contentColor = textColor,
-        tonalElevation = if (hazeState != null) 0.dp else 8.dp,
-        windowInsets = WindowInsets(0, 0, 0, 0),
-        modifier = Modifier
-            .height(64.dp)
-            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .let { if (hazeState != null) it.hazeChild(state = hazeState, style = dev.chrisbanes.haze.HazeStyle(backgroundColor = cardColor, tint = dev.chrisbanes.haze.HazeTint(cardColor.copy(alpha = 0.6f)), blurRadius = 24.dp)) else it }
-    ) {
-        NavigationBarItem(
-            icon = { Icon(Icons.Outlined.Home, contentDescription = "Início") },
-            label = { Text("Início", fontSize = 10.sp) },
-            selected = true,
-            onClick = { /* TODO */ },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = LocalPedidosColors.current.primary,
-                selectedTextColor = LocalPedidosColors.current.primary,
-                indicatorColor = Color.Transparent,
-                unselectedIconColor = textColor.copy(alpha = 0.5f),
-                unselectedTextColor = textColor.copy(alpha = 0.5f)
-            )
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Outlined.Storefront, contentDescription = "Restaurantes") },
-            label = { Text("Restaurantes", fontSize = 10.sp) },
-            selected = false,
-            onClick = { /* TODO */ },
-            colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = textColor.copy(alpha = 0.5f),
-                unselectedTextColor = textColor.copy(alpha = 0.5f)
-            )
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Outlined.Receipt, contentDescription = "Pedidos") },
-            label = { Text("Pedidos", fontSize = 10.sp) },
-            selected = false,
-            onClick = { /* TODO */ },
-            colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = textColor.copy(alpha = 0.5f),
-                unselectedTextColor = textColor.copy(alpha = 0.5f)
-            )
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Outlined.Person, contentDescription = "Perfil") },
-            label = { Text("Perfil", fontSize = 10.sp) },
-            selected = false,
-            onClick = { /* TODO */ },
-            colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = textColor.copy(alpha = 0.5f),
-                unselectedTextColor = textColor.copy(alpha = 0.5f)
-            )
-        )
-    }
-}
