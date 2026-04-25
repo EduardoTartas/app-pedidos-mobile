@@ -58,11 +58,12 @@ class RestaurantesViewModel : ViewModel() {
             _uiState.value = RestaurantesUiState.Loading
             try {
                 // Carregar categorias para o filtro avançado
-                val categoriasResponse = RetrofitClient.categoriaApi.listarCategorias(limit = 20)
+                val categoriasResponse = RetrofitClient.categoriaApi.listarCategorias(limit = 100)
                 if (categoriasResponse.isSuccessful) {
-                    allCategorias = categoriasResponse.body()?.data?.docs?.filter {
-                        !it.nome.equals("Tudo", ignoreCase = true)
-                    } ?: emptyList()
+                    val catsBrutos = categoriasResponse.body()?.data?.docs ?: emptyList()
+                    allCategorias = catsBrutos.filter { 
+                        !it.nome.equals("Tudo", ignoreCase = true) 
+                    }
                 }
                 buscarRestaurantes()
             } catch (e: Exception) {
