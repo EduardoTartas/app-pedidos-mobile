@@ -3,86 +3,115 @@ package dev.fslab.pedidos.utils
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.os.Looper
 import androidx.core.content.ContextCompat
+import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.Locale
 import kotlin.coroutines.resume
 
-data class AppLocation(
+data class LocalizacaoApp(
     val latitude: Double,
     val longitude: Double,
-    val city: String = "Sua localização",
-    val state: String = ""
+    val cidade: String = "Sua localização",
+    val estado: String = ""
 )
 
-class LocationService(private val context: Context) {
+class ServicoLocalizacao(private val contexto: Context) {
 
-    private val fusedLocationClient: FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(context)
-    private val geocoder = Geocoder(context, Locale.getDefault())
+    private val clienteLocalizacao: FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(contexto)
+    private val geocoder = Geocoder(contexto, Locale.getDefault())
 
-    fun hasLocationPermission(): Boolean {
-        val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    fun temPermissaoLocalizacao(): Boolean {
+        val fine = ContextCompat.checkSelfPermission(contexto, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarse = ContextCompat.checkSelfPermission(contexto, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         return fine || coarse
     }
 
+    fun solicitarAtivacaoLocalizacao(
+        aoSucesso: () -> Unit,
+        aoPrecisarPrompt: (IntentSender) -> Unit,
+        aoFalhar: (Exception) -> Unit
+    ) {
+        val requisicaoLocalizacao = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000).build()
+        val builder = LocationSettingsRequest.Builder().addLocationRequest(requisicaoLocalizacao)
+        val cliente: SettingsClient = LocationServices.getSettingsClient(contexto)
+        val tarefa = cliente.checkLocationSettings(builder.build())
+
+        tarefa.addOnSuccessListener {
+            aoSucesso()
+        }
+
+        tarefa.addOnFailureListener { excecao ->
+            if (excecao is ResolvableApiException) {
+                try {
+                    aoPrecisarPrompt(excecao.resolution.intentSender)
+                } catch (sendEx: IntentSender.SendIntentException) {
+                    aoFalhar(sendEx)
+                }
+            } else {
+                aoFalhar(excecao)
+            }
+        }
+    }
+
     @SuppressLint("MissingPermission")
-    suspend fun getCurrentLocation(): AppLocation? = suspendCancellableCoroutine { continuation ->
-        if (!hasLocationPermission()) {
-            continuation.resume(null)
+    suspend fun obterLocalizacaoAtual(): LocalizacaoApp? = suspendCancellableCoroutine { continuacao ->
+        if (!temPermissaoLocalizacao()) {
+            continuacao.resume(null)
             return@suspendCancellableCoroutine
         }
 
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            if (location != null) {
-                resumeLocation(location.latitude, location.longitude, continuation)
+        clienteLocalizacao.lastLocation.addOnSuccessListener { localizacao ->
+            if (localizacao != null) {
+                retomarLocalizacao(localizacao.latitude, localizacao.longitude, continuacao)
             } else {
-                val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 100)
+                val requisicaoLocalizacao = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 100)
                     .setMaxUpdates(1)
                     .build()
 
-                val locationCallback = object : LocationCallback() {
-                    override fun onLocationResult(result: LocationResult) {
-                        fusedLocationClient.removeLocationUpdates(this)
-                        val loc = result.lastLocation
+                val callbackLocalizacao = object : LocationCallback() {
+                    override fun onLocationResult(resultado: LocationResult) {
+                        clienteLocalizacao.removeLocationUpdates(this)
+                        val loc = resultado.lastLocation
                         if (loc != null) {
-                            resumeLocation(loc.latitude, loc.longitude, continuation)
+                            retomarLocalizacao(loc.latitude, loc.longitude, continuacao)
                         } else {
-                            if (continuation.isActive) continuation.resume(null)
+                            if (continuacao.isActive) continuacao.resume(null)
                         }
                     }
                 }
-                fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+                clienteLocalizacao.requestLocationUpdates(requisicaoLocalizacao, callbackLocalizacao, Looper.getMainLooper())
             }
         }.addOnFailureListener {
-            if (continuation.isActive) continuation.resume(null)
+            if (continuacao.isActive) continuacao.resume(null)
         }
     }
 
-    private fun resumeLocation(lat: Double, lng: Double, continuation: kotlinx.coroutines.CancellableContinuation<AppLocation?>) {
-        if (!continuation.isActive) return
+    private fun retomarLocalizacao(lat: Double, lng: Double, continuacao: kotlinx.coroutines.CancellableContinuation<LocalizacaoApp?>) {
+        if (!continuacao.isActive) return
         try {
-            val addresses = geocoder.getFromLocation(lat, lng, 1)
-            if (!addresses.isNullOrEmpty()) {
-                val address = addresses[0]
-                val city = address.subAdminArea ?: address.locality ?: "Sua localização"
-                val state = address.adminArea ?: ""
-                val abbrevState = stateMap[state] ?: state.take(2).uppercase()
+            val enderecos = geocoder.getFromLocation(lat, lng, 1)
+            if (!enderecos.isNullOrEmpty()) {
+                val endereco = enderecos[0]
+                val cidade = endereco.subAdminArea ?: endereco.locality ?: "Sua localização"
+                val estado = endereco.adminArea ?: ""
+                val siglaEstado = mapaEstados[estado] ?: estado.take(2).uppercase()
 
-                continuation.resume(AppLocation(lat, lng, city, abbrevState))
+                continuacao.resume(LocalizacaoApp(lat, lng, cidade, siglaEstado))
             } else {
-                continuation.resume(AppLocation(lat, lng))
+                continuacao.resume(LocalizacaoApp(lat, lng))
             }
         } catch (e: Exception) {
-            continuation.resume(AppLocation(lat, lng))
+            continuacao.resume(LocalizacaoApp(lat, lng))
         }
     }
     
-    private val stateMap = mapOf(
+    private val mapaEstados = mapOf(
         "Acre" to "AC", "Alagoas" to "AL", "Amapá" to "AP", "Amazonas" to "AM",
         "Bahia" to "BA", "Ceará" to "CE", "Distrito Federal" to "DF", "Espírito Santo" to "DF",
         "Goiás" to "GO", "Maranhão" to "MA", "Mato Grosso" to "MT", "Mato Grosso do Sul" to "MS",

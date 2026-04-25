@@ -18,10 +18,11 @@ sealed class HomeUiState {
         val categorias: List<Categoria>,
         val recomendados: List<Restaurante>,
         val populares: List<Restaurante>,
-        val searchQuery: String = "",
-        val selectedCategoriaId: String? = null,
-        val locationCity: String = "Sua localização",
-        val locationState: String = ""
+        val textoBusca: String = "",
+        val categoriaSelecionadaId: String? = null,
+        val cidadeUsuario: String = "Sua localização",
+        val estadoUsuario: String = "",
+        val atualizando: Boolean = false
     ) : HomeUiState()
     data class Error(val message: String) : HomeUiState()
 }
@@ -30,14 +31,16 @@ class HomeViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    private var allCategorias: List<Categoria> = emptyList()
-    private var searchJob: Job? = null
+    private var todasCategorias: List<Categoria> = emptyList()
+    private var todosRestaurantes: List<Restaurante> = emptyList()
+    private var dadosCarregados = false
+    private var trabalhoBusca: Job? = null
     
-    private var currentSearchQuery = ""
-    private var currentCategoriaId: String? = null
+    private var textoBuscaAtual = ""
+    private var categoriaAtualId: String? = null
 
-    private var currentCity = "Sua localização"
-    private var currentStateUF = ""
+    private var cidadeAtual = "Sua localização"
+    private var estadoAtualUF = ""
 
     init {
         carregarDados()
@@ -47,107 +50,140 @@ class HomeViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = HomeUiState.Loading
             try {
-                val categoriasResponse = RetrofitClient.categoriaApi.listarCategorias(limit = 10)
+                // Obter categorias
+                val categoriasResponse = RetrofitClient.categoriaApi.listarCategorias(limit = 100)
                 if (categoriasResponse.isSuccessful) {
-                    val rawCats = categoriasResponse.body()?.data?.docs ?: emptyList()
-                    val tudoCat = rawCats.find { it.nome.equals("Tudo", ignoreCase = true) }
-                    allCategorias = if (tudoCat != null) {
-                        listOf(tudoCat) + rawCats.filter { it.id != tudoCat.id }
+                    val catsBrutos = categoriasResponse.body()?.data?.docs ?: emptyList()
+                    val catTudo = catsBrutos.find { it.nome.equals("Tudo", ignoreCase = true) }
+                    todasCategorias = if (catTudo != null) {
+                        listOf(catTudo) + catsBrutos.filter { it.id != catTudo.id }
                     } else {
-                        rawCats
+                        catsBrutos
                     }
-                    if (tudoCat != null && currentCategoriaId == null) {
-                        currentCategoriaId = tudoCat.id
+                    if (catTudo != null && categoriaAtualId == null) {
+                        categoriaAtualId = catTudo.id
                     }
                 }
                 
-                buscarRestaurantes()
+                // Obter restaurantes
+                val restaurantesResponse = RetrofitClient.restauranteApi.listarRestaurantes(limit = 100, nome = null, categoria = null)
+                if (restaurantesResponse.isSuccessful) {
+                    todosRestaurantes = restaurantesResponse.body()?.data?.docs ?: emptyList()
+                    dadosCarregados = true
+                } else {
+                    _uiState.value = HomeUiState.Error("Erro ao carregar restaurantes.")
+                    return@launch
+                }
+                
+                aplicarFiltrosLocais()
             } catch (e: Exception) {
                 _uiState.value = HomeUiState.Error(e.localizedMessage ?: "Erro desconhecido de conexão.")
             }
         }
     }
 
-    private suspend fun buscarRestaurantes() {
-        try {
-            val selectedCat = allCategorias.find { it.id == currentCategoriaId }
-            val searchCatId = if (selectedCat?.nome.equals("Tudo", ignoreCase = true)) null else currentCategoriaId
+    fun atualizarDados() {
+        val estadoAtual = _uiState.value as? HomeUiState.Success ?: return
 
-            val restaurantesResponse = RetrofitClient.restauranteApi.listarRestaurantes(
-                limit = 30,
-                nome = currentSearchQuery.ifBlank { null },
-                categoria = searchCatId
-            )
-
-            if (restaurantesResponse.isSuccessful) {
-                val todosRestaurantes = restaurantesResponse.body()?.data?.docs ?: emptyList()
-
-                // Regra exigida: Separar restaurantes (Recomendados / Populares)
-                val recomendados = todosRestaurantes.take(5)
-                val populares = if (todosRestaurantes.size > 5) todosRestaurantes.drop(5) else todosRestaurantes
-
-                _uiState.value = HomeUiState.Success(
-                    categorias = allCategorias,
-                    recomendados = recomendados,
-                    populares = populares,
-                    searchQuery = currentSearchQuery,
-                    selectedCategoriaId = currentCategoriaId,
-                    locationCity = currentCity,
-                    locationState = currentStateUF
-                )
-            } else {
-                _uiState.value = HomeUiState.Error("Erro ao carregar restaurantes.")
+        viewModelScope.launch {
+            _uiState.value = estadoAtual.copy(atualizando = true)
+            try {
+                val categoriasResponse = RetrofitClient.categoriaApi.listarCategorias(limit = 100)
+                if (categoriasResponse.isSuccessful) {
+                    val catsBrutos = categoriasResponse.body()?.data?.docs ?: emptyList()
+                    val catTudo = catsBrutos.find { it.nome.equals("Tudo", ignoreCase = true) }
+                    todasCategorias = if (catTudo != null) {
+                        listOf(catTudo) + catsBrutos.filter { it.id != catTudo.id }
+                    } else {
+                        catsBrutos
+                    }
+                    if (catTudo != null && categoriaAtualId == null) {
+                        categoriaAtualId = catTudo.id
+                    }
+                }
+                
+                val restaurantesResponse = RetrofitClient.restauranteApi.listarRestaurantes(limit = 100, nome = null, categoria = null)
+                if (restaurantesResponse.isSuccessful) {
+                    todosRestaurantes = restaurantesResponse.body()?.data?.docs ?: emptyList()
+                    dadosCarregados = true
+                }
+                
+                aplicarFiltrosLocais()
+            } catch (e: Exception) {
+                aplicarFiltrosLocais()
             }
-        } catch (e: Exception) {
-            _uiState.value = HomeUiState.Error(e.localizedMessage ?: "Erro de rede.")
         }
     }
 
-    fun onSearchQueryChanged(query: String) {
-        currentSearchQuery = query
-        // Atualiza a UI imediatamente para nao perder o foco
-        val currentState = _uiState.value as? HomeUiState.Success
-        if (currentState != null) {
-            _uiState.value = currentState.copy(searchQuery = query)
+    private fun aplicarFiltrosLocais() {
+        if (!dadosCarregados) return
+
+        val catSelecionada = todasCategorias.find { it.id == categoriaAtualId }
+        val idBuscaCategoria = if (catSelecionada?.nome.equals("Tudo", ignoreCase = true)) null else categoriaAtualId
+
+        var filtrados = todosRestaurantes
+
+        // Filtrar por categoria
+        if (idBuscaCategoria != null) {
+            filtrados = filtrados.filter { restaurante -> 
+                restaurante.categorias?.any { cat -> cat.id == idBuscaCategoria } == true 
+            }
+        }
+
+        // Filtrar por texto da busca
+        if (textoBuscaAtual.isNotBlank()) {
+            filtrados = filtrados.filter { 
+                it.nome.contains(textoBuscaAtual, ignoreCase = true) 
+            }
+        }
+
+        val recomendados = filtrados.take(5)
+        val populares = if (filtrados.size > 5) filtrados.drop(5) else filtrados
+
+        _uiState.value = HomeUiState.Success(
+            categorias = todasCategorias,
+            recomendados = recomendados,
+            populares = populares,
+            textoBusca = textoBuscaAtual,
+            categoriaSelecionadaId = categoriaAtualId,
+            cidadeUsuario = cidadeAtual,
+            estadoUsuario = estadoAtualUF
+        )
+    }
+
+    fun aoMudarTextoBusca(busca: String) {
+        textoBuscaAtual = busca
+        // Atualiza a UI imediatamente para não perder o foco
+        val estadoAtual = _uiState.value as? HomeUiState.Success
+        if (estadoAtual != null) {
+            _uiState.value = estadoAtual.copy(textoBusca = busca)
         }
 
         // Debounce da busca
-        searchJob?.cancel()
-        searchJob = viewModelScope.launch {
-            delay(500)
-            _uiState.value = HomeUiState.Loading
-            buscarRestaurantes()
+        trabalhoBusca?.cancel()
+        trabalhoBusca = viewModelScope.launch {
+            delay(300)
+            aplicarFiltrosLocais()
         }
     }
 
-    fun onCategoriaSelected(categoriaId: String?) {
-        if (currentCategoriaId == categoriaId) return // Same category toggle behavior can be added
-        currentCategoriaId = categoriaId
+    fun aoSelecionarCategoria(idCategoria: String?) {
+        if (categoriaAtualId == idCategoria) return
+        categoriaAtualId = idCategoria
         
-        val currentState = _uiState.value as? HomeUiState.Success
-        if (currentState != null) {
-            _uiState.value = currentState.copy(selectedCategoriaId = categoriaId)
-        } else {
-            _uiState.value = HomeUiState.Loading
-        }
-        
-        viewModelScope.launch {
-            buscarRestaurantes()
-        }
+        aplicarFiltrosLocais()
     }
 
-    fun setLocation(city: String, state: String) {
-        currentCity = city
-        currentStateUF = state
+    fun definirLocalizacao(cidade: String, estado: String) {
+        cidadeAtual = cidade
+        estadoAtualUF = estado
         
-        val currentState = _uiState.value as? HomeUiState.Success
-        if (currentState != null) {
-            _uiState.value = currentState.copy(
-                locationCity = city,
-                locationState = state
+        val estadoAtual = _uiState.value as? HomeUiState.Success
+        if (estadoAtual != null) {
+            _uiState.value = estadoAtual.copy(
+                cidadeUsuario = cidade,
+                estadoUsuario = estado
             )
         }
-        
-        // Se a API suportar envio de cidade, você poderá modificar a chamada do buscarRestaurantes() aqui
     }
 }

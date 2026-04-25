@@ -39,15 +39,21 @@ import dev.fslab.pedidos.model.Restaurante
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 import dev.fslab.pedidos.ui.viewmodel.HomeUiState
 import dev.fslab.pedidos.ui.viewmodel.HomeViewModel
-
 import androidx.core.content.ContextCompat
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
-import dev.fslab.pedidos.utils.LocationService
+import dev.fslab.pedidos.utils.ServicoLocalizacao
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeChild
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onLogout: () -> Unit = {},
@@ -57,46 +63,79 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val colors = LocalPedidosColors.current
     val context = LocalContext.current
+    val pullRefreshState = rememberPullToRefreshState()
     
-    val locationService = remember { LocationService(context) }
+    val servicoLocalizacao = remember { ServicoLocalizacao(context) }
     
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            if (isGranted) {
-                // Must launch coroutine to call suspend functions
+    val launcherConfiguracaoLocalizacao = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult(),
+        onResult = { result ->
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
                 viewModel.viewModelScope.launch {
-                    val location = locationService.getCurrentLocation()
-                    if (location != null) {
-                        viewModel.setLocation(location.city, location.state ?: "")
+                    val localizacao = servicoLocalizacao.obterLocalizacaoAtual()
+                    if (localizacao != null) {
+                        viewModel.definirLocalizacao(localizacao.cidade, localizacao.estado ?: "")
                     }
                 }
             }
         }
     )
+    
+    val launcherPermissaoLocalizacao = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { concedido ->
+            if (concedido) {
+                servicoLocalizacao.solicitarAtivacaoLocalizacao(
+                    aoSucesso = {
+                        viewModel.viewModelScope.launch {
+                            val localizacao = servicoLocalizacao.obterLocalizacaoAtual()
+                            if (localizacao != null) {
+                                viewModel.definirLocalizacao(localizacao.cidade, localizacao.estado ?: "")
+                            }
+                        }
+                    },
+                    aoPrecisarPrompt = { intentSender ->
+                        val intentSenderRequest = androidx.activity.result.IntentSenderRequest.Builder(intentSender).build()
+                        launcherConfiguracaoLocalizacao.launch(intentSenderRequest)
+                    },
+                    aoFalhar = { }
+                )
+            }
+        }
+    )
 
     LaunchedEffect(Unit) {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            val location = locationService.getCurrentLocation()
-            if (location != null) {
-                viewModel.setLocation(location.city, location.state ?: "")
-            }
+        if (servicoLocalizacao.temPermissaoLocalizacao()) {
+            servicoLocalizacao.solicitarAtivacaoLocalizacao(
+                aoSucesso = {
+                    viewModel.viewModelScope.launch {
+                        val localizacao = servicoLocalizacao.obterLocalizacaoAtual()
+                        if (localizacao != null) {
+                            viewModel.definirLocalizacao(localizacao.cidade, localizacao.estado ?: "")
+                        }
+                    }
+                },
+                aoPrecisarPrompt = { intentSender ->
+                    val intentSenderRequest = androidx.activity.result.IntentSenderRequest.Builder(intentSender).build()
+                    launcherConfiguracaoLocalizacao.launch(intentSenderRequest)
+                },
+                aoFalhar = { }
+            )
         } else {
-            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            launcherPermissaoLocalizacao.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
-    // Using the dark surface color explicitly to match the design (or from theme if dynamic)
-    val isLight = !androidx.compose.foundation.isSystemInDarkTheme()
-    val bgColor = if(isLight) Color(0xFFF8F9FA) else Color(0xFF0A0E1A)
-    val cardColor = if(isLight) Color.White else Color(0xFF161B2E)
-    val textColors = if(isLight) Color.Black else Color.White
+    val bgColor = colors.background
+    val cardColor = colors.surface
+    val textColors = colors.textPrimary
 
     val categoriesScrollState = rememberScrollState()
+    val hazeState = remember { HazeState() }
 
     Scaffold(
         bottomBar = {
-            BottomNavigationBar(cardColor, textColors, onNavigateRestaurantes)
+            BottomNavigationBar(cardColor, textColors, hazeState)
         },
         containerColor = bgColor
     ) { innerPadding ->
@@ -110,7 +149,7 @@ fun HomeScreen(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(text = state.message, color = Color.Red)
+                        Text(text = state.message, color = LocalPedidosColors.current.error)
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(onClick = { viewModel.carregarDados() }) {
                             Text("Tentar Novamente")
@@ -118,17 +157,34 @@ fun HomeScreen(
                     }
                 }
                 is HomeUiState.Success -> {
-                    LazyColumn(
+                    PullToRefreshBox(
+                        isRefreshing = state.atualizando,
+                        onRefresh = { viewModel.atualizarDados() },
+                        state = pullRefreshState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(top = 0.dp, bottom = 80.dp) // extra padding for bottom nav overlapping
+                        indicator = {
+                            PullToRefreshDefaults.Indicator(
+                                modifier = Modifier.align(Alignment.TopCenter),
+                                isRefreshing = state.atualizando,
+                                state = pullRefreshState,
+                                color = colors.primary,
+                                containerColor = colors.background
+                            )
+                        }
                     ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize().haze(
+                                state = hazeState
+                            ),
+                            contentPadding = PaddingValues(top = 0.dp, bottom = 80.dp)
+                        ) {
                         item {
-                            HomeHeader(textColors, cardColor, state.locationCity, state.locationState)
+                            HomeHeader(textColors, cardColor, state.cidadeUsuario, state.estadoUsuario)
                         }
                         item {
-                            SearchBar(
-                                query = state.searchQuery,
-                                onQueryChange = { viewModel.onSearchQueryChanged(it) },
+                            BarraBusca(
+                                busca = state.textoBusca,
+                                aoMudarBusca = { viewModel.aoMudarTextoBusca(it) },
                                 cardColor = cardColor,
                                 textColor = textColors
                             )
@@ -136,8 +192,8 @@ fun HomeScreen(
                         item {
                             CategoriesRow(
                                 categorias = state.categorias,
-                                selectedCategoriaId = state.selectedCategoriaId,
-                                onCategoriaSelected = { viewModel.onCategoriaSelected(it) },
+                                categoriaSelecionadaId = state.categoriaSelecionadaId,
+                                aoSelecionarCategoria = { viewModel.aoSelecionarCategoria(it) },
                                 cardColor = cardColor,
                                 textColor = textColors,
                                 scrollState = categoriesScrollState
@@ -156,6 +212,7 @@ fun HomeScreen(
                             PopularItem(restaurante, cardColor, textColors)
                         }
                     }
+                    }
                 }
             }
         }
@@ -163,7 +220,7 @@ fun HomeScreen(
 }
 
 @Composable
-    fun HomeHeader(textColor: Color, cardColor: Color, city: String = "Sua localização", state: String = "") {
+    fun HomeHeader(textColor: Color, cardColor: Color, cidade: String = "Sua localização", estado: String = "") {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -180,14 +237,14 @@ fun HomeScreen(
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = city,
-                    color = Color(0xFF14B822),
+                    text = cidade,
+                    color = LocalPedidosColors.current.primary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
-                if (state.isNotEmpty()) {
+                if (estado.isNotEmpty()) {
                     Text(
-                        text = ", $state",
+                        text = ", $estado",
                         color = textColor,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
@@ -196,7 +253,7 @@ fun HomeScreen(
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowDown,
                     contentDescription = "Expand",
-                    tint = Color(0xFF14B822),
+                    tint = LocalPedidosColors.current.primary,
                     modifier = Modifier.padding(start = 4.dp).size(20.dp)
                 )
             }
@@ -211,7 +268,7 @@ fun HomeScreen(
             Icon(
                 imageVector = Icons.Default.NotificationsNone,
                 contentDescription = "Notificações",
-                tint = Color(0xFF14B822)
+                tint = LocalPedidosColors.current.primary
             )
             // Notification dot
             Box(
@@ -220,7 +277,7 @@ fun HomeScreen(
                     .padding(8.dp)
                     .size(8.dp)
                     .clip(CircleShape)
-                    .background(Color.Red)
+                    .background(LocalPedidosColors.current.error)
             )
         }
     }
@@ -228,11 +285,12 @@ fun HomeScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchBar(query: String, onQueryChange: (String) -> Unit, cardColor: Color, textColor: Color) {
+fun BarraBusca(busca: String, aoMudarBusca: (String) -> Unit, cardColor: Color, textColor: Color) {
+    val colors = LocalPedidosColors.current
     Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
         TextField(
-            value = query,
-            onValueChange = onQueryChange,
+            value = busca,
+            onValueChange = aoMudarBusca,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -266,8 +324,8 @@ fun SearchBar(query: String, onQueryChange: (String) -> Unit, cardColor: Color, 
 @Composable
 fun CategoriesRow(
     categorias: List<Categoria>,
-    selectedCategoriaId: String?,
-    onCategoriaSelected: (String?) -> Unit,
+    categoriaSelecionadaId: String?,
+    aoSelecionarCategoria: (String?) -> Unit,
     cardColor: Color,
     textColor: Color,
     scrollState: androidx.compose.foundation.ScrollState
@@ -282,8 +340,8 @@ fun CategoriesRow(
         categorias.forEach { cat ->
             CategoryChip(
                 nome = cat.nome,
-                isSelected = selectedCategoriaId == cat.id,
-                onClick = { onCategoriaSelected(cat.id) },
+                isSelected = categoriaSelecionadaId == cat.id,
+                onClick = { aoSelecionarCategoria(cat.id) },
                 cardColor = cardColor,
                 textColor = textColor,
                 iconeUrl = cat.iconeCategoria
@@ -301,7 +359,8 @@ fun CategoriesRow(
         textColor: Color,
         iconeUrl: String? = null
     ) {
-        val bgColor = if (isSelected) Color(0xFF14B822) else cardColor
+        val colors = LocalPedidosColors.current
+        val bgColor = if (isSelected) colors.primary else cardColor
         val color = if (isSelected) Color.White else textColor.copy(alpha = 0.8f)
 
         val context = LocalContext.current
@@ -353,6 +412,7 @@ fun CategoriesRow(
 
 @Composable
 fun SectionTitle(title: String, action: String, textColor: Color) {
+    val colors = LocalPedidosColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -368,7 +428,7 @@ fun SectionTitle(title: String, action: String, textColor: Color) {
         )
         Text(
             text = action,
-            color = Color(0xFF14B822),
+            color = LocalPedidosColors.current.primary,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium
         )
@@ -389,6 +449,7 @@ fun RecomendadosRow(restaurantes: List<Restaurante>, cardColor: Color, textColor
 
 @Composable
 fun RecomendadoCard(restaurante: Restaurante, cardColor: Color, textColor: Color) {
+    val colors = LocalPedidosColors.current
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
@@ -442,19 +503,19 @@ fun RecomendadoCard(restaurante: Restaurante, cardColor: Color, textColor: Color
                         modifier = Modifier
                             .padding(start = 8.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF165B20).copy(alpha = 0.2f))
+                            .background(LocalPedidosColors.current.successBackground.copy(alpha = 0.2f))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = String.format("%.1f", restaurante.avaliacaoMedia.coerceAtLeast(4.0)),
-                            color = Color(0xFF14B822),
+                            color = LocalPedidosColors.current.primary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = "Star",
-                            tint = Color(0xFF14B822),
+                            tint = LocalPedidosColors.current.primary,
                             modifier = Modifier.size(12.dp).padding(start = 2.dp)
                         )
                     }
@@ -475,13 +536,13 @@ fun RecomendadoCard(restaurante: Restaurante, cardColor: Color, textColor: Color
                     Icon(
                         imageVector = Icons.Default.TwoWheeler, // placeholder for moto
                         contentDescription = "Delivery",
-                        tint = Color(0xFF14B822),
+                        tint = LocalPedidosColors.current.primary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = if(restaurante.taxaEntrega <= 0.0) "Entrega Grátis" else "R$ ${String.format("%.2f", restaurante.taxaEntrega)}",
-                        color = Color(0xFF14B822),
+                        color = LocalPedidosColors.current.primary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -493,6 +554,7 @@ fun RecomendadoCard(restaurante: Restaurante, cardColor: Color, textColor: Color
 
 @Composable
 fun PopularItem(restaurante: Restaurante, cardColor: Color, textColor: Color) {
+    val colors = LocalPedidosColors.current
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
@@ -527,14 +589,14 @@ fun PopularItem(restaurante: Restaurante, cardColor: Color, textColor: Color) {
                 ) {
                     Text(
                         text = String.format("%.1f", restaurante.avaliacaoMedia.coerceAtLeast(4.0)),
-                        color = Color(0xFFFFB800),
+                        color = LocalPedidosColors.current.featureOrange,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = "Star",
-                        tint = Color(0xFFFFB800),
+                        tint = LocalPedidosColors.current.featureOrange,
                         modifier = Modifier.size(10.dp).padding(start = 2.dp)
                     )
                 }
@@ -576,13 +638,13 @@ fun PopularItem(restaurante: Restaurante, cardColor: Color, textColor: Color) {
                     Icon(
                         imageVector = Icons.Default.TwoWheeler, // placeholder for moto
                         contentDescription = "Delivery",
-                        tint = if (restaurante.taxaEntrega <= 0.0) Color(0xFF14B822) else textColor.copy(alpha = 0.5f),
+                        tint = if (restaurante.taxaEntrega <= 0.0) LocalPedidosColors.current.primary else textColor.copy(alpha = 0.5f),
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = if(restaurante.taxaEntrega <= 0.0) "Entrega Grátis" else "R$ ${String.format("%.2f", restaurante.taxaEntrega)}",
-                        color = if (restaurante.taxaEntrega <= 0.0) Color(0xFF14B822) else textColor.copy(alpha = 0.6f),
+                        color = if (restaurante.taxaEntrega <= 0.0) LocalPedidosColors.current.primary else textColor.copy(alpha = 0.6f),
                         fontSize = 12.sp
                     )
                 }
@@ -592,12 +654,21 @@ fun PopularItem(restaurante: Restaurante, cardColor: Color, textColor: Color) {
 }
 
 @Composable
+<<<<<<< HEAD
 fun BottomNavigationBar(cardColor: Color, textColor: Color, onNavigateRestaurantes: () -> Unit = {}) {
+=======
+fun BottomNavigationBar(cardColor: Color, textColor: Color, hazeState: HazeState? = null) {
+    val colors = LocalPedidosColors.current
+>>>>>>> 1c3ff0b1853d16d4b11e2edd1198a14c87f937bd
     NavigationBar(
-        containerColor = cardColor.copy(alpha = 0.85f),
+        containerColor = if (hazeState != null) Color.Transparent else cardColor.copy(alpha = 0.90f),
         contentColor = textColor,
-        tonalElevation = 0.dp,
-        modifier = Modifier.clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+        tonalElevation = if (hazeState != null) 0.dp else 8.dp,
+        windowInsets = WindowInsets(0, 0, 0, 0),
+        modifier = Modifier
+            .height(64.dp)
+            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+            .let { if (hazeState != null) it.hazeChild(state = hazeState, style = dev.chrisbanes.haze.HazeStyle(backgroundColor = cardColor, tint = dev.chrisbanes.haze.HazeTint(cardColor.copy(alpha = 0.6f)), blurRadius = 24.dp)) else it }
     ) {
         NavigationBarItem(
             icon = { Icon(Icons.Outlined.Home, contentDescription = "Início") },
@@ -605,8 +676,8 @@ fun BottomNavigationBar(cardColor: Color, textColor: Color, onNavigateRestaurant
             selected = true,
             onClick = { /* TODO */ },
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = Color(0xFF14B822),
-                selectedTextColor = Color(0xFF14B822),
+                selectedIconColor = LocalPedidosColors.current.primary,
+                selectedTextColor = LocalPedidosColors.current.primary,
                 indicatorColor = Color.Transparent,
                 unselectedIconColor = textColor.copy(alpha = 0.5f),
                 unselectedTextColor = textColor.copy(alpha = 0.5f)
