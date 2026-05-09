@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import dev.fslab.pedidos.model.*
 import dev.fslab.pedidos.network.RetrofitClient
 import dev.fslab.pedidos.network.TokenManager
+import dev.fslab.pedidos.utils.NetworkUtils
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,13 +27,6 @@ sealed class AuthState {
 
 /**
  * AuthViewModel - Gerencia o estado de autenticação da aplicação
- *
- * Responsável por:
- * - Login via API (POST /login)
- * - Login com Google (POST /auth/google)
- * - Cadastro (POST /signup)
- * - Recuperação de senha (POST /recover)
- * - Gerenciar tokens JWT e estado do usuário
  */
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -115,18 +109,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     _authState.value = AuthState.Error(errorMessage)
                 }
             } catch (e: retrofit2.HttpException) {
-                val errorBody = e.response()?.errorBody()?.string()
-                val apiMessage = try {
-                    gson.fromJson(errorBody, ApiErrorResponse::class.java)?.getErrorMessage()
-                } catch (_: Exception) { null }
-
-                val errorMessage = apiMessage ?: when (e.code()) {
-                    401 -> "Email ou senha incorretos"
-                    403 -> "Usuário inativo ou bloqueado"
-                    404 -> "Usuário não encontrado"
-                    500 -> "Erro no servidor. Tente novamente mais tarde."
-                    else -> "Erro ao autenticar (${e.code()})"
-                }
+                val errorMessage = NetworkUtils.getErrorMessage(e.response()?.errorBody(), "Erro ao autenticar")
                 _authState.value = AuthState.Error(errorMessage)
             } catch (e: java.net.UnknownHostException) {
                 _authState.value = AuthState.Error("Sem conexão com a internet")
@@ -158,17 +141,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     _authState.value = AuthState.Error(errorMessage)
                 }
             } catch (e: retrofit2.HttpException) {
-                val errorBody = e.response()?.errorBody()?.string()
-                val apiMessage = try {
-                    gson.fromJson(errorBody, ApiErrorResponse::class.java)?.getErrorMessage()
-                } catch (_: Exception) { null }
-
-                val errorMessage = apiMessage ?: when (e.code()) {
-                    401 -> "Token do Google inválido ou expirado"
-                    403 -> "Conta desativada"
-                    500 -> "Erro no servidor. Tente novamente mais tarde."
-                    else -> "Erro ao autenticar com Google (${e.code()})"
-                }
+                val errorMessage = NetworkUtils.getErrorMessage(e.response()?.errorBody(), "Erro ao autenticar com Google")
                 _authState.value = AuthState.Error(errorMessage)
             } catch (e: java.net.UnknownHostException) {
                 _authState.value = AuthState.Error("Sem conexão com a internet")
@@ -215,11 +188,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 onSuccess()
             } catch (e: retrofit2.HttpException) {
                 _authState.value = AuthState.Idle
-                val errorBody = e.response()?.errorBody()?.string()
-                val msg = try {
-                    gson.fromJson(errorBody, ApiErrorResponse::class.java)?.getErrorMessage()
-                } catch (_: Exception) { null }
-                onError(msg ?: "Erro ao atualizar perfil (${e.code()})")
+                val msg = NetworkUtils.getErrorMessage(e.response()?.errorBody(), "Erro ao atualizar perfil")
+                onError(msg)
             } catch (e: java.net.UnknownHostException) {
                 _authState.value = AuthState.Idle
                 onError("Sem conexão com a internet")
@@ -268,17 +238,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 }
             } catch (e: retrofit2.HttpException) {
                 _authState.value = AuthState.Idle
-                val errorBody = e.response()?.errorBody()?.string()
-                val msg = try {
-                    gson.fromJson(errorBody, ApiErrorResponse::class.java)?.getErrorMessage()
-                } catch (_: Exception) { null }
-
-                val errorMessage = when (e.code()) {
-                    400 -> msg ?: "Dados inválidos. Verifique os campos."
-                    409 -> "Este e-mail já está cadastrado"
-                    else -> msg ?: "Erro ao criar conta (${e.code()})"
-                }
-                onError(errorMessage)
+                val msg = NetworkUtils.getErrorMessage(e.response()?.errorBody(), "Erro ao criar conta")
+                onError(msg)
             } catch (e: java.net.UnknownHostException) {
                 _authState.value = AuthState.Idle
                 onError("Sem conexão com a internet")

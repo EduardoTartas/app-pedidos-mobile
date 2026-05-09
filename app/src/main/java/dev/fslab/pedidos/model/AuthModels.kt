@@ -89,10 +89,3 @@ data class BasicResponse(
     @SerializedName("data") val data: Any? = null,
     @SerializedName("errors") val errors: List<String> = emptyList()
 )
-
-data class ApiErrorResponse(
-    @SerializedName("message") val message: String = "",
-    @SerializedName("errors") val errors: List<String> = emptyList()
-) {
-    fun getErrorMessage(): String = errors.firstOrNull() ?: message
-}

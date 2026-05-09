@@ -58,14 +58,9 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/**
- * Google Web Client ID — usado pelo Credential Manager para solicitar o ID Token.
- * Este é o CLIENT_ID do tipo "Web application" configurado no Google Cloud Console.
- */
 private const val GOOGLE_WEB_CLIENT_ID =
     "1053347409082-qb4s3d724bp69hs78kdt38s35brinr7n.apps.googleusercontent.com"
 
-/** Rotas que exibem a barra de navegação inferior. */
 private val mainScreenRoutes = bottomNavItems.map { it.route }.toSet()
 
 @Composable
@@ -109,13 +104,15 @@ fun PedidosApp(activity: ComponentActivity) {
             },
             modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
+            val homeViewModel: dev.fslab.pedidos.ui.viewmodel.HomeViewModel = viewModel()
+
             NavHost(
                 navController = navController,
                 startDestination = "login",
                 modifier = Modifier
                     .fillMaxSize()
                     .haze(state = hazeState)
-                    .padding(top = innerPadding.calculateTopPadding(), bottom = 0.dp)
+                    .padding(bottom = 0.dp)
             ) {
                 composable("login") {
                     LaunchedEffect(authState) {
@@ -172,7 +169,6 @@ fun PedidosApp(activity: ComponentActivity) {
 
                                     authViewModel.loginWithGoogle(idToken)
                                 } catch (e: GetCredentialCancellationException) {
-                                    // Usuário cancelou — não faz nada
                                     Log.d("PedidosApp", "Google Sign-In cancelado pelo usuário")
                                 } catch (e: androidx.credentials.exceptions.NoCredentialException) {
                                     Log.e("PedidosApp", "Nenhuma conta do Google encontrada no dispositivo", e)
@@ -212,11 +208,9 @@ fun PedidosApp(activity: ComponentActivity) {
                     )
                 }
                 composable("signup") {
-                    // Estado local para mensagem de erro e sucesso do cadastro
                     var cadastroError by remember { mutableStateOf<String?>(null) }
                     var cadastroSuccess by remember { mutableStateOf<String?>(null) }
 
-                    // Redireciona ao login após exibir mensagem de sucesso
                     LaunchedEffect(cadastroSuccess) {
                         if (cadastroSuccess != null) {
                             kotlinx.coroutines.delay(2000L)
@@ -255,9 +249,6 @@ fun PedidosApp(activity: ComponentActivity) {
                     )
                 }
 
-                // ═══════════════════════════════════════════
-                // COMPLETAR PERFIL (pós-login Google)
-                // ═══════════════════════════════════════════
                 composable("completar_perfil") {
                     var perfilError by remember { mutableStateOf<String?>(null) }
 
@@ -276,16 +267,13 @@ fun PedidosApp(activity: ComponentActivity) {
                             authViewModel.completeProfile(
                                 cpf = cpf,
                                 telefone = telefone,
-                                onSuccess = {
-                                    // AuthState.Success será emitido -> LaunchedEffect navega
-                                },
+                                onSuccess = { },
                                 onError = { msg ->
                                     perfilError = msg
                                 }
                             )
                         },
                         onSkip = {
-                            // Ir direto para Home sem completar perfil
                             navController.navigate("home") {
                                 popUpTo("completar_perfil") { inclusive = true }
                                 launchSingleTop = true
@@ -298,7 +286,17 @@ fun PedidosApp(activity: ComponentActivity) {
                 }
 
                 composable("home") {
+                    val user by authViewModel.currentUser.collectAsState()
+                    val userId = user?.id ?: ""
+                    
+                    LaunchedEffect(userId) {
+                        if (userId.isNotEmpty()) {
+                            homeViewModel.carregarDados(userId)
+                        }
+                    }
+
                     HomeScreen(
+                        viewModel = homeViewModel,
                         bottomPadding = innerPadding.calculateBottomPadding(),
                         onLogout = {
                             authViewModel.logout()
@@ -306,6 +304,12 @@ fun PedidosApp(activity: ComponentActivity) {
                                 popUpTo("login") { inclusive = true }
                                 launchSingleTop = true
                             }
+                        },
+                        onNavigateToNovoEndereco = {
+                            navController.navigate("novo_endereco")
+                        },
+                        onRefresh = {
+                            homeViewModel.atualizarDados(userId)
                         }
                     )
                 }
@@ -314,6 +318,28 @@ fun PedidosApp(activity: ComponentActivity) {
                     RestaurantesScreen(
                         bottomPadding = innerPadding.calculateBottomPadding()
                     )
+                }
+
+                composable("novo_endereco") {
+                    val user by authViewModel.currentUser.collectAsState()
+                    val userId = user?.id ?: ""
+                    
+                    if (userId.isNotEmpty()) {
+                        dev.fslab.pedidos.ui.screens.NovoEnderecoScreen(
+                            usuarioId = userId,
+                            onBack = { navController.popBackStack() },
+                            onSuccess = {
+                                homeViewModel.carregarDados(userId)
+                                navController.popBackStack()
+                            }
+                        )
+                    } else {
+                        LaunchedEffect(Unit) {
+                            navController.navigate("login") {
+                                popUpTo(0)
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -73,8 +73,11 @@ fun RestaurantesScreen(
                 is RestaurantesUiState.Success -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(top = 0.dp, bottom = bottomPadding + 16.dp)
+                        contentPadding = PaddingValues(bottom = bottomPadding + 16.dp)
                     ) {
+                        item {
+                            Spacer(modifier = Modifier.statusBarsPadding())
+                        }
                         item {
                             RestaurantesHeader(textColors)
                         }

@@ -51,6 +51,8 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 fun HomeScreen(
     bottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
     onLogout: () -> Unit = {},
+    onNavigateToNovoEndereco: () -> Unit = {},
+    onRefresh: () -> Unit = {},
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -58,6 +60,8 @@ fun HomeScreen(
     val context = LocalContext.current
     val pullRefreshState = rememberPullToRefreshState()
     
+    var showEnderecoSheet by remember { mutableStateOf(false) }
+
     val servicoLocalizacao = remember { ServicoLocalizacao(context) }
     
     val launcherConfiguracaoLocalizacao = rememberLauncherForActivityResult(
@@ -148,7 +152,7 @@ fun HomeScreen(
                 is HomeUiState.Success -> {
                     PullToRefreshBox(
                         isRefreshing = state.atualizando,
-                        onRefresh = { viewModel.atualizarDados() },
+                        onRefresh = onRefresh,
                         state = pullRefreshState,
                         modifier = Modifier.fillMaxSize(),
                         indicator = {
@@ -163,10 +167,20 @@ fun HomeScreen(
                     ) {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = 0.dp, bottom = bottomPadding + 16.dp)
+                            contentPadding = PaddingValues(bottom = bottomPadding + 16.dp)
                         ) {
                         item {
-                            HomeHeader(textColors, cardColor, state.cidadeUsuario, state.estadoUsuario)
+                            Spacer(modifier = Modifier.statusBarsPadding())
+                        }
+                        item {
+                            HomeHeader(
+                                textColor = textColors, 
+                                cardColor = cardColor, 
+                                label = state.labelEndereco,
+                                cidade = state.cidadeUsuario, 
+                                estado = state.estadoUsuario,
+                                onClick = { showEnderecoSheet = true }
+                            )
                         }
                         item {
                             BarraBusca(
@@ -200,6 +214,21 @@ fun HomeScreen(
                         }
                     }
                     }
+
+                    if (showEnderecoSheet) {
+                        dev.fslab.pedidos.ui.components.EnderecosBottomSheet(
+                            enderecos = state.enderecos,
+                            selectedEnderecoId = state.enderecoSelecionadoId,
+                            onDismiss = { showEnderecoSheet = false },
+                            onNovoEnderecoClick = { 
+                                showEnderecoSheet = false
+                                onNavigateToNovoEndereco() 
+                            },
+                            onEnderecoSelected = { endereco ->
+                                viewModel.selecionarEndereco(endereco)
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -207,36 +236,45 @@ fun HomeScreen(
 }
 
 @Composable
-    fun HomeHeader(textColor: Color, cardColor: Color, cidade: String = "Sua localização", estado: String = "") {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+fun HomeHeader(
+    textColor: Color, 
+    cardColor: Color, 
+    label: String = "",
+    cidade: String = "Sua localização", 
+    estado: String = "",
+    onClick: () -> Unit = {}
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Column {
             Text(
                 text = "ENTREGAR EM",
                 color = textColor.copy(alpha = 0.5f),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = cidade,
-                    color = LocalPedidosColors.current.primary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-                if (estado.isNotEmpty()) {
+                if (label.isNotBlank()) {
                     Text(
-                        text = ", $estado",
-                        color = textColor,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
+                        text = "\"${label.uppercase()}\", ",
+                        color = LocalPedidosColors.current.primary,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 15.sp
                     )
                 }
+                Text(
+                    text = if (estado.isNotEmpty()) "${cidade.uppercase()} ${estado.uppercase()}" else cidade.uppercase(),
+                    color = textColor,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowDown,
                     contentDescription = "Expand",
@@ -257,7 +295,6 @@ fun HomeScreen(
                 contentDescription = "Notificações",
                 tint = LocalPedidosColors.current.primary
             )
-            // Notification dot
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -337,65 +374,65 @@ fun CategoriesRow(
     }
 }
 
-    @Composable
-    fun CategoryChip(
-        nome: String,
-        isSelected: Boolean,
-        onClick: () -> Unit,
-        cardColor: Color,
-        textColor: Color,
-        iconeUrl: String? = null
+@Composable
+fun CategoryChip(
+    nome: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    cardColor: Color,
+    textColor: Color,
+    iconeUrl: String? = null
+) {
+    val colors = LocalPedidosColors.current
+    val bgColor = if (isSelected) colors.primary else cardColor
+    val color = if (isSelected) Color.White else textColor.copy(alpha = 0.8f)
+
+    val context = LocalContext.current
+    val imageLoader = remember {
+        ImageLoader.Builder(context)
+            .components {
+                add(SvgDecoder.Factory())
+            }
+            .build()
+    }
+
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(bgColor)
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        val colors = LocalPedidosColors.current
-        val bgColor = if (isSelected) colors.primary else cardColor
-        val color = if (isSelected) Color.White else textColor.copy(alpha = 0.8f)
-
-        val context = LocalContext.current
-        val imageLoader = remember {
-            ImageLoader.Builder(context)
-                .components {
-                    add(SvgDecoder.Factory())
-                }
-                .build()
-        }
-
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(bgColor)
-                .clickable { onClick() }
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (!iconeUrl.isNullOrEmpty()) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(iconeUrl)
-                        .crossfade(true)
-                        .build(),
-                    imageLoader = imageLoader,
+        if (!iconeUrl.isNullOrEmpty()) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(iconeUrl)
+                    .crossfade(true)
+                    .build(),
+                imageLoader = imageLoader,
+                contentDescription = null,
+                colorFilter = if (isSelected) androidx.compose.ui.graphics.ColorFilter.tint(Color.White) else null,
+                modifier = Modifier.size(16.dp).padding(end = 4.dp)
+            )
+        } else {
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.RestaurantMenu,
                     contentDescription = null,
-                    colorFilter = if (isSelected) androidx.compose.ui.graphics.ColorFilter.tint(Color.White) else null,
+                    tint = color,
                     modifier = Modifier.size(16.dp).padding(end = 4.dp)
                 )
-            } else {
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Default.RestaurantMenu,
-                        contentDescription = null,
-                        tint = color,
-                        modifier = Modifier.size(16.dp).padding(end = 4.dp)
-                    )
-                }
             }
-            Text(
-                text = nome,
-                color = color,
-                fontWeight = FontWeight.Medium,
-                fontSize = 14.sp
-            )
         }
+        Text(
+            text = nome,
+            color = color,
+            fontWeight = FontWeight.Medium,
+            fontSize = 14.sp
+        )
     }
+}
 
 @Composable
 fun SectionTitle(title: String, action: String, textColor: Color) {
@@ -454,7 +491,6 @@ fun RecomendadoCard(restaurante: Restaurante, cardColor: Color, textColor: Color
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
-                // Badge tempo
                 Box(
                     modifier = Modifier
                         .padding(12.dp)
@@ -521,7 +557,7 @@ fun RecomendadoCard(restaurante: Restaurante, cardColor: Color, textColor: Color
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.TwoWheeler, // placeholder for moto
+                        imageVector = Icons.Default.TwoWheeler,
                         contentDescription = "Delivery",
                         tint = LocalPedidosColors.current.primary,
                         modifier = Modifier.size(16.dp)
@@ -564,7 +600,6 @@ fun PopularItem(restaurante: Restaurante, cardColor: Color, textColor: Color) {
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
-                // Badge de nota sobre a imagem
                 Row(
                     Modifier
                         .align(Alignment.TopStart)
@@ -623,7 +658,7 @@ fun PopularItem(restaurante: Restaurante, cardColor: Color, textColor: Color) {
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Icon(
-                        imageVector = Icons.Default.TwoWheeler, // placeholder for moto
+                        imageVector = Icons.Default.TwoWheeler,
                         contentDescription = "Delivery",
                         tint = if (restaurante.taxaEntrega <= 0.0) LocalPedidosColors.current.primary else textColor.copy(alpha = 0.5f),
                         modifier = Modifier.size(14.dp)
@@ -639,4 +674,3 @@ fun PopularItem(restaurante: Restaurante, cardColor: Color, textColor: Color) {
         }
     }
 }
-
