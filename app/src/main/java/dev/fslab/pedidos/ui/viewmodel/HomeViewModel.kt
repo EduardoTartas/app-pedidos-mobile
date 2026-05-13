@@ -47,12 +47,25 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private var loadJob: Job? = null
     private var searchJob: Job? = null
     private var inicializado = false
+    
+    private var gpsCidade: String? = null
+    private var gpsEstado: String? = null
 
-    fun carregarDados(usuarioId: String? = null, silent: Boolean = false) {
-        if (!silent && !inicializado) {
+    fun isInicializado() = inicializado
+
+    private var lastUserId: String? = null
+
+    fun carregarDados(usuarioId: String? = null, silent: Boolean = false, force: Boolean = false) {
+        // Se não for forced, Evita recarregamento de navegação se o mesmo usuário já está carregado
+        if (!force && !silent && inicializado && lastUserId == usuarioId) {
+            return
+        }
+
+        if (!silent && (!inicializado || force)) {
             _uiState.value = HomeUiState.Loading
         }
         inicializado = true
+        lastUserId = usuarioId
 
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
@@ -69,22 +82,29 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     val endResp = RetrofitClient.enderecoApi.listarPorUsuario(usuarioId)
                     if (endResp.isSuccessful) {
                         val novaLista = endResp.body()?.data ?: emptyList()
+                        listaEnderecos = novaLista
+                        
                         if (novaLista.isNotEmpty()) {
-                            listaEnderecos = novaLista
-                            
                             // LÓGICA DE SELEÇÃO:
                             val savedId = LocationPreferences.getSelectedId(getApplication())
                             val idAindaExiste = listaEnderecos.any { it.id == savedId }
                             
+                            // Preserva "gps_location"
+                            val isGpsLocation = savedId == "gps_location"
+                            
                             // SÓ definimos um novo se o disco estiver vazio ou o endereço salvo foi deletado
-                            if (savedId == null || !idAindaExiste) {
+                            if (savedId == null || (!idAindaExiste && !isGpsLocation)) {
                                 val principal = listaEnderecos.find { it.principal } ?: listaEnderecos.firstOrNull()
                                 principal?.let {
                                     LocationPreferences.saveSelectedId(getApplication(), it.id)
                                 }
                             }
+                        } else {
+                            LocationPreferences.saveSelectedId(getApplication(), "gps_location")
                         }
                     }
+                } else {
+                    listaEnderecos = emptyList()
                 }
                 
                 publishState()
@@ -98,7 +118,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun publishState() {
         val currentSelectedId = LocationPreferences.getSelectedId(getApplication())
-        val selectedEndereco = listaEnderecos.find { it.id == currentSelectedId }
+        val selectedEndereco = listaEnderecos.find { it.id == currentSelectedId } ?: if (currentSelectedId != "gps_location") listaEnderecos.find { it.principal } ?: listaEnderecos.firstOrNull() else null
         
         val catTudo = todasCategorias.find { it.nome.equals("Tudo", ignoreCase = true) }
         val effectiveCatId = if (selectedCategoryId == null) catTudo?.id else selectedCategoryId
@@ -111,6 +131,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             filtrados = filtrados.filter { it.nome.contains(searchText, ignoreCase = true) }
         }
 
+        val fallbackId = if (selectedEndereco != null) selectedEndereco.id else "gps_location"
+        // Só salva o GPS como default se a pessoa não tiver nenhum endereço salvo (nem principal) e tivermos caido no fallback
+        if (fallbackId == "gps_location" && currentSelectedId == null) {
+            LocationPreferences.saveSelectedId(getApplication(), "gps_location")
+        }
+
         _uiState.value = HomeUiState.Success(
             categorias = todasCategorias,
             recomendados = filtrados.take(5),
@@ -118,10 +144,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             textoBusca = searchText,
             categoriaSelecionadaId = effectiveCatId,
             labelEndereco = selectedEndereco?.label ?: "",
-            cidadeUsuario = selectedEndereco?.cidade ?: "Sua localização",
-            estadoUsuario = selectedEndereco?.estado ?: "",
+            cidadeUsuario = selectedEndereco?.cidade ?: gpsCidade ?: "Sua localização",
+            estadoUsuario = selectedEndereco?.estado ?: gpsEstado ?: "",
             enderecos = listaEnderecos,
-            enderecoSelecionadoId = currentSelectedId,
+            enderecoSelecionadoId = fallbackId,
             atualizando = false
         )
     }
@@ -133,28 +159,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun definirLocalizacao(cidade: String, estado: String) {
-        LocationPreferences.saveSelectedId(getApplication(), "gps_location")
-        val catTudo = todasCategorias.find { it.nome.equals("Tudo", ignoreCase = true) }
+        // Guardamos as informações do GPS em cache
+        gpsCidade = cidade
+        gpsEstado = estado
         
-        _uiState.value = HomeUiState.Success(
-            categorias = todasCategorias,
-            recomendados = todosRestaurantes.take(5),
-            populares = todosRestaurantes.drop(5),
-            textoBusca = searchText,
-            categoriaSelecionadaId = selectedCategoryId ?: catTudo?.id,
-            labelEndereco = "",
-            cidadeUsuario = cidade,
-            estadoUsuario = estado,
-            enderecos = listaEnderecos,
-            enderecoSelecionadoId = "gps_location",
-            atualizando = false
-        )
+        publishState()
     }
 
     fun atualizarDados(usuarioId: String? = null) {
         val estado = _uiState.value as? HomeUiState.Success
         if (estado != null) _uiState.value = estado.copy(atualizando = true)
-        carregarDados(usuarioId, silent = true)
+        carregarDados(usuarioId, silent = true, force = true)
     }
 
     fun aoMudarTextoBusca(busca: String) {

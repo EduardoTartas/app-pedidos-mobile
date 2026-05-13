@@ -140,8 +140,8 @@ fun PedidosApp(activity: ComponentActivity) {
                             navController.navigate("esqueci_senha?email=$email")
                         },
                         onRegister = { navController.navigate("signup") },
-                        onLogin = { email, senha, lembrarMe ->
-                            authViewModel.loginUser(email, senha, lembrarMe)
+                        onLogin = { email, senha ->
+                            authViewModel.loginUser(email, senha)
                         },
                         onGoogleSignIn = {
                             coroutineScope.launch {
