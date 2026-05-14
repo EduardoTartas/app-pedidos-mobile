@@ -37,6 +37,7 @@ import dev.fslab.pedidos.ui.screens.auth.LoginScreen
 import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
 import dev.fslab.pedidos.ui.screens.HomeScreen
 import dev.fslab.pedidos.ui.screens.RestaurantesScreen
+import dev.fslab.pedidos.ui.screens.SplashScreen
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 import dev.fslab.pedidos.ui.viewmodel.AuthState
 import dev.fslab.pedidos.ui.viewmodel.AuthViewModel
@@ -62,6 +63,7 @@ private const val GOOGLE_WEB_CLIENT_ID =
     "1053347409082-qb4s3d724bp69hs78kdt38s35brinr7n.apps.googleusercontent.com"
 
 private val mainScreenRoutes = bottomNavItems.map { it.route }.toSet()
+private val splashRoute = "splash"
 
 @Composable
 fun PedidosApp(activity: ComponentActivity) {
@@ -78,7 +80,7 @@ fun PedidosApp(activity: ComponentActivity) {
         val navController = rememberNavController()
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
-        val showBottomBar = currentRoute in mainScreenRoutes
+        val showBottomBar = currentRoute in mainScreenRoutes && currentRoute != splashRoute
 
         val hazeState = remember { HazeState() }
         val cardColor = if (isDarkTheme) Color(0xFF161B2E) else Color.White
@@ -104,16 +106,38 @@ fun PedidosApp(activity: ComponentActivity) {
             },
             modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
-            val homeViewModel: dev.fslab.pedidos.ui.viewmodel.HomeViewModel = viewModel()
-
             NavHost(
                 navController = navController,
-                startDestination = "login",
+                startDestination = splashRoute,
                 modifier = Modifier
                     .fillMaxSize()
                     .haze(state = hazeState)
                     .padding(bottom = 0.dp)
             ) {
+                composable(splashRoute) {
+                    SplashScreen(
+                        authState = authState,
+                        onNavigateToHome = {
+                            navController.navigate("home") {
+                                popUpTo(splashRoute) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateToLogin = {
+                            navController.navigate("login") {
+                                popUpTo(splashRoute) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateToCompleteProfile = {
+                            navController.navigate("completar_perfil") {
+                                popUpTo(splashRoute) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    )
+                }
+
                 composable("login") {
                     LaunchedEffect(authState) {
                         when (authState) {
@@ -286,6 +310,7 @@ fun PedidosApp(activity: ComponentActivity) {
                 }
 
                 composable("home") {
+                    val homeViewModel: dev.fslab.pedidos.ui.viewmodel.HomeViewModel = viewModel()
                     val user by authViewModel.currentUser.collectAsState()
                     val userId = user?.id ?: ""
                     
@@ -321,6 +346,7 @@ fun PedidosApp(activity: ComponentActivity) {
                 }
 
                 composable("novo_endereco") {
+                    val homeViewModel: dev.fslab.pedidos.ui.viewmodel.HomeViewModel = viewModel()
                     val user by authViewModel.currentUser.collectAsState()
                     val userId = user?.id ?: ""
                     

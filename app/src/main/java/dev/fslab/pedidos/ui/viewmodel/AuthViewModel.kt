@@ -70,21 +70,43 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun checkSavedSession() {
-        val savedToken = dev.fslab.pedidos.network.AuthPreferences.getRefreshToken(getApplication())
+        val context = getApplication<Application>()
+        val savedToken = dev.fslab.pedidos.network.AuthPreferences.getRefreshToken(context)
+        val cachedUserJson = dev.fslab.pedidos.network.AuthPreferences.getUser(context)
+
+        // PASSO 1: Tentativa de login instantâneo via cache
+        if (!cachedUserJson.isNullOrEmpty() && !savedToken.isNullOrEmpty()) {
+            try {
+                val cachedUser = gson.fromJson(cachedUserJson, User::class.java)
+                _currentUser.value = cachedUser
+                _authState.value = AuthState.Success(cachedUser)
+                Log.d(TAG, "Login instantâneo via cache para: ${cachedUser.nome}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Erro ao decodificar usuário do cache", e)
+            }
+        }
+
+        // PASSO 2: Validação em background (ou login inicial se não houver cache)
         if (!savedToken.isNullOrEmpty()) {
             viewModelScope.launch {
                 try {
                     val request = RefreshRequest(refreshToken = savedToken)
                     val response = RetrofitClient.authApi.refresh(request)
                     val remoteUser = response.getRemoteUser()
+
                     if (response.isSuccess() && remoteUser != null) {
                         handleAuthenticatedUser(remoteUser)
+                        Log.d(TAG, "Sessão validada e atualizada com sucesso")
                     } else {
                         throw Exception(response.getErrorMessage().ifEmpty { "Token inválido" })
                     }
                 } catch (e: Exception) {
-                    dev.fslab.pedidos.network.AuthPreferences.clear(getApplication())
-                    _authState.value = AuthState.Idle
+                    Log.w(TAG, "Falha na validação da sessão salva: ${e.message}")
+                    // Só desloga se não conseguirmos validar e o erro for crítico (ex: 401)
+                    // Se for erro de rede, mantemos o estado de cache se já estivermos logados
+                    if (_authState.value !is AuthState.Success) {
+                        logout()
+                    }
                 }
             }
         } else {
@@ -342,6 +364,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         val user = payload.toUser()
         _currentUser.value = user
         _profileComplete.value = payload.profileComplete
+
+        // Salva usuário no cache para login instantâneo na próxima abertura
+        try {
+            val userJson = gson.toJson(user)
+            dev.fslab.pedidos.network.AuthPreferences.saveUser(getApplication(), userJson)
+        } catch (e: Exception) {
+            Log.e(TAG, "Erro ao salvar usuário no cache", e)
+        }
 
         if (!payload.profileComplete) {
             _authState.value = AuthState.NeedsProfileCompletion(user)

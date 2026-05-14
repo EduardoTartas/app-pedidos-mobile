@@ -7,6 +7,7 @@ import androidx.security.crypto.MasterKey
 object AuthPreferences {
     private const val PREFS_NAME = "auth_prefs"
     private const val KEY_REFRESH_TOKEN = "refresh_token"
+    private const val KEY_USER_DATA = "user_data"
 
     private fun getPrefs(context: Context) = EncryptedSharedPreferences.create(
         context,
@@ -24,7 +25,18 @@ object AuthPreferences {
         return getPrefs(context).getString(KEY_REFRESH_TOKEN, null)
     }
 
+    fun saveUser(context: Context, userJson: String) {
+        getPrefs(context).edit().putString(KEY_USER_DATA, userJson).apply()
+    }
+
+    fun getUser(context: Context): String? {
+        return getPrefs(context).getString(KEY_USER_DATA, null)
+    }
+
     fun clear(context: Context) {
-        getPrefs(context).edit().remove(KEY_REFRESH_TOKEN).apply()
+        getPrefs(context).edit()
+            .remove(KEY_REFRESH_TOKEN)
+            .remove(KEY_USER_DATA)
+            .apply()
     }
 }

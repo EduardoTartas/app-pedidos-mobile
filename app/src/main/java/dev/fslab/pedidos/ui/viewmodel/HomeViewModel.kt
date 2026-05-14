@@ -8,12 +8,15 @@ import dev.fslab.pedidos.model.Endereco
 import dev.fslab.pedidos.model.Restaurante
 import dev.fslab.pedidos.network.RetrofitClient
 import dev.fslab.pedidos.utils.LocationPreferences
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 sealed class HomeUiState {
     object Loading : HomeUiState()
@@ -56,7 +59,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private var lastUserId: String? = null
 
     fun carregarDados(usuarioId: String? = null, silent: Boolean = false, force: Boolean = false) {
-        // Se não for forced, Evita recarregamento de navegação se o mesmo usuário já está carregado
         if (!force && !silent && inicializado && lastUserId == usuarioId) {
             return
         }
@@ -70,29 +72,35 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             try {
-                // Fetch de Categorias e Restaurantes
-                val catsTask = RetrofitClient.categoriaApi.listarCategorias(limit = 100)
-                val restsTask = RetrofitClient.restauranteApi.listarRestaurantes(limit = 100)
+                // Fetch paralelo usando async para ganhar tempo
+                val catsDeferred = async { RetrofitClient.categoriaApi.listarCategorias(limit = 100) }
+                val restsDeferred = async { RetrofitClient.restauranteApi.listarRestaurantes(limit = 100) }
+                val endsDeferred = if (!usuarioId.isNullOrEmpty()) {
+                    async { RetrofitClient.enderecoApi.listarPorUsuario(usuarioId) }
+                } else null
+
+                val catsTask = catsDeferred.await()
+                val restsTask = restsDeferred.await()
                 
-                if (catsTask.isSuccessful) todasCategorias = catsTask.body()?.data?.docs ?: emptyList()
+                if (catsTask.isSuccessful) {
+                    val rawCats = catsTask.body()?.data?.docs ?: emptyList()
+                    // Lógica para colocar "Tudo" em primeiro
+                    todasCategorias = rawCats.sortedWith(compareByDescending { it.nome.equals("Tudo", ignoreCase = true) })
+                }
                 if (restsTask.isSuccessful) todosRestaurantes = restsTask.body()?.data?.docs ?: emptyList()
 
                 // Gestão de Endereços
-                if (!usuarioId.isNullOrEmpty()) {
-                    val endResp = RetrofitClient.enderecoApi.listarPorUsuario(usuarioId)
+                if (endsDeferred != null) {
+                    val endResp = endsDeferred.await()
                     if (endResp.isSuccessful) {
                         val novaLista = endResp.body()?.data ?: emptyList()
                         listaEnderecos = novaLista
                         
                         if (novaLista.isNotEmpty()) {
-                            // LÓGICA DE SELEÇÃO:
                             val savedId = LocationPreferences.getSelectedId(getApplication())
                             val idAindaExiste = listaEnderecos.any { it.id == savedId }
-                            
-                            // Preserva "gps_location"
                             val isGpsLocation = savedId == "gps_location"
                             
-                            // SÓ definimos um novo se o disco estiver vazio ou o endereço salvo foi deletado
                             if (savedId == null || (!idAindaExiste && !isGpsLocation)) {
                                 val principal = listaEnderecos.find { it.principal } ?: listaEnderecos.firstOrNull()
                                 principal?.let {
@@ -116,54 +124,59 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun publishState() {
-        val currentSelectedId = LocationPreferences.getSelectedId(getApplication())
-        val selectedEndereco = listaEnderecos.find { it.id == currentSelectedId } ?: if (currentSelectedId != "gps_location") listaEnderecos.find { it.principal } ?: listaEnderecos.firstOrNull() else null
-        
-        val catTudo = todasCategorias.find { it.nome.equals("Tudo", ignoreCase = true) }
-        val effectiveCatId = if (selectedCategoryId == null) catTudo?.id else selectedCategoryId
-        
-        var filtrados = todosRestaurantes
-        if (effectiveCatId != null && effectiveCatId != catTudo?.id) {
-            filtrados = filtrados.filter { r -> r.categorias?.any { it.id == effectiveCatId } == true }
-        }
-        if (searchText.isNotBlank()) {
-            filtrados = filtrados.filter { it.nome.contains(searchText, ignoreCase = true) }
-        }
+    private suspend fun publishState() {
+        // Movemos o processamento pesado de filtros para o Dispatcher Default (Worker Thread)
+        withContext(Dispatchers.Default) {
+            val currentSelectedId = LocationPreferences.getSelectedId(getApplication())
+            val selectedEndereco = listaEnderecos.find { it.id == currentSelectedId } 
+                ?: if (currentSelectedId != "gps_location") listaEnderecos.find { it.principal } ?: listaEnderecos.firstOrNull() 
+                else null
+            
+            val catTudo = todasCategorias.find { it.nome.equals("Tudo", ignoreCase = true) }
+            val effectiveCatId = if (selectedCategoryId == null) catTudo?.id else selectedCategoryId
+            
+            var filtrados = todosRestaurantes
+            if (effectiveCatId != null && effectiveCatId != catTudo?.id) {
+                filtrados = filtrados.filter { r -> r.categorias?.any { it.id == effectiveCatId } == true }
+            }
+            if (searchText.isNotBlank()) {
+                filtrados = filtrados.filter { it.nome.contains(searchText, ignoreCase = true) }
+            }
 
-        val fallbackId = if (selectedEndereco != null) selectedEndereco.id else "gps_location"
-        // Só salva o GPS como default se a pessoa não tiver nenhum endereço salvo (nem principal) e tivermos caido no fallback
-        if (fallbackId == "gps_location" && currentSelectedId == null) {
-            LocationPreferences.saveSelectedId(getApplication(), "gps_location")
-        }
+            val fallbackId = if (selectedEndereco != null) selectedEndereco.id else "gps_location"
+            
+            if (fallbackId == "gps_location" && currentSelectedId == null) {
+                LocationPreferences.saveSelectedId(getApplication(), "gps_location")
+            }
 
-        _uiState.value = HomeUiState.Success(
-            categorias = todasCategorias,
-            recomendados = filtrados.take(5),
-            populares = if (filtrados.size > 5) filtrados.drop(5) else filtrados,
-            textoBusca = searchText,
-            categoriaSelecionadaId = effectiveCatId,
-            labelEndereco = selectedEndereco?.label ?: "",
-            cidadeUsuario = selectedEndereco?.cidade ?: gpsCidade ?: "Sua localização",
-            estadoUsuario = selectedEndereco?.estado ?: gpsEstado ?: "",
-            enderecos = listaEnderecos,
-            enderecoSelecionadoId = fallbackId,
-            atualizando = false
-        )
+            // Voltamos para a Main Thread para atualizar a UI
+            withContext(Dispatchers.Main) {
+                _uiState.value = HomeUiState.Success(
+                    categorias = todasCategorias,
+                    recomendados = filtrados.take(5),
+                    populares = if (filtrados.size > 5) filtrados.drop(5) else filtrados,
+                    textoBusca = searchText,
+                    categoriaSelecionadaId = effectiveCatId,
+                    labelEndereco = selectedEndereco?.label ?: "",
+                    cidadeUsuario = selectedEndereco?.cidade ?: gpsCidade ?: "Sua localização",
+                    estadoUsuario = selectedEndereco?.estado ?: gpsEstado ?: "",
+                    enderecos = listaEnderecos,
+                    enderecoSelecionadoId = fallbackId,
+                    atualizando = false
+                )
+            }
+        }
     }
 
     fun selecionarEndereco(endereco: Endereco) {
-        // Grava no disco imediatamente
         LocationPreferences.saveSelectedId(getApplication(), endereco.id)
-        publishState()
+        viewModelScope.launch { publishState() }
     }
 
     fun definirLocalizacao(cidade: String, estado: String) {
-        // Guardamos as informações do GPS em cache
         gpsCidade = cidade
         gpsEstado = estado
-        
-        publishState()
+        viewModelScope.launch { publishState() }
     }
 
     fun atualizarDados(usuarioId: String? = null) {
@@ -186,6 +199,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun aoSelecionarCategoria(id: String?) {
         selectedCategoryId = id
-        publishState()
+        viewModelScope.launch { publishState() }
     }
 }
