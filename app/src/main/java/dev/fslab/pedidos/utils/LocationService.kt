@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.location.Geocoder
+import android.os.Build
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.google.android.gms.common.api.ResolvableApiException
@@ -94,8 +95,30 @@ class ServicoLocalizacao(private val contexto: Context) {
 
     private fun retomarLocalizacao(lat: Double, lng: Double, continuacao: kotlinx.coroutines.CancellableContinuation<LocalizacaoApp?>) {
         if (!continuacao.isActive) return
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            geocoder.getFromLocation(lat, lng, 1) { enderecos ->
+                processarEnderecos(lat, lng, enderecos, continuacao)
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            try {
+                val enderecos = geocoder.getFromLocation(lat, lng, 1)
+                processarEnderecos(lat, lng, enderecos, continuacao)
+            } catch (e: Exception) {
+                processarEnderecos(lat, lng, null, continuacao)
+            }
+        }
+    }
+
+    private fun processarEnderecos(
+        lat: Double, 
+        lng: Double, 
+        enderecos: List<android.location.Address>?, 
+        continuacao: kotlinx.coroutines.CancellableContinuation<LocalizacaoApp?>
+    ) {
+        if (!continuacao.isActive) return
         try {
-            val enderecos = geocoder.getFromLocation(lat, lng, 1)
             if (!enderecos.isNullOrEmpty()) {
                 val endereco = enderecos[0]
                 val cidade = endereco.subAdminArea ?: endereco.locality ?: "Sua localização"
@@ -113,7 +136,7 @@ class ServicoLocalizacao(private val contexto: Context) {
     
     private val mapaEstados = mapOf(
         "Acre" to "AC", "Alagoas" to "AL", "Amapá" to "AP", "Amazonas" to "AM",
-        "Bahia" to "BA", "Ceará" to "CE", "Distrito Federal" to "DF", "Espírito Santo" to "DF",
+        "Bahia" to "BA", "Ceará" to "CE", "Distrito Federal" to "DF", "Espírito Santo" to "ES",
         "Goiás" to "GO", "Maranhão" to "MA", "Mato Grosso" to "MT", "Mato Grosso do Sul" to "MS",
         "Minas Gerais" to "MG", "Pará" to "PA", "Paraíba" to "PB", "Paraná" to "PR",
         "Pernambuco" to "PE", "Piauí" to "PI", "Rio de Janeiro" to "RJ", "Rio Grande do Norte" to "RN",

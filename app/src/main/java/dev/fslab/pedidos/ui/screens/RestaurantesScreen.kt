@@ -34,6 +34,7 @@ import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import dev.fslab.pedidos.model.Categoria
 import dev.fslab.pedidos.model.Restaurante
+import dev.fslab.pedidos.ui.components.ErrorStateComponent
 import dev.fslab.pedidos.ui.viewmodel.FiltrosAvancados
 import dev.fslab.pedidos.ui.viewmodel.RestaurantesUiState
 import dev.fslab.pedidos.ui.viewmodel.RestaurantesViewModel
@@ -73,16 +74,10 @@ fun RestaurantesScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 is RestaurantesUiState.Error -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = state.message, color = Color.Red)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.carregarDados() }) {
-                            Text("Tentar Novamente")
-                        }
-                    }
+                    ErrorStateComponent(
+                        message = state.message,
+                        onRetry = { viewModel.carregarDados() }
+                    )
                 }
                 is RestaurantesUiState.Success -> {
                     LazyColumn(

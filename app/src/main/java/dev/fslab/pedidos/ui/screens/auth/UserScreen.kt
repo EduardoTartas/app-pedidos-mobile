@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -17,15 +19,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 
 @Composable
 fun UserScreen(
     onBack: () -> Unit
 ) {
-
-    val backgroundColor = Color(0xFF0D1B2A)
-    val cardColor = Color(0xFF1B263B)
-    val greenColor = Color(0xFF00C853)
+    val colors = LocalPedidosColors.current
+    val backgroundColor = colors.background
+    val cardColor = colors.surface
+    val greenColor = colors.primary
 
     Column(
         modifier = Modifier
@@ -33,8 +36,7 @@ fun UserScreen(
             .background(backgroundColor)
             .padding(horizontal = 20.dp, vertical = 24.dp)
             .padding(bottom = 80.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
         // HEADER
@@ -93,7 +95,7 @@ fun UserScreen(
 
                 Text(
                     text = "Ricardo Silva",
-                    color = Color.White,
+                    color = colors.textPrimary,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -115,10 +117,41 @@ fun UserScreen(
         UserOptionItem("Cupons Disponíveis", Icons.Outlined.ConfirmationNumber, greenColor)
         UserOptionItem("Notificações", Icons.Outlined.Notifications, greenColor)
         UserOptionItem("Segurança", Icons.Outlined.Security, greenColor)
-        UserOptionItem("Ajuda", Icons.Outlined.HelpOutline, greenColor)
+        UserOptionItem("Ajuda", Icons.AutoMirrored.Outlined.HelpOutline, greenColor)
+        
+        Spacer(modifier = Modifier.weight(1f))
+        
+        // Botão Sair - Usando a nova cor e ícone automirrored
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp)
+                .clickable { /* Ação de Logout */ },
+            colors = CardDefaults.cardColors(containerColor = colors.errorBackground.copy(alpha = 0.1f)),
+            shape = RoundedCornerShape(18.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.Logout,
+                    contentDescription = null,
+                    tint = colors.error,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = "Sair da Conta",
+                    color = colors.error,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
     }
-
-
 }
 
 @Composable
@@ -127,14 +160,13 @@ fun UserOptionItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     iconColor: Color
 ) {
-
-
+    val colors = LocalPedidosColors.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
             .clickable { },
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B263B)),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
         shape = RoundedCornerShape(18.dp)
     ) {
 
@@ -150,7 +182,7 @@ fun UserOptionItem(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF0D1B2A)),
+                    .background(colors.background),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -165,7 +197,7 @@ fun UserOptionItem(
 
             Text(
                 text = title,
-                color = Color.White,
+                color = colors.textPrimary,
                 fontSize = 15.sp,
                 modifier = Modifier.weight(1f)
             )
@@ -173,10 +205,8 @@ fun UserOptionItem(
             Icon(
                 imageVector = Icons.Outlined.ChevronRight,
                 contentDescription = null,
-                tint = Color.Gray
+                tint = colors.textSecondary.copy(alpha = 0.5f)
             )
         }
     }
-
-
 }

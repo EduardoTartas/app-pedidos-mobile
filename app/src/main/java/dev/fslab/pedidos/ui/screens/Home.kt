@@ -32,6 +32,8 @@ import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import dev.fslab.pedidos.model.Categoria
 import dev.fslab.pedidos.model.Restaurante
+import dev.fslab.pedidos.ui.components.CategoriasBottomSheet
+import dev.fslab.pedidos.ui.components.ErrorStateComponent
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 import dev.fslab.pedidos.ui.viewmodel.HomeUiState
 import dev.fslab.pedidos.ui.viewmodel.HomeViewModel
@@ -150,16 +152,10 @@ fun HomeScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 is HomeUiState.Error -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = state.message, color = LocalPedidosColors.current.error)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.carregarDados() }) {
-                            Text("Tentar Novamente")
-                        }
-                    }
+                    ErrorStateComponent(
+                        message = state.message,
+                        onRetry = { viewModel.carregarDados(force = true) }
+                    )
                 }
                 is HomeUiState.Success -> {
                     PullToRefreshBox(
