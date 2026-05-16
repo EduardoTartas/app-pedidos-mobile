@@ -226,6 +226,7 @@ fun PedidosApp(activity: ComponentActivity) {
                         onErrorDismiss = { authViewModel.clearError() }
                     )
                 }
+
                 composable(
                     route = "esqueci_senha?email={email}",
                     arguments = listOf(
