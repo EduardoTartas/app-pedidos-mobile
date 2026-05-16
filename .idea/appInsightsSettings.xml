@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="dev.fslab.pedidos" />
+                  <option name="mobileSdkAppId" value="1:1053347409082:android:0fe1186c571677eda8a683" />
+                  <option name="projectId" value="rango-74b14" />
+                  <option name="projectNumber" value="1053347409082" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
