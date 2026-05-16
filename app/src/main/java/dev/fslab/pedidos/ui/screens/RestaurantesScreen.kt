@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,6 +29,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.ImageLoader
+import coil.decode.SvgDecoder
+import coil.request.ImageRequest
 import dev.fslab.pedidos.model.Categoria
 import dev.fslab.pedidos.model.Restaurante
 import dev.fslab.pedidos.ui.viewmodel.FiltrosAvancados
@@ -41,6 +45,16 @@ fun RestaurantesScreen(
     viewModel: RestaurantesViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    // OTIMIZAÇÃO: Centralizando ImageLoader
+    val imageLoader = remember {
+        ImageLoader.Builder(context)
+            .components { add(SvgDecoder.Factory()) }
+            .allowHardware(true)
+            .crossfade(true)
+            .build()
+    }
 
     val isLight = !androidx.compose.foundation.isSystemInDarkTheme()
     val bgColor = if (isLight) Color(0xFFF8F9FA) else Color(0xFF0A0E1A)
@@ -131,8 +145,11 @@ fun RestaurantesScreen(
                                 }
                             }
                         }
-                        items(state.restaurantes) { restaurante ->
-                            RestauranteCard(restaurante, cardColor, textColors)
+                        items(
+                            items = state.restaurantes,
+                            key = { it.id } // OTIMIZAÇÃO: Chave estável
+                        ) { restaurante ->
+                            RestauranteCard(restaurante, cardColor, textColors, imageLoader)
                         }
                     }
 
@@ -654,7 +671,13 @@ fun FilterOptionChip(
 // CARD DO RESTAURANTE
 // ═══════════════════════════════════════════
 @Composable
-fun RestauranteCard(restaurante: Restaurante, cardColor: Color, textColor: Color) {
+fun RestauranteCard(
+    restaurante: Restaurante, 
+    cardColor: Color, 
+    textColor: Color,
+    imageLoader: ImageLoader
+) {
+    val context = LocalContext.current
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
@@ -670,8 +693,11 @@ fun RestauranteCard(restaurante: Restaurante, cardColor: Color, textColor: Color
                     .height(160.dp)
             ) {
                 AsyncImage(
-                    model = restaurante.fotoRestaurante
-                        ?: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600&auto=format&fit=crop",
+                    model = ImageRequest.Builder(context)
+                        .data(restaurante.fotoRestaurante ?: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600&auto=format&fit=crop")
+                        .crossfade(true)
+                        .build(),
+                    imageLoader = imageLoader,
                     contentDescription = "Foto de ${restaurante.nome}",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -789,4 +815,3 @@ fun RestauranteCard(restaurante: Restaurante, cardColor: Color, textColor: Color
         }
     }
 }
-

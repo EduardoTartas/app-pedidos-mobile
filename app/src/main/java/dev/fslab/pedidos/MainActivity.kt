@@ -46,8 +46,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.graphics.Color
 import dev.fslab.pedidos.ui.components.BottomNavigationBar
 import dev.fslab.pedidos.ui.components.bottomNavItems
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,9 +83,12 @@ fun PedidosApp(activity: ComponentActivity) {
         val navController = rememberNavController()
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
-        val showBottomBar = currentRoute in mainScreenRoutes && currentRoute != splashRoute
+        
+        // Trava reforçada: Só mostra se a rota atual estiver na lista e não for nula/splash
+        val showBottomBar = currentRoute != null && 
+                          currentRoute in mainScreenRoutes && 
+                          currentRoute != splashRoute
 
-        val hazeState = remember { HazeState() }
         val cardColor = if (isDarkTheme) Color(0xFF161B2E) else Color.White
         val textColors = if (isDarkTheme) Color.White else Color.Black
 
@@ -92,7 +98,6 @@ fun PedidosApp(activity: ComponentActivity) {
                     BottomNavigationBar(
                         cardColor = cardColor,
                         textColor = textColors,
-                        hazeState = hazeState,
                         selectedRoute = currentRoute ?: "home",
                         onNavigate = { route ->
                             navController.navigate(route) {
@@ -109,9 +114,20 @@ fun PedidosApp(activity: ComponentActivity) {
             NavHost(
                 navController = navController,
                 startDestination = splashRoute,
+                enterTransition = {
+                    fadeIn(animationSpec = tween(300)) + slideInHorizontally(initialOffsetX = { 300 }, animationSpec = tween(300))
+                },
+                exitTransition = {
+                    fadeOut(animationSpec = tween(300)) + slideOutHorizontally(targetOffsetX = { -300 }, animationSpec = tween(300))
+                },
+                popEnterTransition = {
+                    fadeIn(animationSpec = tween(300)) + slideInHorizontally(initialOffsetX = { -300 }, animationSpec = tween(300))
+                },
+                popExitTransition = {
+                    fadeOut(animationSpec = tween(300)) + slideOutHorizontally(targetOffsetX = { 300 }, animationSpec = tween(300))
+                },
                 modifier = Modifier
                     .fillMaxSize()
-                    .haze(state = hazeState)
                     .padding(bottom = 0.dp)
             ) {
                 composable(splashRoute) {
@@ -332,6 +348,13 @@ fun PedidosApp(activity: ComponentActivity) {
                         },
                         onNavigateToNovoEndereco = {
                             navController.navigate("novo_endereco")
+                        },
+                        onNavigateToRestaurantes = {
+                            navController.navigate("restaurantes") {
+                                popUpTo("home") { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         },
                         onRefresh = {
                             homeViewModel.atualizarDados(userId)

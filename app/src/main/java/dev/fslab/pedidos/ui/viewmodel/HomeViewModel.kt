@@ -84,10 +84,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 
                 if (catsTask.isSuccessful) {
                     val rawCats = catsTask.body()?.data?.docs ?: emptyList()
-                    // Lógica para colocar "Tudo" em primeiro
                     todasCategorias = rawCats.sortedWith(compareByDescending { it.nome.equals("Tudo", ignoreCase = true) })
                 }
-                if (restsTask.isSuccessful) todosRestaurantes = restsTask.body()?.data?.docs ?: emptyList()
+                if (restsTask.isSuccessful) {
+                    val rawRests = restsTask.body()?.data?.docs ?: emptyList()
+                    // Correção visual: troca crase por apóstrofo para evitar fusão de caracteres (Ex: Paulo`s -> Paulo's)
+                    todosRestaurantes = rawRests.map { rest ->
+                        rest.copy(nome = rest.nome.replace("`", "'"))
+                    }
+                }
 
                 // Gestão de Endereços
                 if (endsDeferred != null) {
@@ -139,8 +144,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             if (effectiveCatId != null && effectiveCatId != catTudo?.id) {
                 filtrados = filtrados.filter { r -> r.categorias?.any { it.id == effectiveCatId } == true }
             }
+            
+            // OTIMIZAÇÃO: Busca insensível a acentos e maiúsculas
             if (searchText.isNotBlank()) {
-                filtrados = filtrados.filter { it.nome.contains(searchText, ignoreCase = true) }
+                val normalizedQuery = normalizarString(searchText)
+                filtrados = filtrados.filter { 
+                    normalizarString(it.nome).contains(normalizedQuery) 
+                }
             }
 
             val fallbackId = if (selectedEndereco != null) selectedEndereco.id else "gps_location"
@@ -154,7 +164,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.value = HomeUiState.Success(
                     categorias = todasCategorias,
                     recomendados = filtrados.take(5),
-                    populares = if (filtrados.size > 5) filtrados.drop(5) else filtrados,
+                    populares = filtrados,
                     textoBusca = searchText,
                     categoriaSelecionadaId = effectiveCatId,
                     labelEndereco = selectedEndereco?.label ?: "",
@@ -200,5 +210,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     fun aoSelecionarCategoria(id: String?) {
         selectedCategoryId = id
         viewModelScope.launch { publishState() }
+    }
+
+    // Helper para remover acentos e deixar em minúsculo
+    private fun normalizarString(texto: String): String {
+        val normalizada = java.text.Normalizer.normalize(texto, java.text.Normalizer.Form.NFD)
+        return normalizada.replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "").lowercase()
     }
 }
