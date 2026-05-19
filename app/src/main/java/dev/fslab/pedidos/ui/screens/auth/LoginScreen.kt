@@ -74,7 +74,7 @@ fun LoginScreen(
         onToggleTheme: () -> Unit = {},
         onEsqueciSenha: (String) -> Unit = {},
         onRegister: () -> Unit = {},
-        onLogin: (email: String, senha: String, lembrarMe: Boolean) -> Unit = { _, _, _ -> },
+        onLogin: (email: String, senha: String) -> Unit = { _, _ -> },
         onGoogleSignIn: () -> Unit = {},
         isLoading: Boolean = false,
         errorMessage: String? = null,
@@ -85,7 +85,36 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var senha by remember { mutableStateOf("") }
     var senhaVisivel by remember { mutableStateOf(false) }
-    var lembrarMe by remember { mutableStateOf(false) }
+
+    if (isLoading && email.isBlank() && senha.isBlank()) {
+        // Modo tela de carregamento inicial (Splash Screen logic)
+        Box(
+            modifier = modifier.fillMaxSize().background(colors.background),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(90.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(colors.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.iguana_icon),
+                        contentDescription = "Logo",
+                        modifier = Modifier.size(60.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                CircularProgressIndicator(
+                    color = colors.primary,
+                    strokeWidth = 3.dp
+                )
+            }
+        }
+        return
+    }
 
     Box(modifier = modifier.fillMaxSize().background(colors.background).imePadding()) {
         Column(
@@ -284,30 +313,17 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Lembrar-me e Esqueci a senha
+                    // Esqueci a senha
                     Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(
-                                    checked = lembrarMe,
-                                    onCheckedChange = { lembrarMe = it },
-                                    enabled = !isLoading,
-                                    colors = CheckboxDefaults.colors(checkedColor = colors.primary)
-                            )
-                            Text(
-                                    text = "Lembrar-me",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = colors.textSecondary
-                            )
-                        }
                         Text(
                                 text = "Esqueci a senha",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = colors.primary,
-                                modifier = Modifier.clickable { onEsqueciSenha(email) }
+                                modifier = Modifier.clickable { onEsqueciSenha(email) }.padding(vertical = 8.dp)
                         )
                     }
 
@@ -315,7 +331,7 @@ fun LoginScreen(
 
                     // Botão Entrar
                     Button(
-                            onClick = { onLogin(email, senha, lembrarMe) },
+                            onClick = { onLogin(email, senha) },
                             modifier = Modifier.fillMaxWidth().height(50.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = colors.primary),

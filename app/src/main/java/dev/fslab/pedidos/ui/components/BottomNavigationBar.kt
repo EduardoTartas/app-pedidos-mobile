@@ -55,32 +55,17 @@ val bottomNavItems = listOf(
 fun BottomNavigationBar(
     cardColor: Color,
     textColor: Color,
-    hazeState: HazeState? = null,
     selectedRoute: String = "home",
     onNavigate: (String) -> Unit = {}
 ) {
     val colors = LocalPedidosColors.current
 
     NavigationBar(
-        containerColor = if (hazeState != null) Color.Transparent else cardColor.copy(alpha = 0.90f),
+        containerColor = cardColor.copy(alpha = 0.98f),
         contentColor = textColor,
-        tonalElevation = if (hazeState != null) 0.dp else 8.dp,
+        tonalElevation = 4.dp,
         modifier = Modifier
             .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .let { mod ->
-                if (hazeState != null) {
-                    mod.hazeChild(
-                        state = hazeState,
-                        style = HazeStyle(
-                            backgroundColor = cardColor,
-                            tint = HazeTint(cardColor.copy(alpha = 0.6f)),
-                            blurRadius = 24.dp
-                        )
-                    )
-                } else {
-                    mod
-                }
-            }
     ) {
         bottomNavItems.forEach { item ->
             val isSelected = selectedRoute == item.route

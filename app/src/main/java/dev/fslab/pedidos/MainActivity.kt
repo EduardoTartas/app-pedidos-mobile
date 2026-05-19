@@ -37,7 +37,7 @@ import dev.fslab.pedidos.ui.screens.auth.LoginScreen
 import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
 import dev.fslab.pedidos.ui.screens.HomeScreen
 import dev.fslab.pedidos.ui.screens.RestaurantesScreen
-import dev.fslab.pedidos.ui.screens.RestauranteDetalhesScreen
+import dev.fslab.pedidos.ui.screens.SplashScreen
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 import dev.fslab.pedidos.ui.viewmodel.AuthState
 import dev.fslab.pedidos.ui.viewmodel.AuthViewModel
@@ -46,8 +46,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.graphics.Color
 import dev.fslab.pedidos.ui.components.BottomNavigationBar
 import dev.fslab.pedidos.ui.components.bottomNavItems
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,15 +62,11 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/**
- * Google Web Client ID — usado pelo Credential Manager para solicitar o ID Token.
- * Este é o CLIENT_ID do tipo "Web application" configurado no Google Cloud Console.
- */
 private const val GOOGLE_WEB_CLIENT_ID =
     "1053347409082-qb4s3d724bp69hs78kdt38s35brinr7n.apps.googleusercontent.com"
 
-/** Rotas que exibem a barra de navegação inferior. */
 private val mainScreenRoutes = bottomNavItems.map { it.route }.toSet()
+private val splashRoute = "splash"
 
 @Composable
 fun PedidosApp(activity: ComponentActivity) {
@@ -84,9 +83,12 @@ fun PedidosApp(activity: ComponentActivity) {
         val navController = rememberNavController()
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
-        val showBottomBar = currentRoute in mainScreenRoutes
+        
+        // Trava reforçada: Só mostra se a rota atual estiver na lista e não for nula/splash
+        val showBottomBar = currentRoute != null && 
+                          currentRoute in mainScreenRoutes && 
+                          currentRoute != splashRoute
 
-        val hazeState = remember { HazeState() }
         val cardColor = if (isDarkTheme) Color(0xFF161B2E) else Color.White
         val textColors = if (isDarkTheme) Color.White else Color.Black
 
@@ -96,7 +98,6 @@ fun PedidosApp(activity: ComponentActivity) {
                     BottomNavigationBar(
                         cardColor = cardColor,
                         textColor = textColors,
-                        hazeState = hazeState,
                         selectedRoute = currentRoute ?: "home",
                         onNavigate = { route ->
                             navController.navigate(route) {
@@ -112,12 +113,47 @@ fun PedidosApp(activity: ComponentActivity) {
         ) { innerPadding ->
             NavHost(
                 navController = navController,
-                startDestination = "login",
+                startDestination = splashRoute,
+                enterTransition = {
+                    fadeIn(animationSpec = tween(300)) + slideInHorizontally(initialOffsetX = { 300 }, animationSpec = tween(300))
+                },
+                exitTransition = {
+                    fadeOut(animationSpec = tween(300)) + slideOutHorizontally(targetOffsetX = { -300 }, animationSpec = tween(300))
+                },
+                popEnterTransition = {
+                    fadeIn(animationSpec = tween(300)) + slideInHorizontally(initialOffsetX = { -300 }, animationSpec = tween(300))
+                },
+                popExitTransition = {
+                    fadeOut(animationSpec = tween(300)) + slideOutHorizontally(targetOffsetX = { 300 }, animationSpec = tween(300))
+                },
                 modifier = Modifier
                     .fillMaxSize()
-                    .haze(state = hazeState)
-                    .padding(top = innerPadding.calculateTopPadding(), bottom = 0.dp)
+                    .padding(bottom = 0.dp)
             ) {
+                composable(splashRoute) {
+                    SplashScreen(
+                        authState = authState,
+                        onNavigateToHome = {
+                            navController.navigate("home") {
+                                popUpTo(splashRoute) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateToLogin = {
+                            navController.navigate("login") {
+                                popUpTo(splashRoute) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateToCompleteProfile = {
+                            navController.navigate("completar_perfil") {
+                                popUpTo(splashRoute) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    )
+                }
+
                 composable("login") {
                     LaunchedEffect(authState) {
                         when (authState) {
@@ -144,8 +180,8 @@ fun PedidosApp(activity: ComponentActivity) {
                             navController.navigate("esqueci_senha?email=$email")
                         },
                         onRegister = { navController.navigate("signup") },
-                        onLogin = { email, senha, lembrarMe ->
-                            authViewModel.loginUser(email, senha, lembrarMe)
+                        onLogin = { email, senha ->
+                            authViewModel.loginUser(email, senha)
                         },
                         onGoogleSignIn = {
                             coroutineScope.launch {
@@ -173,7 +209,6 @@ fun PedidosApp(activity: ComponentActivity) {
 
                                     authViewModel.loginWithGoogle(idToken)
                                 } catch (e: GetCredentialCancellationException) {
-                                    // Usuário cancelou — não faz nada
                                     Log.d("PedidosApp", "Google Sign-In cancelado pelo usuário")
                                 } catch (e: androidx.credentials.exceptions.NoCredentialException) {
                                     Log.e("PedidosApp", "Nenhuma conta do Google encontrada no dispositivo", e)
@@ -191,6 +226,7 @@ fun PedidosApp(activity: ComponentActivity) {
                         onErrorDismiss = { authViewModel.clearError() }
                     )
                 }
+
                 composable(
                     route = "esqueci_senha?email={email}",
                     arguments = listOf(
@@ -213,11 +249,9 @@ fun PedidosApp(activity: ComponentActivity) {
                     )
                 }
                 composable("signup") {
-                    // Estado local para mensagem de erro e sucesso do cadastro
                     var cadastroError by remember { mutableStateOf<String?>(null) }
                     var cadastroSuccess by remember { mutableStateOf<String?>(null) }
 
-                    // Redireciona ao login após exibir mensagem de sucesso
                     LaunchedEffect(cadastroSuccess) {
                         if (cadastroSuccess != null) {
                             kotlinx.coroutines.delay(2000L)
@@ -256,9 +290,6 @@ fun PedidosApp(activity: ComponentActivity) {
                     )
                 }
 
-                // ═══════════════════════════════════════════
-                // COMPLETAR PERFIL (pós-login Google)
-                // ═══════════════════════════════════════════
                 composable("completar_perfil") {
                     var perfilError by remember { mutableStateOf<String?>(null) }
 
@@ -277,16 +308,13 @@ fun PedidosApp(activity: ComponentActivity) {
                             authViewModel.completeProfile(
                                 cpf = cpf,
                                 telefone = telefone,
-                                onSuccess = {
-                                    // AuthState.Success será emitido -> LaunchedEffect navega
-                                },
+                                onSuccess = { },
                                 onError = { msg ->
                                     perfilError = msg
                                 }
                             )
                         },
                         onSkip = {
-                            // Ir direto para Home sem completar perfil
                             navController.navigate("home") {
                                 popUpTo("completar_perfil") { inclusive = true }
                                 launchSingleTop = true
@@ -299,7 +327,18 @@ fun PedidosApp(activity: ComponentActivity) {
                 }
 
                 composable("home") {
+                    val homeViewModel: dev.fslab.pedidos.ui.viewmodel.HomeViewModel = viewModel()
+                    val user by authViewModel.currentUser.collectAsState()
+                    val userId = user?.id ?: ""
+                    
+                    LaunchedEffect(userId) {
+                        if (userId.isNotEmpty()) {
+                            homeViewModel.carregarDados(userId)
+                        }
+                    }
+
                     HomeScreen(
+                        viewModel = homeViewModel,
                         bottomPadding = innerPadding.calculateBottomPadding(),
                         onLogout = {
                             authViewModel.logout()
@@ -308,31 +347,49 @@ fun PedidosApp(activity: ComponentActivity) {
                                 launchSingleTop = true
                             }
                         },
-                        onNavigateDetalhes = { restauranteId ->
-                            navController.navigate("restaurante/$restauranteId")
+                        onNavigateToNovoEndereco = {
+                            navController.navigate("novo_endereco")
+                        },
+                        onNavigateToRestaurantes = {
+                            navController.navigate("restaurantes") {
+                                popUpTo("home") { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onRefresh = {
+                            homeViewModel.atualizarDados(userId)
                         }
                     )
                 }
 
                 composable("restaurantes") {
                     RestaurantesScreen(
-                        bottomPadding = innerPadding.calculateBottomPadding(),
-                        onNavigateDetalhes = { restauranteId ->
-                            navController.navigate("restaurante/$restauranteId")
-                        }
+                        bottomPadding = innerPadding.calculateBottomPadding()
                     )
                 }
 
-                composable(
-                    route = "restaurante/{restauranteId}",
-                    arguments = listOf(navArgument("restauranteId") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val restauranteId = backStackEntry.arguments?.getString("restauranteId") ?: ""
-                    RestauranteDetalhesScreen(
-                        restauranteId = restauranteId,
-                        bottomPadding = innerPadding.calculateBottomPadding(),
-                        onBack = { navController.popBackStack() }
-                    )
+                composable("novo_endereco") {
+                    val homeViewModel: dev.fslab.pedidos.ui.viewmodel.HomeViewModel = viewModel()
+                    val user by authViewModel.currentUser.collectAsState()
+                    val userId = user?.id ?: ""
+                    
+                    if (userId.isNotEmpty()) {
+                        dev.fslab.pedidos.ui.screens.NovoEnderecoScreen(
+                            usuarioId = userId,
+                            onBack = { navController.popBackStack() },
+                            onSuccess = {
+                                homeViewModel.carregarDados(userId)
+                                navController.popBackStack()
+                            }
+                        )
+                    } else {
+                        LaunchedEffect(Unit) {
+                            navController.navigate("login") {
+                                popUpTo(0)
+                            }
+                        }
+                    }
                 }
             }
         }
