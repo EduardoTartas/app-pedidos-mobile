@@ -51,6 +51,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 fun HomeScreen(
     bottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
     onLogout: () -> Unit = {},
+    onNavigateDetalhes: (String) -> Unit = {},
     onNavigateToNovoEndereco: () -> Unit = {},
     onNavigateToRestaurantes: () -> Unit = {},
     onRefresh: () -> Unit = {},
@@ -218,7 +219,7 @@ fun HomeScreen(
                             SectionTitle("Recomendados", "Ver todos", textColors, onActionClick = onNavigateToRestaurantes)
                         }
                         item(key = "row_recomendados") {
-                            RecomendadosRow(state.recomendados, cardColor, textColors, imageLoader)
+                            RecomendadosRow(state.recomendados, cardColor, textColors, imageLoader, onItemClick = { onNavigateDetalhes(it.id) })
                         }
                         item(key = "title_populares") {
                             SectionTitle("Populares perto de você", "Ver todos", textColors, onActionClick = onNavigateToRestaurantes)
@@ -227,7 +228,7 @@ fun HomeScreen(
                             items = state.populares,
                             key = { it.id }
                         ) { restaurante ->
-                            PopularItem(restaurante, cardColor, textColors, imageLoader)
+                            PopularItem(restaurante, cardColor, textColors, imageLoader, onClick = { onNavigateDetalhes(restaurante.id) })
                         }
                     }
                     }
@@ -541,14 +542,15 @@ fun RecomendadosRow(
     restaurantes: List<Restaurante>, 
     cardColor: Color, 
     textColor: Color,
-    imageLoader: ImageLoader
+    imageLoader: ImageLoader,
+    onItemClick: (Restaurante) -> Unit = {}
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(restaurantes, key = { it.id }) { restaurante ->
-            RecomendadoCard(restaurante, cardColor, textColor, imageLoader)
+            RecomendadoCard(restaurante, cardColor, textColor, imageLoader, onClick = { onItemClick(restaurante) })
         }
     }
 }
@@ -558,7 +560,8 @@ fun RecomendadoCard(
     restaurante: Restaurante, 
     cardColor: Color, 
     textColor: Color,
-    imageLoader: ImageLoader
+    imageLoader: ImageLoader,
+    onClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     Card(
@@ -671,7 +674,8 @@ fun PopularItem(
     restaurante: Restaurante, 
     cardColor: Color, 
     textColor: Color,
-    imageLoader: ImageLoader
+    imageLoader: ImageLoader,
+    onClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     Card(

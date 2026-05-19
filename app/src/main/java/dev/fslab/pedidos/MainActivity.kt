@@ -37,6 +37,7 @@ import dev.fslab.pedidos.ui.screens.auth.LoginScreen
 import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
 import dev.fslab.pedidos.ui.screens.HomeScreen
 import dev.fslab.pedidos.ui.screens.RestaurantesScreen
+import dev.fslab.pedidos.ui.screens.RestauranteDetalhesScreen
 import dev.fslab.pedidos.ui.screens.SplashScreen
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 import dev.fslab.pedidos.ui.viewmodel.AuthState
@@ -347,6 +348,9 @@ fun PedidosApp(activity: ComponentActivity) {
                                 launchSingleTop = true
                             }
                         },
+                        onNavigateDetalhes = { restauranteId ->
+                            navController.navigate("restaurante/$restauranteId")
+                        },
                         onNavigateToNovoEndereco = {
                             navController.navigate("novo_endereco")
                         },
@@ -365,7 +369,22 @@ fun PedidosApp(activity: ComponentActivity) {
 
                 composable("restaurantes") {
                     RestaurantesScreen(
-                        bottomPadding = innerPadding.calculateBottomPadding()
+                        bottomPadding = innerPadding.calculateBottomPadding(),
+                        onNavigateDetalhes = { restauranteId ->
+                            navController.navigate("restaurante/$restauranteId")
+                        }
+                    )
+                }
+
+                composable(
+                    route = "restaurante/{restauranteId}",
+                    arguments = listOf(navArgument("restauranteId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val restauranteId = backStackEntry.arguments?.getString("restauranteId") ?: ""
+                    RestauranteDetalhesScreen(
+                        restauranteId = restauranteId,
+                        bottomPadding = innerPadding.calculateBottomPadding(),
+                        onBack = { navController.popBackStack() }
                     )
                 }
 

@@ -150,7 +150,7 @@ fun RestaurantesScreen(
                             items = state.restaurantes,
                             key = { it.id } // OTIMIZAÇÃO: Chave estável
                         ) { restaurante ->
-                            RestauranteCard(restaurante, cardColor, textColors, imageLoader)
+                            RestauranteCard(restaurante, cardColor, textColors, imageLoader, onClick = { onNavigateDetalhes(restaurante.id) })
                         }
                     }
 
@@ -676,7 +676,8 @@ fun RestauranteCard(
     restaurante: Restaurante, 
     cardColor: Color, 
     textColor: Color,
-    imageLoader: ImageLoader
+    imageLoader: ImageLoader,
+    onClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     Card(
