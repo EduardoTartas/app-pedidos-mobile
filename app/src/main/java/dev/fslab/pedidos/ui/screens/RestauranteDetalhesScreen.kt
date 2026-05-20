@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -47,7 +48,11 @@ fun RestauranteDetalhesScreen(
     restauranteId: String,
     bottomPadding: Dp = 0.dp,
     onBack: () -> Unit = {},
-    viewModel: RestauranteDetalhesViewModel = viewModel()
+    viewModel: RestauranteDetalhesViewModel = viewModel(),
+    onNavigatePersonalizacao: (Prato) -> Unit = {},
+    carrinhoTotalItens: Int = 0,
+    carrinhoPrecoTotal: Double = 0.0,
+    onVerCarrinho: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -205,14 +210,29 @@ fun RestauranteDetalhesScreen(
                                 items(pratos) { prato ->
                                     PratoItem(
                                         prato = prato,
-                                        cardColor = cardColor,
-                                        textColor = textColor
+                                        cardColor = bgColor,
+                                        textColor = textColor,
+                                        onAdicionar = { onNavigatePersonalizacao(prato) }
                                     )
                                 }
                             }
                         }
                     }
                 }
+            }
+
+            // Barra flutuante do carrinho
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = bottomPadding)
+            ) {
+                dev.fslab.pedidos.ui.components.CarrinhoBar(
+                    totalItens = carrinhoTotalItens,
+                    precoTotal = carrinhoPrecoTotal,
+                    onClick = onVerCarrinho
+                )
             }
         }
     }
@@ -517,22 +537,42 @@ fun SecaoTitulo(secao: String, textColor: Color) {
 fun PratoItem(
     prato: Prato,
     cardColor: Color,
-    textColor: Color
+    textColor: Color,
+    onAdicionar: () -> Unit = {}
 ) {
     Card(
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 5.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Coluna esquerda: nome, descrição, preço, botão +
+            // Foto do prato (ESQUERDA)
+            if (!prato.fotoPrato.isNullOrBlank()) {
+                AsyncImage(
+                    model = prato.fotoPrato,
+                    contentDescription = "Foto de ${prato.nome}",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(90.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .border(
+                            width = 1.dp,
+                            color = textColor.copy(alpha = 0.10f),
+                            shape = RoundedCornerShape(14.dp)
+                        )
+                )
+            }
+
+            // Coluna direita: nome, descrição, preço, botão
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -540,7 +580,7 @@ fun PratoItem(
                 Text(
                     text = prato.nome,
                     color = textColor,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -549,34 +589,35 @@ fun PratoItem(
                 if (!prato.descricao.isNullOrBlank()) {
                     Text(
                         text = prato.descricao,
-                        color = textColor.copy(alpha = 0.5f),
+                        color = textColor.copy(alpha = 0.55f),
                         fontSize = 12.sp,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        lineHeight = 16.sp
+                        lineHeight = 17.sp
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         text = "R$ ${String.format("%.2f", prato.preco)}",
                         color = textColor,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         fontSize = 15.sp
                     )
 
-                    // Botão Adicionar sem preenchimento (estilo Outlined)
+                    // Botão Adicionar
                     OutlinedButton(
-                        onClick = { /* Futuro: adicionar ao carrinho */ },
-                        modifier = Modifier.height(34.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                        onClick = onAdicionar,
+                        modifier = Modifier.height(32.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                         shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, Color(0xFF14B822).copy(alpha = 0.5f)),
+                        border = BorderStroke(1.5.dp, Color(0xFF14B822)),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = Color(0xFF14B822)
                         )
@@ -584,25 +625,12 @@ fun PratoItem(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(14.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Adicionar", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text("Adicionar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-            }
-
-            // Foto do prato (direita)
-            if (!prato.fotoPrato.isNullOrBlank()) {
-                Spacer(modifier = Modifier.width(12.dp))
-                AsyncImage(
-                    model = prato.fotoPrato,
-                    contentDescription = "Foto de ${prato.nome}",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(85.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                )
             }
         }
     }

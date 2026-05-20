@@ -38,10 +38,13 @@ import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
 import dev.fslab.pedidos.ui.screens.HomeScreen
 import dev.fslab.pedidos.ui.screens.RestaurantesScreen
 import dev.fslab.pedidos.ui.screens.RestauranteDetalhesScreen
+import dev.fslab.pedidos.ui.screens.PratoPersonalizacaoScreen
 import dev.fslab.pedidos.ui.screens.SplashScreen
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 import dev.fslab.pedidos.ui.viewmodel.AuthState
 import dev.fslab.pedidos.ui.viewmodel.AuthViewModel
+import dev.fslab.pedidos.ui.viewmodel.CarrinhoViewModel
+import dev.fslab.pedidos.ui.viewmodel.PratoPersonalizacaoViewModel
 import kotlinx.coroutines.launch
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.graphics.Color
@@ -77,6 +80,15 @@ fun PedidosApp(activity: ComponentActivity) {
     val authState by authViewModel.authState.collectAsState()
     val isLoading = authState is AuthState.Loading
     val errorMessage = (authState as? AuthState.Error)?.message
+
+    // ViewModel de personalização com escopo de Activity (compartilhado entre telas)
+    val personalizacaoViewModel: PratoPersonalizacaoViewModel = viewModel()
+
+    // ViewModel do carrinho com escopo de Activity (persistência entre telas)
+    val carrinhoViewModel: CarrinhoViewModel = viewModel()
+    val carrinhoItens by carrinhoViewModel.itens.collectAsState()
+    val carrinhoTotalItens = carrinhoItens.sumOf { it.quantidade }
+    val carrinhoPrecoTotal = carrinhoItens.sumOf { it.precoTotal * it.quantidade }
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -384,7 +396,28 @@ fun PedidosApp(activity: ComponentActivity) {
                     RestauranteDetalhesScreen(
                         restauranteId = restauranteId,
                         bottomPadding = innerPadding.calculateBottomPadding(),
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onNavigatePersonalizacao = { prato ->
+                            personalizacaoViewModel.carregarGrupos(prato)
+                            navController.navigate("personalizacao")
+                        },
+                        carrinhoTotalItens = carrinhoTotalItens,
+                        carrinhoPrecoTotal = carrinhoPrecoTotal,
+                        onVerCarrinho = { /* TODO: navegar para tela do carrinho */ }
+                    )
+                }
+
+                composable("personalizacao") {
+                    PratoPersonalizacaoScreen(
+                        onBack = { navController.popBackStack() },
+                        onAdicionarAoCarrinho = { state ->
+                            carrinhoViewModel.adicionarItem(
+                                prato = state.prato,
+                                selecoes = state.selecoes,
+                                grupos = state.grupos
+                            )
+                        },
+                        viewModel = personalizacaoViewModel
                     )
                 }
 
