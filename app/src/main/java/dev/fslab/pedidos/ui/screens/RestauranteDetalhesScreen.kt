@@ -556,20 +556,33 @@ fun PratoItem(
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Foto do prato (ESQUERDA)
-            if (!prato.fotoPrato.isNullOrBlank()) {
-                AsyncImage(
-                    model = prato.fotoPrato,
-                    contentDescription = "Foto de ${prato.nome}",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(90.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .border(
-                            width = 1.dp,
-                            color = textColor.copy(alpha = 0.10f),
-                            shape = RoundedCornerShape(14.dp)
-                        )
-                )
+            Box(
+                modifier = Modifier
+                    .size(90.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(textColor.copy(alpha = 0.05f))
+                    .border(
+                        width = 1.dp,
+                        color = textColor.copy(alpha = 0.10f),
+                        shape = RoundedCornerShape(14.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!prato.fotoPrato.isNullOrBlank()) {
+                    AsyncImage(
+                        model = prato.fotoPrato,
+                        contentDescription = "Foto de ${prato.nome}",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Restaurant,
+                        contentDescription = null,
+                        tint = textColor.copy(alpha = 0.2f),
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
 
             // Coluna direita: nome, descrição, preço, botão
