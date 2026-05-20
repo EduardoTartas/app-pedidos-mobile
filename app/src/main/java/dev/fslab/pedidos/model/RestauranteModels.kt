@@ -59,3 +59,36 @@ data class CardapioResponse(
     val message: String,
     val data: Map<String, List<Prato>>?
 )
+
+// ═══════════════════════════════════════════
+// ADICIONAIS
+// ═══════════════════════════════════════════
+
+data class AdicionalGrupo(
+    @SerializedName("_id") val id: String,
+    val nome: String,
+    val tipo: String,          // "adicional" | "variacao"
+    val obrigatorio: Boolean,
+    val min: Int,
+    val max: Int,
+    val ativo: Boolean
+)
+
+data class AdicionalOpcao(
+    @SerializedName("_id") val id: String,
+    @SerializedName("grupo_id") val grupoId: String,
+    val nome: String,
+    val preco: Double,
+    @SerializedName("foto_adicional") val fotoAdicional: String?,
+    val ativo: Boolean
+)
+
+data class AdicionalGruposResponse(
+    val message: String,
+    val data: List<AdicionalGrupo>?
+)
+
+data class AdicionalOpcoesResponse(
+    val message: String,
+    val data: List<AdicionalOpcao>?
+)

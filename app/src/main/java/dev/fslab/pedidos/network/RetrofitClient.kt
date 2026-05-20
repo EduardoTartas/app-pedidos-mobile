@@ -69,4 +69,8 @@ object RetrofitClient {
     val enderecoApi: EnderecoApi by lazy {
         retrofit.create(EnderecoApi::class.java)
     }
+
+    val adicionalApi: AdicionalApi by lazy {
+        retrofit.create(AdicionalApi::class.java)
+    }
 }
