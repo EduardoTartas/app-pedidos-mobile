@@ -212,9 +212,10 @@ fun PratoPersonalizacaoScreen(
                 ) {
                     Button(
                         onClick = {
+                            // A navegação de volta é responsabilidade do caller.
+                            // onAdicionarAoCarrinho retorna false se há conflito pendente
+                            // (nesse caso o dialog será exibido e o caller não navega de volta ainda)
                             onAdicionarAoCarrinho(state)
-                            viewModel.resetar()
-                            onBack()
                         },
                         modifier = Modifier
                             .fillMaxWidth()
