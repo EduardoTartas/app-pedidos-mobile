@@ -55,6 +55,9 @@ fun HomeScreen(
     onNavigateToNovoEndereco: () -> Unit = {},
     onNavigateToRestaurantes: () -> Unit = {},
     onRefresh: () -> Unit = {},
+    carrinhoTotalItens: Int = 0,
+    carrinhoPrecoTotal: Double = 0.0,
+    onVerCarrinho: () -> Unit = {},
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -238,35 +241,9 @@ fun HomeScreen(
                             enderecos = state.enderecos,
                             selectedEnderecoId = state.enderecoSelecionadoId,
                             onDismiss = { showEnderecoSheet = false },
-                            onNovoEnderecoClick = { 
+                            onNovoEnderecoClick = {
                                 showEnderecoSheet = false
-                                onNavigateToNovoEndereco() 
-                            },
-                            onEnderecoSelected = { endereco ->
-                                viewModel.selecionarEndereco(endereco)
-                            }
-                        )
-                    }
-
-                    if (showCategoriasSheet) {
-                        dev.fslab.pedidos.ui.components.CategoriasBottomSheet(
-                            categorias = state.categorias,
-                            categoriaSelecionadaId = state.categoriaSelecionadaId,
-                            onDismiss = { showCategoriasSheet = false },
-                            onCategoriaSelected = { id ->
-                                viewModel.aoSelecionarCategoria(id)
-                            }
-                        )
-                    }
-
-                    if (showEnderecoSheet) {
-                        dev.fslab.pedidos.ui.components.EnderecosBottomSheet(
-                            enderecos = state.enderecos,
-                            selectedEnderecoId = state.enderecoSelecionadoId,
-                            onDismiss = { showEnderecoSheet = false },
-                            onNovoEnderecoClick = { 
-                                showEnderecoSheet = false
-                                onNavigateToNovoEndereco() 
+                                onNavigateToNovoEndereco()
                             },
                             onEnderecoSelected = { endereco ->
                                 viewModel.selecionarEndereco(endereco)
@@ -285,6 +262,21 @@ fun HomeScreen(
                         )
                     }
                 }
+            }
+
+            // Barra do carrinho flutuante — fora do when{} para aparecer em todos os estados
+            // e posicionada corretamente no Box pai (fillMaxSize)
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = bottomPadding)
+            ) {
+                dev.fslab.pedidos.ui.components.CarrinhoBar(
+                    totalItens = carrinhoTotalItens,
+                    precoTotal = carrinhoPrecoTotal,
+                    onClick = onVerCarrinho
+                )
             }
         }
     }
