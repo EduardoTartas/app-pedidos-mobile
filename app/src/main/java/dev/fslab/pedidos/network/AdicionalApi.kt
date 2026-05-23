@@ -15,7 +15,7 @@ interface AdicionalApi {
     ): Response<AdicionalGruposResponse>
 
     /** Lista todas as opções de um grupo */
-    @GET("adicionais/opcoes/{grupoId}")
+    @GET("adicionais/grupos/{grupoId}/opcoes")
     suspend fun listarOpcoesPorGrupo(
         @Path("grupoId") grupoId: String
     ): Response<AdicionalOpcoesResponse>
