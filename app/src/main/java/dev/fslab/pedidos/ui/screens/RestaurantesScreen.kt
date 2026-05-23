@@ -42,6 +42,7 @@ import dev.fslab.pedidos.ui.viewmodel.RestaurantesViewModel
 @Composable
 fun RestaurantesScreen(
     bottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
+    onNavigateDetalhes: (String) -> Unit = {},
     viewModel: RestaurantesViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -149,7 +150,7 @@ fun RestaurantesScreen(
                             items = state.restaurantes,
                             key = { it.id } // OTIMIZAÇÃO: Chave estável
                         ) { restaurante ->
-                            RestauranteCard(restaurante, cardColor, textColors, imageLoader)
+                            RestauranteCard(restaurante, cardColor, textColors, imageLoader, onClick = { onNavigateDetalhes(restaurante.id) })
                         }
                     }
 
@@ -675,7 +676,8 @@ fun RestauranteCard(
     restaurante: Restaurante, 
     cardColor: Color, 
     textColor: Color,
-    imageLoader: ImageLoader
+    imageLoader: ImageLoader,
+    onClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     Card(
@@ -684,7 +686,7 @@ fun RestauranteCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clickable { /* TODO: navegar para detalhes do restaurante */ }
+            .clickable { onClick() }
     ) {
         Column {
             Box(
