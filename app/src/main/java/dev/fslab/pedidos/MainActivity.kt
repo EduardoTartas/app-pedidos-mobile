@@ -553,6 +553,8 @@ fun PedidosApp(activity: ComponentActivity) {
                     val nomeRestaurante by carrinhoViewModel.nomeRestaurante.collectAsState()
                     val restauranteId by carrinhoViewModel.restauranteId.collectAsState()
                     val pedidoState by pedidoViewModel.uiState.collectAsState()
+                    val enderecoSelecionado by carrinhoViewModel.enderecoSelecionado.collectAsState()
+                    val formaPagamento by carrinhoViewModel.formaPagamento.collectAsState()
 
                     // Garante que os endereços estejam carregados (usa a instância Activity-scoped)
                     LaunchedEffect(userId) {
@@ -585,8 +587,10 @@ fun PedidosApp(activity: ComponentActivity) {
                         },
                         onFinalizarPedido = {
                             pedidoViewModel.realizarPedido(
-                                restauranteId = restauranteId,
-                                itens = carrinhoItens
+                                restauranteId  = restauranteId,
+                                itens          = carrinhoItens,
+                                endereco       = enderecoSelecionado,
+                                formaPagamento = formaPagamento
                             )
                         },
                         onVoltarAoRestaurante = {

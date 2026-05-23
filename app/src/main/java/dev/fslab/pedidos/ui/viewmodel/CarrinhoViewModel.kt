@@ -9,16 +9,24 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-enum class FormaPagamento(val label: String, val iconKey: String) {
-    CARTAO("Cartão de Crédito / Débito", "card"),
-    PIX("Pix", "pix"),
-    DINHEIRO("Dinheiro", "money")
+/**
+ * Forma de pagamento selecionada pelo usuário.
+ *
+ * [label]    Texto exibido na UI
+ * [iconKey]  Chave para seleção de ícone
+ * [apiValue] Valor aceito pela API (enum do backend)
+ */
+enum class FormaPagamento(val label: String, val iconKey: String, val apiValue: String) {
+    CARTAO_CREDITO("Cartão de Crédito", "card",    "cartao_credito"),
+    CARTAO_DEBITO ("Cartão de Débito",  "card",    "cartao_debito"),
+    PIX           ("Pix",              "pix",     "pix"),
+    DINHEIRO      ("Dinheiro",         "money",   "dinheiro")
 }
 
 /** Representa um conflito pendente de restaurante diferente */
 data class ConflitoPendente(
-    val nomeRestauranteAtual: String,   // nome do restaurante do carrinho atual
-    val nomeRestauranteNovo: String,    // nome do restaurante que o user quer adicionar
+    val nomeRestauranteAtual: String,
+    val nomeRestauranteNovo: String,
     val itemParaAdicionar: ItemParaAdicionar
 )
 
@@ -46,7 +54,7 @@ class CarrinhoViewModel : ViewModel() {
     private val _enderecoSelecionado = MutableStateFlow<Endereco?>(null)
     val enderecoSelecionado: StateFlow<Endereco?> = _enderecoSelecionado.asStateFlow()
 
-    private val _formaPagamento = MutableStateFlow(FormaPagamento.CARTAO)
+    private val _formaPagamento = MutableStateFlow(FormaPagamento.PIX)
     val formaPagamento: StateFlow<FormaPagamento> = _formaPagamento.asStateFlow()
 
     /** Quantidade total de itens no carrinho (considerando `quantidade` de cada item) */
@@ -74,27 +82,22 @@ class CarrinhoViewModel : ViewModel() {
         val carrinhoVazio = _itens.value.isEmpty()
 
         return if (carrinhoVazio || carrinhoAtualId == restauranteId) {
-            // Mesmo restaurante ou carrinho vazio: adiciona direto
             _restauranteId.value = restauranteId
             _nomeRestaurante.value = nomeRestaurante
             adicionarItem(prato, selecoes, grupos)
-            true  // adicionado com sucesso
+            true
         } else {
-            // Restaurante diferente: sinaliza conflito para a UI mostrar modal
             _conflitoPendente.value = ConflitoPendente(
                 nomeRestauranteAtual = _nomeRestaurante.value,
                 nomeRestauranteNovo = nomeRestaurante,
                 itemParaAdicionar = ItemParaAdicionar(prato, selecoes, grupos)
             )
-            false  // conflito pendente — NÃO navegar de volta ainda
+            false
         }
     }
 
     /** Confirma a substituição: limpa o carrinho e adiciona o novo item */
-    fun substituirCarrinho(
-        restauranteId: String,
-        nomeRestaurante: String
-    ) {
+    fun substituirCarrinho(restauranteId: String, nomeRestaurante: String) {
         val conflito = _conflitoPendente.value ?: return
         limpar()
         _restauranteId.value = restauranteId
@@ -112,9 +115,6 @@ class CarrinhoViewModel : ViewModel() {
         _conflitoPendente.value = null
     }
 
-    /**
-     * Adiciona um prato ao carrinho com as seleções atuais do ViewModel de personalização.
-     */
     fun adicionarItem(
         prato: Prato,
         selecoes: Map<String, Set<String>>,
@@ -139,14 +139,12 @@ class CarrinhoViewModel : ViewModel() {
         _itens.value = _itens.value + novoItem
     }
 
-    /** Incrementa a quantidade de um item pelo seu id */
     fun incrementarItem(itemId: String) {
         _itens.value = _itens.value.map { item ->
             if (item.id == itemId) item.copy(quantidade = item.quantidade + 1) else item
         }
     }
 
-    /** Decrementa a quantidade; remove o item se chegar a 0 */
     fun decrementarItem(itemId: String) {
         val lista = _itens.value.map { item ->
             if (item.id == itemId) item.copy(quantidade = item.quantidade - 1) else item
@@ -154,7 +152,6 @@ class CarrinhoViewModel : ViewModel() {
         _itens.value = lista.filter { it.quantidade > 0 }
     }
 
-    /** Remove um item diretamente pelo id */
     fun removerItem(itemId: String) {
         _itens.value = _itens.value.filter { it.id != itemId }
     }
@@ -175,7 +172,7 @@ class CarrinhoViewModel : ViewModel() {
     fun limpar() {
         _itens.value = emptyList()
         _enderecoSelecionado.value = null
-        _formaPagamento.value = FormaPagamento.CARTAO
+        _formaPagamento.value = FormaPagamento.PIX
         _nomeRestaurante.value = ""
         _restauranteId.value = ""
         _conflitoPendente.value = null

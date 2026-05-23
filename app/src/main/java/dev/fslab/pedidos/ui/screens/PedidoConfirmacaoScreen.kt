@@ -216,7 +216,41 @@ fun PedidoConfirmacaoScreen(
                             color = colors.textPrimary.copy(alpha = 0.07f)
                         )
 
-                        // Itens
+                        // Endereço de entrega
+                        pedido.enderecoEntrega?.let { end ->
+                            ResumoRow(
+                                label = "Entregar em",
+                                value = "${end.logradouro}, ${end.numero} - ${end.bairro}"
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            ResumoRow(
+                                label = "",
+                                value = "${end.cidade} - ${end.estado}"
+                            )
+                            HorizontalDivider(
+                                modifier = Modifier.padding(vertical = 12.dp),
+                                color = colors.textPrimary.copy(alpha = 0.07f)
+                            )
+                        }
+
+                        // Forma de pagamento
+                        pedido.formaPagamento?.let { fp ->
+                            val formaPagamentoLabel = when (fp) {
+                                "cartao_credito" -> "Cartão de Crédito"
+                                "cartao_debito"  -> "Cartão de Débito"
+                                "pix"            -> "Pix"
+                                "dinheiro"       -> "Dinheiro"
+                                else             -> fp
+                            }
+                            ResumoRow(
+                                label = "Pagamento",
+                                value = formaPagamentoLabel
+                            )
+                            HorizontalDivider(
+                                modifier = Modifier.padding(vertical = 12.dp),
+                                color = colors.textPrimary.copy(alpha = 0.07f)
+                            )
+                        }
                         pedido.itens.forEach { item ->
                             ResumoRow(
                                 label = "${item.quantidade}x ${item.pratoNome}",
