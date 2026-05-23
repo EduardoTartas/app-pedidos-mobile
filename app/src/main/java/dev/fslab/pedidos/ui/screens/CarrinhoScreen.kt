@@ -35,6 +35,7 @@ import dev.fslab.pedidos.ui.components.PagamentoBottomSheet
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 import dev.fslab.pedidos.ui.viewmodel.CarrinhoViewModel
 import dev.fslab.pedidos.ui.viewmodel.FormaPagamento
+import dev.fslab.pedidos.ui.viewmodel.PedidoUiState
 
 private val Verde = Color(0xFF14B822)
 
@@ -50,7 +51,9 @@ fun CarrinhoScreen(
     onBack: () -> Unit = {},
     onNavigateNovoEndereco: () -> Unit = {},
     onFinalizarPedido: () -> Unit = {},
-    onVoltarAoRestaurante: () -> Unit = {}
+    onVoltarAoRestaurante: () -> Unit = {},
+    pedidoState: PedidoUiState = PedidoUiState.Idle,
+    onDismissErro: () -> Unit = {}
 ) {
     val colors = LocalPedidosColors.current
     val itens by viewModel.itens.collectAsState()
@@ -334,7 +337,92 @@ fun CarrinhoScreen(
             }
         )
     }
+
+    // ─── Diálogo de erro do pedido ───────────────────────────────────────────
+    if (pedidoState is PedidoUiState.Error) {
+        AlertDialog(
+            onDismissRequest = onDismissErro,
+            containerColor = if (androidx.compose.foundation.isSystemInDarkTheme())
+                androidx.compose.ui.graphics.Color(0xFF1A202C)
+            else
+                androidx.compose.ui.graphics.Color.White,
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = androidx.compose.ui.graphics.Color(0xFFE53935),
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Erro ao realizar pedido",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = LocalPedidosColors.current.textPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = (pedidoState as PedidoUiState.Error).message,
+                    fontSize = 14.sp,
+                    color = LocalPedidosColors.current.textPrimary.copy(alpha = 0.7f),
+                    lineHeight = 20.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = onDismissErro,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = androidx.compose.ui.graphics.Color(0xFFE53935)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Fechar", color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
+
+    // ─── Overlay de loading ──────────────────────────────────────────────────
+    if (pedidoState is PedidoUiState.Loading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f)),
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.material3.Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = androidx.compose.material3.CardDefaults.cardColors(
+                    containerColor = if (androidx.compose.foundation.isSystemInDarkTheme())
+                        androidx.compose.ui.graphics.Color(0xFF1A202C)
+                    else
+                        androidx.compose.ui.graphics.Color.White
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        color = Verde,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Enviando pedido...",
+                        color = LocalPedidosColors.current.textPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp
+                    )
+                }
+            }
+        }
+    }
 }
+
 
 // ═══════════════════════════════════════════════════════
 // TOP BAR

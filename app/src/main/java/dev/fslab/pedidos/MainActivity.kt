@@ -37,6 +37,7 @@ import dev.fslab.pedidos.ui.screens.auth.LoginScreen
 import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
 import dev.fslab.pedidos.ui.screens.CarrinhoScreen
 import dev.fslab.pedidos.ui.screens.HomeScreen
+import dev.fslab.pedidos.ui.screens.PedidoConfirmacaoScreen
 import dev.fslab.pedidos.ui.screens.RestaurantesScreen
 import dev.fslab.pedidos.ui.screens.RestauranteDetalhesScreen
 import dev.fslab.pedidos.ui.screens.PratoPersonalizacaoScreen
@@ -46,6 +47,8 @@ import dev.fslab.pedidos.ui.viewmodel.AuthState
 import dev.fslab.pedidos.ui.viewmodel.AuthViewModel
 import dev.fslab.pedidos.ui.viewmodel.CarrinhoViewModel
 import dev.fslab.pedidos.ui.viewmodel.HomeUiState
+import dev.fslab.pedidos.ui.viewmodel.PedidoUiState
+import dev.fslab.pedidos.ui.viewmodel.PedidoViewModel
 import dev.fslab.pedidos.ui.viewmodel.PratoPersonalizacaoViewModel
 import kotlinx.coroutines.launch
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -91,6 +94,9 @@ fun PedidosApp(activity: ComponentActivity) {
     val carrinhoItens by carrinhoViewModel.itens.collectAsState()
     val carrinhoTotalItens = carrinhoItens.sumOf { it.quantidade }
     val carrinhoPrecoTotal = carrinhoItens.sumOf { it.precoTotal * it.quantidade }
+
+    // ViewModel de pedidos com escopo de Activity
+    val pedidoViewModel: PedidoViewModel = viewModel()
 
     // HomeViewModel com escopo de Activity — compartilhado entre home, carrinho e novo_endereco
     // IMPORTANTE: declarar aqui garante a mesma instância em todas as rotas.
@@ -545,11 +551,25 @@ fun PedidosApp(activity: ComponentActivity) {
                     val user by authViewModel.currentUser.collectAsState()
                     val userId = user?.id ?: ""
                     val nomeRestaurante by carrinhoViewModel.nomeRestaurante.collectAsState()
+                    val restauranteId by carrinhoViewModel.restauranteId.collectAsState()
+                    val pedidoState by pedidoViewModel.uiState.collectAsState()
 
                     // Garante que os endereços estejam carregados (usa a instância Activity-scoped)
                     LaunchedEffect(userId) {
                         if (userId.isNotEmpty()) {
                             homeViewModel.carregarDados(userId)
+                        }
+                    }
+
+                    // Navega para a tela de confirmação ao criar pedido com sucesso
+                    LaunchedEffect(pedidoState) {
+                        if (pedidoState is PedidoUiState.Success) {
+                            carrinhoViewModel.limpar()
+                            navController.navigate("pedido_confirmacao") {
+                                // Remove o carrinho e o restaurante do back-stack
+                                popUpTo("home") { inclusive = false }
+                                launchSingleTop = true
+                            }
                         }
                     }
 
@@ -564,12 +584,44 @@ fun PedidosApp(activity: ComponentActivity) {
                             navController.navigate("novo_endereco")
                         },
                         onFinalizarPedido = {
-                            // TODO: implementar finalização do pedido
+                            pedidoViewModel.realizarPedido(
+                                restauranteId = restauranteId,
+                                itens = carrinhoItens
+                            )
                         },
                         onVoltarAoRestaurante = {
                             navController.popBackStack()
-                        }
+                        },
+                        pedidoState = pedidoState,
+                        onDismissErro = { pedidoViewModel.resetar() }
                     )
+                }
+
+                composable("pedido_confirmacao") {
+                    val pedidoState by pedidoViewModel.uiState.collectAsState()
+                    val nomeRestaurante by carrinhoViewModel.nomeRestaurante.collectAsState()
+                    val pedido = (pedidoState as? PedidoUiState.Success)?.pedido
+
+                    if (pedido != null) {
+                        PedidoConfirmacaoScreen(
+                            pedido = pedido,
+                            nomeRestaurante = nomeRestaurante,
+                            onVoltarInicio = {
+                                pedidoViewModel.resetar()
+                                navController.navigate("home") {
+                                    popUpTo("home") { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            }
+                        )
+                    } else {
+                        // Segurança: se o pedido sumir (ex: processo morreu), volta para home
+                        LaunchedEffect(Unit) {
+                            navController.navigate("home") {
+                                popUpTo("home") { inclusive = false }
+                            }
+                        }
+                    }
                 }
             }
         }
