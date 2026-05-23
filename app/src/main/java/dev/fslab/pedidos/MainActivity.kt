@@ -35,12 +35,21 @@ import dev.fslab.pedidos.ui.screens.auth.CompletarPerfilScreen
 import dev.fslab.pedidos.ui.screens.auth.EsqueciSenhaScreen
 import dev.fslab.pedidos.ui.screens.auth.LoginScreen
 import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
+import dev.fslab.pedidos.ui.screens.CarrinhoScreen
 import dev.fslab.pedidos.ui.screens.HomeScreen
+import dev.fslab.pedidos.ui.screens.PedidoConfirmacaoScreen
 import dev.fslab.pedidos.ui.screens.RestaurantesScreen
+import dev.fslab.pedidos.ui.screens.RestauranteDetalhesScreen
+import dev.fslab.pedidos.ui.screens.PratoPersonalizacaoScreen
 import dev.fslab.pedidos.ui.screens.SplashScreen
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 import dev.fslab.pedidos.ui.viewmodel.AuthState
 import dev.fslab.pedidos.ui.viewmodel.AuthViewModel
+import dev.fslab.pedidos.ui.viewmodel.CarrinhoViewModel
+import dev.fslab.pedidos.ui.viewmodel.HomeUiState
+import dev.fslab.pedidos.ui.viewmodel.PedidoUiState
+import dev.fslab.pedidos.ui.viewmodel.PedidoViewModel
+import dev.fslab.pedidos.ui.viewmodel.PratoPersonalizacaoViewModel
 import kotlinx.coroutines.launch
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.graphics.Color
@@ -76,6 +85,24 @@ fun PedidosApp(activity: ComponentActivity) {
     val authState by authViewModel.authState.collectAsState()
     val isLoading = authState is AuthState.Loading
     val errorMessage = (authState as? AuthState.Error)?.message
+
+    // ViewModel de personalização com escopo de Activity (compartilhado entre telas)
+    val personalizacaoViewModel: PratoPersonalizacaoViewModel = viewModel()
+
+    // ViewModel do carrinho com escopo de Activity (persistência entre telas)
+    val carrinhoViewModel: CarrinhoViewModel = viewModel()
+    val carrinhoItens by carrinhoViewModel.itens.collectAsState()
+    val carrinhoTotalItens = carrinhoItens.sumOf { it.quantidade }
+    val carrinhoPrecoTotal = carrinhoItens.sumOf { it.precoTotal * it.quantidade }
+
+    // ViewModel de pedidos com escopo de Activity
+    val pedidoViewModel: PedidoViewModel = viewModel()
+
+    // HomeViewModel com escopo de Activity — compartilhado entre home, carrinho e novo_endereco
+    // IMPORTANTE: declarar aqui garante a mesma instância em todas as rotas.
+    // Se declarado dentro de cada composable, cada rota teria sua própria instância isolada.
+    val homeViewModel: dev.fslab.pedidos.ui.viewmodel.HomeViewModel = viewModel()
+    val homeState by homeViewModel.uiState.collectAsState()
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -327,10 +354,9 @@ fun PedidosApp(activity: ComponentActivity) {
                 }
 
                 composable("home") {
-                    val homeViewModel: dev.fslab.pedidos.ui.viewmodel.HomeViewModel = viewModel()
                     val user by authViewModel.currentUser.collectAsState()
                     val userId = user?.id ?: ""
-                    
+
                     LaunchedEffect(userId) {
                         if (userId.isNotEmpty()) {
                             homeViewModel.carregarDados(userId)
@@ -347,6 +373,9 @@ fun PedidosApp(activity: ComponentActivity) {
                                 launchSingleTop = true
                             }
                         },
+                        onNavigateDetalhes = { restauranteId ->
+                            navController.navigate("restaurante/$restauranteId")
+                        },
                         onNavigateToNovoEndereco = {
                             navController.navigate("novo_endereco")
                         },
@@ -359,34 +388,237 @@ fun PedidosApp(activity: ComponentActivity) {
                         },
                         onRefresh = {
                             homeViewModel.atualizarDados(userId)
-                        }
+                        },
+                        carrinhoTotalItens = carrinhoTotalItens,
+                        carrinhoPrecoTotal = carrinhoPrecoTotal,
+                        onVerCarrinho = { navController.navigate("carrinho") }
                     )
                 }
 
                 composable("restaurantes") {
                     RestaurantesScreen(
-                        bottomPadding = innerPadding.calculateBottomPadding()
+                        bottomPadding = innerPadding.calculateBottomPadding(),
+                        onNavigateDetalhes = { restauranteId ->
+                            navController.navigate("restaurante/$restauranteId")
+                        }
+                    )
+                }
+
+                composable(
+                    route = "restaurante/{restauranteId}",
+                    arguments = listOf(navArgument("restauranteId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val restauranteId = backStackEntry.arguments?.getString("restauranteId") ?: ""
+                    val detalhesViewModel: dev.fslab.pedidos.ui.viewmodel.RestauranteDetalhesViewModel = viewModel()
+                    val detalhesState by detalhesViewModel.uiState.collectAsState()
+
+                    // Prato que o usuário clicou mas há conflito de restaurante
+                    var pratoPendenteConflito by remember { mutableStateOf<dev.fslab.pedidos.model.Prato?>(null) }
+                    val carrinhoItens by carrinhoViewModel.itens.collectAsState()
+                    val carrinhoRestauranteId by carrinhoViewModel.restauranteId.collectAsState()
+                    val carrinhoNomeRestaurante by carrinhoViewModel.nomeRestaurante.collectAsState()
+
+                    // Salva o nome e ID do restaurante atual no carrinho assim que carrega
+                    // (necessário para que o conflito saiba o nome do restaurante ativo)
+                    LaunchedEffect(detalhesState) {
+                        val success = detalhesState as? dev.fslab.pedidos.ui.viewmodel.DetalhesUiState.Success
+                        if (success != null && carrinhoItens.isEmpty()) {
+                            // Só define o restaurante do carrinho se o carrinho estiver vazio
+                            // (se já tiver itens, o restaurante do carrinho é o anterior)
+                            carrinhoViewModel.definirRestaurante(
+                                nome = success.restaurante.nome,
+                                id = success.restaurante.id
+                            )
+                        }
+                    }
+
+                    // Dialog premium de conflito de restaurante
+                    val detalhesSuccess = detalhesState as? dev.fslab.pedidos.ui.viewmodel.DetalhesUiState.Success
+                    if (pratoPendenteConflito != null && detalhesSuccess != null) {
+                        dev.fslab.pedidos.ui.components.ConflitoRestauranteDialog(
+                            nomeRestauranteAtual = carrinhoNomeRestaurante,
+                            nomeRestauranteNovo = detalhesSuccess.restaurante.nome,
+                            onSubstituir = {
+                                carrinhoViewModel.limpar()
+                                carrinhoViewModel.definirRestaurante(
+                                    nome = detalhesSuccess.restaurante.nome,
+                                    id = detalhesSuccess.restaurante.id
+                                )
+                                personalizacaoViewModel.carregarGrupos(pratoPendenteConflito!!)
+                                pratoPendenteConflito = null
+                                navController.navigate("personalizacao")
+                            },
+                            onCancelar = { pratoPendenteConflito = null }
+                        )
+                    }
+
+                    RestauranteDetalhesScreen(
+                        restauranteId = restauranteId,
+                        bottomPadding = innerPadding.calculateBottomPadding(),
+                        onBack = { navController.popBackStack() },
+                        viewModel = detalhesViewModel,
+                        onNavigatePersonalizacao = { prato ->
+                            val nomeRestauranteNovo = detalhesSuccess?.restaurante?.nome ?: ""
+                            val idRestauranteNovo = detalhesSuccess?.restaurante?.id ?: ""
+                            val temConflito = carrinhoItens.isNotEmpty() &&
+                                    carrinhoRestauranteId.isNotEmpty() &&
+                                    carrinhoRestauranteId != idRestauranteNovo
+
+                            if (temConflito) {
+                                // Mostra o dialog na tela atual — sem navegar para personalizacao
+                                pratoPendenteConflito = prato
+                            } else {
+                                // Mesmo restaurante ou carrinho vazio: vai direto
+                                carrinhoViewModel.definirRestaurante(nomeRestauranteNovo, idRestauranteNovo)
+                                personalizacaoViewModel.carregarGrupos(prato)
+                                navController.navigate("personalizacao")
+                            }
+                        },
+                        carrinhoTotalItens = carrinhoTotalItens,
+                        carrinhoPrecoTotal = carrinhoPrecoTotal,
+                        onVerCarrinho = { navController.navigate("carrinho") }
+                    )
+                }
+
+                composable("personalizacao") {
+                    // O conflito já foi tratado na tela de detalhes do restaurante.
+                    // Aqui sabemos que é o mesmo restaurante ou o carrinho foi esvaziado.
+                    PratoPersonalizacaoScreen(
+                        onBack = { navController.popBackStack() },
+                        onAdicionarAoCarrinho = { state ->
+                            // Adiciona direto — sem verificação de conflito aqui
+                            carrinhoViewModel.adicionarItem(
+                                prato = state.prato,
+                                selecoes = state.selecoes,
+                                grupos = state.grupos
+                            )
+                            personalizacaoViewModel.resetar()
+                            navController.popBackStack()
+                        },
+                        viewModel = personalizacaoViewModel
                     )
                 }
 
                 composable("novo_endereco") {
-                    val homeViewModel: dev.fslab.pedidos.ui.viewmodel.HomeViewModel = viewModel()
                     val user by authViewModel.currentUser.collectAsState()
                     val userId = user?.id ?: ""
-                    
+
+                    // Flag: indica que o endereço foi criado e estamos aguardando o reload
+                    var aguardandoAtualizacao by remember { mutableStateOf(false) }
+
+                    // Quando o reload terminar (Success com atualizando=false), navega de volta
+                    LaunchedEffect(homeState, aguardandoAtualizacao) {
+                        if (aguardandoAtualizacao) {
+                            val success = homeState as? HomeUiState.Success
+                            if (success != null && !success.atualizando) {
+                                aguardandoAtualizacao = false
+                                navController.popBackStack()
+                            }
+                        }
+                    }
+
+                    // Segurança: timeout de 5s para não travar na tela para sempre
+                    LaunchedEffect(aguardandoAtualizacao) {
+                        if (aguardandoAtualizacao) {
+                            kotlinx.coroutines.delay(5000L)
+                            if (aguardandoAtualizacao) {
+                                aguardandoAtualizacao = false
+                                navController.popBackStack()
+                            }
+                        }
+                    }
+
                     if (userId.isNotEmpty()) {
                         dev.fslab.pedidos.ui.screens.NovoEnderecoScreen(
                             usuarioId = userId,
                             onBack = { navController.popBackStack() },
                             onSuccess = {
-                                homeViewModel.carregarDados(userId)
-                                navController.popBackStack()
+                                // Força reload usando a instância Activity-scoped
+                                homeViewModel.atualizarDados(userId)
+                                aguardandoAtualizacao = true
                             }
                         )
                     } else {
                         LaunchedEffect(Unit) {
                             navController.navigate("login") {
                                 popUpTo(0)
+                            }
+                        }
+                    }
+                }
+
+                composable("carrinho") {
+                    val user by authViewModel.currentUser.collectAsState()
+                    val userId = user?.id ?: ""
+                    val nomeRestaurante by carrinhoViewModel.nomeRestaurante.collectAsState()
+                    val restauranteId by carrinhoViewModel.restauranteId.collectAsState()
+                    val pedidoState by pedidoViewModel.uiState.collectAsState()
+
+                    // Garante que os endereços estejam carregados (usa a instância Activity-scoped)
+                    LaunchedEffect(userId) {
+                        if (userId.isNotEmpty()) {
+                            homeViewModel.carregarDados(userId)
+                        }
+                    }
+
+                    // Navega para a tela de confirmação ao criar pedido com sucesso
+                    LaunchedEffect(pedidoState) {
+                        if (pedidoState is PedidoUiState.Success) {
+                            carrinhoViewModel.limpar()
+                            navController.navigate("pedido_confirmacao") {
+                                // Remove o carrinho e o restaurante do back-stack
+                                popUpTo("home") { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+
+                    val enderecos = (homeState as? HomeUiState.Success)?.enderecos ?: emptyList()
+
+                    CarrinhoScreen(
+                        viewModel = carrinhoViewModel,
+                        nomeRestaurante = nomeRestaurante,
+                        enderecos = enderecos,
+                        onBack = { navController.popBackStack() },
+                        onNavigateNovoEndereco = {
+                            navController.navigate("novo_endereco")
+                        },
+                        onFinalizarPedido = {
+                            pedidoViewModel.realizarPedido(
+                                restauranteId = restauranteId,
+                                itens = carrinhoItens
+                            )
+                        },
+                        onVoltarAoRestaurante = {
+                            navController.popBackStack()
+                        },
+                        pedidoState = pedidoState,
+                        onDismissErro = { pedidoViewModel.resetar() }
+                    )
+                }
+
+                composable("pedido_confirmacao") {
+                    val pedidoState by pedidoViewModel.uiState.collectAsState()
+                    val nomeRestaurante by carrinhoViewModel.nomeRestaurante.collectAsState()
+                    val pedido = (pedidoState as? PedidoUiState.Success)?.pedido
+
+                    if (pedido != null) {
+                        PedidoConfirmacaoScreen(
+                            pedido = pedido,
+                            nomeRestaurante = nomeRestaurante,
+                            onVoltarInicio = {
+                                pedidoViewModel.resetar()
+                                navController.navigate("home") {
+                                    popUpTo("home") { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            }
+                        )
+                    } else {
+                        // Segurança: se o pedido sumir (ex: processo morreu), volta para home
+                        LaunchedEffect(Unit) {
+                            navController.navigate("home") {
+                                popUpTo("home") { inclusive = false }
                             }
                         }
                     }

@@ -53,9 +53,13 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 fun HomeScreen(
     bottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
     onLogout: () -> Unit = {},
+    onNavigateDetalhes: (String) -> Unit = {},
     onNavigateToNovoEndereco: () -> Unit = {},
     onNavigateToRestaurantes: () -> Unit = {},
     onRefresh: () -> Unit = {},
+    carrinhoTotalItens: Int = 0,
+    carrinhoPrecoTotal: Double = 0.0,
+    onVerCarrinho: () -> Unit = {},
     viewModel: HomeViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -214,7 +218,7 @@ fun HomeScreen(
                             SectionTitle("Recomendados", "Ver todos", textColors, onActionClick = onNavigateToRestaurantes)
                         }
                         item(key = "row_recomendados") {
-                            RecomendadosRow(state.recomendados, cardColor, textColors, imageLoader)
+                            RecomendadosRow(state.recomendados, cardColor, textColors, imageLoader, onItemClick = { onNavigateDetalhes(it.id) })
                         }
                         item(key = "title_populares") {
                             SectionTitle("Populares perto de você", "Ver todos", textColors, onActionClick = onNavigateToRestaurantes)
@@ -223,7 +227,7 @@ fun HomeScreen(
                             items = state.populares,
                             key = { it.id }
                         ) { restaurante ->
-                            PopularItem(restaurante, cardColor, textColors, imageLoader)
+                            PopularItem(restaurante, cardColor, textColors, imageLoader, onClick = { onNavigateDetalhes(restaurante.id) })
                         }
                     }
                     }
@@ -233,9 +237,9 @@ fun HomeScreen(
                             enderecos = state.enderecos,
                             selectedEnderecoId = state.enderecoSelecionadoId,
                             onDismiss = { showEnderecoSheet = false },
-                            onNovoEnderecoClick = { 
+                            onNovoEnderecoClick = {
                                 showEnderecoSheet = false
-                                onNavigateToNovoEndereco() 
+                                onNavigateToNovoEndereco()
                             },
                             onEnderecoSelected = { endereco ->
                                 viewModel.selecionarEndereco(endereco)
@@ -254,6 +258,21 @@ fun HomeScreen(
                         )
                     }
                 }
+            }
+
+            // Barra do carrinho flutuante — fora do when{} para aparecer em todos os estados
+            // e posicionada corretamente no Box pai (fillMaxSize)
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = bottomPadding)
+            ) {
+                dev.fslab.pedidos.ui.components.CarrinhoBar(
+                    totalItens = carrinhoTotalItens,
+                    precoTotal = carrinhoPrecoTotal,
+                    onClick = onVerCarrinho
+                )
             }
         }
     }
@@ -511,14 +530,15 @@ fun RecomendadosRow(
     restaurantes: List<Restaurante>, 
     cardColor: Color, 
     textColor: Color,
-    imageLoader: ImageLoader
+    imageLoader: ImageLoader,
+    onItemClick: (Restaurante) -> Unit = {}
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(restaurantes, key = { it.id }) { restaurante ->
-            RecomendadoCard(restaurante, cardColor, textColor, imageLoader)
+            RecomendadoCard(restaurante, cardColor, textColor, imageLoader, onClick = { onItemClick(restaurante) })
         }
     }
 }
@@ -528,13 +548,14 @@ fun RecomendadoCard(
     restaurante: Restaurante, 
     cardColor: Color, 
     textColor: Color,
-    imageLoader: ImageLoader
+    imageLoader: ImageLoader,
+    onClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
-        modifier = Modifier.width(280.dp).height(240.dp)
+        modifier = Modifier.width(280.dp).height(240.dp).clickable { onClick() }
     ) {
         Column {
             Box(
@@ -641,7 +662,8 @@ fun PopularItem(
     restaurante: Restaurante, 
     cardColor: Color, 
     textColor: Color,
-    imageLoader: ImageLoader
+    imageLoader: ImageLoader,
+    onClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     Card(
@@ -650,6 +672,7 @@ fun PopularItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable { onClick() }
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
