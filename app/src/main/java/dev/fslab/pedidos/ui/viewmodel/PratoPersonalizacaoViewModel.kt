@@ -74,15 +74,10 @@ class PratoPersonalizacaoViewModel : ViewModel() {
                     }
                 }.awaitAll()
 
-                // 3. Pré-selecionar primeira opção de grupos com max == 1 (variação/radio)
-                val selecoesIniciais = gruposComOpcoes
-                    .filter { it.grupo.max == 1 && it.opcoes.isNotEmpty() }
-                    .associate { gc -> gc.grupo.id to setOf(gc.opcoes.first().id) }
-
                 _uiState.value = PersonalizacaoUiState.Success(
                     prato = prato,
                     grupos = gruposComOpcoes,
-                    selecoes = selecoesIniciais
+                    selecoes = emptyMap()
                 )
             } catch (e: Exception) {
                 _uiState.value = PersonalizacaoUiState.Error(
@@ -133,6 +128,21 @@ class PratoPersonalizacaoViewModel : ViewModel() {
             gc.opcoes.filter { it.id in ids }.sumOf { it.preco }
         }
         return state.prato.preco + extras
+    }
+
+    /**
+     * Valida se todos os grupos obrigatórios atingiram o mínimo de seleções.
+     * Retorna lista de nomes dos grupos ainda não satisfeitos.
+     * Lista vazia = pode adicionar ao carrinho.
+     */
+    fun validarObrigatorios(): List<String> {
+        val state = _uiState.value as? PersonalizacaoUiState.Success ?: return emptyList()
+        return state.grupos
+            .filter { gc ->
+                gc.grupo.obrigatorio &&
+                (state.selecoes[gc.grupo.id]?.size ?: 0) < gc.grupo.min
+            }
+            .map { it.grupo.nome }
     }
 
     fun resetar() {
