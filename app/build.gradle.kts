@@ -20,17 +20,12 @@ android {
     }
 
     signingConfigs {
-        getByName("debug") {
-            storeFile = file("${rootProject.projectDir}/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
+        // Usando configuração padrão do sistema para evitar erro de arquivo ausente
     }
 
     buildTypes {
         getByName("debug") {
-            signingConfig = signingConfigs.getByName("debug")
+            // Removendo referência ao signingConfig customizado
         }
         release {
             isMinifyEnabled = false

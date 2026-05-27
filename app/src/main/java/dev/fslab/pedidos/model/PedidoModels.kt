@@ -28,17 +28,36 @@ data class AdicionalPedidoRequest(
 
 data class CriarPedidoResponse(
     val message: String,
-    val data: PedidoCriado?
+    val data: Pedido?
 )
 
-data class PedidoCriado(
+data class ListaPedidosResponse(
+    val message: String,
+    val data: PaginatedResponse<Pedido>?
+)
+
+data class RestauranteSimplificado(
     @SerializedName("_id") val id: String,
-    @SerializedName("restaurante_id") val restauranteId: Any?,   // pode vir como objeto populado
-    @SerializedName("cliente_id") val clienteId: Any?,
+    val nome: String,
+    @SerializedName("foto_restaurante") val fotoRestaurante: String?
+)
+
+data class ClienteSimplificado(
+    @SerializedName("_id") val id: String,
+    val nome: String,
+    val email: String,
+    val telefone: String?
+)
+
+data class Pedido(
+    @SerializedName("_id") val id: String,
+    @SerializedName("restaurante_id") val restaurante: RestauranteSimplificado?,
+    @SerializedName("cliente_id") val cliente: ClienteSimplificado?,
     val status: String,
     val itens: List<ItemPedidoCriado>,
     val totais: TotaisPedido,
-    @SerializedName("historico_status") val historicoStatus: List<HistoricoStatus>,
+    @SerializedName("forma_pagamento") val formaPagamento: String?,
+    @SerializedName("historico_status") val historicoStatus: List<HistoricoStatus> = emptyList(),
     @SerializedName("createdAt") val criadoEm: String?
 )
 

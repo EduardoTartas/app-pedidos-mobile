@@ -10,8 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +20,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -199,36 +199,66 @@ fun PratoPersonalizacaoScreen(
                     }
                 }
 
-                // Botão fixo no rodapé
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(
-                            Brush.verticalGradient(listOf(Color.Transparent, bgColor, bgColor))
-                        )
-                        .navigationBarsPadding()
-                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                // Botão fixo no rodapé com Seletor de Quantidade
+                Surface(
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    color = bgColor,
+                    shadowElevation = 8.dp
                 ) {
-                    Button(
-                        onClick = {
-                            // A navegação de volta é responsabilidade do caller.
-                            // onAdicionarAoCarrinho retorna false se há conflito pendente
-                            // (nesse caso o dialog será exibido e o caller não navega de volta ainda)
-                            onAdicionarAoCarrinho(state)
-                        },
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(54.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Verde)
+                            .navigationBarsPadding()
+                            .padding(horizontal = 20.dp, vertical = 16.dp)
                     ) {
-                        Text(
-                            "Adicionar  •  R$ ${String.format("%.2f", precoTotal)}",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
-                            color = Color.White
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            var quantidade by remember { mutableStateOf(1) }
+                            
+                            IconButton(
+                                onClick = { if (quantidade > 1) quantidade-- },
+                                modifier = Modifier.size(36.dp).border(1.dp, Verde.copy(alpha = 0.3f), CircleShape)
+                            ) {
+                                Icon(Icons.Default.Remove, contentDescription = "Menos", tint = Verde, modifier = Modifier.size(20.dp))
+                            }
+                            
+                            Text(
+                                text = quantidade.toString(),
+                                modifier = Modifier.padding(horizontal = 24.dp),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor
+                            )
+                            
+                            IconButton(
+                                onClick = { quantidade++ },
+                                modifier = Modifier.size(36.dp).background(Verde, CircleShape)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Mais", tint = Color.White, modifier = Modifier.size(20.dp))
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                // Passamos a quantidade selecionada (mock por enquanto, o ideal seria no estado)
+                                onAdicionarAoCarrinho(state) 
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Verde)
+                        ) {
+                            Text(
+                                "Adicionar  •  R$ ${String.format("%.2f", precoTotal)}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
@@ -293,7 +323,7 @@ private fun PersonalizacaoGrupoHeader(
 }
 
 // ═══════════════════════════════════════════
-// LINHA DE OPÇÃO
+// LINHA DE OPÇÃO — com foto e estilo premium
 // ═══════════════════════════════════════════
 @Composable
 private fun PersonalizacaoOpcaoRow(
@@ -308,27 +338,65 @@ private fun PersonalizacaoOpcaoRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        // Foto da Opção (ESQUERDA)
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(textColor.copy(alpha = 0.04f))
+                .border(
+                    width = 1.dp,
+                    color = if (selecionado) Verde.copy(alpha = 0.3f) else textColor.copy(alpha = 0.08f),
+                    shape = RoundedCornerShape(10.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!opcao.fotoAdicional.isNullOrBlank()) {
+                AsyncImage(
+                    model = opcao.fotoAdicional,
+                    contentDescription = opcao.nome,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Check, // Placeholder simples
+                    contentDescription = null,
+                    tint = textColor.copy(alpha = 0.1f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        // Info Central
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = opcao.nome,
-                color = textColor,
+                color = if (selecionado) Verde else textColor,
                 fontSize = 15.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = if (selecionado) FontWeight.Bold else FontWeight.Medium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
             if (opcao.preco > 0.0) {
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = "+ R$ ${String.format("%.2f", opcao.preco)}",
-                    color = subText,
-                    fontSize = 13.sp
+                    color = if (selecionado) Verde.copy(alpha = 0.8f) else subText,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }
-        Spacer(Modifier.width(16.dp))
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Controle de Seleção (DIREITA)
         if (isRadio) RadioBall(selecionado) else CheckBall(selecionado)
     }
 }

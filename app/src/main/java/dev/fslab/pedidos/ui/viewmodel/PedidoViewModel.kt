@@ -6,7 +6,7 @@ import dev.fslab.pedidos.model.AdicionalPedidoRequest
 import dev.fslab.pedidos.model.CriarPedidoRequest
 import dev.fslab.pedidos.model.ItemCarrinho
 import dev.fslab.pedidos.model.ItemPedidoRequest
-import dev.fslab.pedidos.model.PedidoCriado
+import dev.fslab.pedidos.model.Pedido
 import dev.fslab.pedidos.network.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 sealed class PedidoUiState {
     object Idle : PedidoUiState()
     object Loading : PedidoUiState()
-    data class Success(val pedido: PedidoCriado) : PedidoUiState()
+    data class Success(val pedido: dev.fslab.pedidos.model.Pedido) : PedidoUiState()
     data class Error(val message: String) : PedidoUiState()
 }
 

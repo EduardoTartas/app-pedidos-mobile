@@ -38,6 +38,9 @@ class CarrinhoViewModel : ViewModel() {
     private val _restauranteId = MutableStateFlow("")
     val restauranteId: StateFlow<String> = _restauranteId.asStateFlow()
 
+    private val _taxaEntrega = MutableStateFlow(0.0)
+    val taxaEntrega: StateFlow<Double> = _taxaEntrega.asStateFlow()
+
     private val _conflitoPendente = MutableStateFlow<ConflitoPendente?>(null)
     val conflitoPendente: StateFlow<ConflitoPendente?> = _conflitoPendente.asStateFlow()
 
@@ -159,9 +162,10 @@ class CarrinhoViewModel : ViewModel() {
         _itens.value = _itens.value.filter { it.id != itemId }
     }
 
-    fun definirRestaurante(nome: String, id: String = "") {
+    fun definirRestaurante(nome: String, id: String = "", taxa: Double = 0.0) {
         _nomeRestaurante.value = nome
         if (id.isNotEmpty()) _restauranteId.value = id
+        _taxaEntrega.value = taxa
     }
 
     fun selecionarEndereco(endereco: Endereco) {
@@ -178,6 +182,7 @@ class CarrinhoViewModel : ViewModel() {
         _formaPagamento.value = FormaPagamento.CARTAO
         _nomeRestaurante.value = ""
         _restauranteId.value = ""
+        _taxaEntrega.value = 0.0
         _conflitoPendente.value = null
     }
 }

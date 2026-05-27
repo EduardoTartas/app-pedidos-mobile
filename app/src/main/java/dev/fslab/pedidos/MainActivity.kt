@@ -404,6 +404,28 @@ fun PedidosApp(activity: ComponentActivity) {
                     )
                 }
 
+                composable("pedidos") {
+                    val historyViewModel: dev.fslab.pedidos.ui.viewmodel.PedidosHistoryViewModel = viewModel()
+                    dev.fslab.pedidos.ui.screens.PedidosScreen(
+                        bottomPadding = innerPadding.calculateBottomPadding(),
+                        onNavigateToPedidoDetalhes = { pedidoId ->
+                            navController.navigate("pedido_detalhes/$pedidoId")
+                        },
+                        viewModel = historyViewModel
+                    )
+                }
+
+                composable(
+                    route = "pedido_detalhes/{pedidoId}",
+                    arguments = listOf(navArgument("pedidoId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val pedidoId = backStackEntry.arguments?.getString("pedidoId") ?: ""
+                    dev.fslab.pedidos.ui.screens.PedidoDetalhesScreen(
+                        pedidoId = pedidoId,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
+
                 composable(
                     route = "restaurante/{restauranteId}",
                     arguments = listOf(navArgument("restauranteId") { type = NavType.StringType })
@@ -427,7 +449,8 @@ fun PedidosApp(activity: ComponentActivity) {
                             // (se já tiver itens, o restaurante do carrinho é o anterior)
                             carrinhoViewModel.definirRestaurante(
                                 nome = success.restaurante.nome,
-                                id = success.restaurante.id
+                                id = success.restaurante.id,
+                                taxa = success.restaurante.taxaEntrega
                             )
                         }
                     }
@@ -442,7 +465,8 @@ fun PedidosApp(activity: ComponentActivity) {
                                 carrinhoViewModel.limpar()
                                 carrinhoViewModel.definirRestaurante(
                                     nome = detalhesSuccess.restaurante.nome,
-                                    id = detalhesSuccess.restaurante.id
+                                    id = detalhesSuccess.restaurante.id,
+                                    taxa = detalhesSuccess.restaurante.taxaEntrega
                                 )
                                 personalizacaoViewModel.carregarGrupos(pratoPendenteConflito!!)
                                 pratoPendenteConflito = null
@@ -469,7 +493,11 @@ fun PedidosApp(activity: ComponentActivity) {
                                 pratoPendenteConflito = prato
                             } else {
                                 // Mesmo restaurante ou carrinho vazio: vai direto
-                                carrinhoViewModel.definirRestaurante(nomeRestauranteNovo, idRestauranteNovo)
+                                carrinhoViewModel.definirRestaurante(
+                                    nome = nomeRestauranteNovo, 
+                                    id = idRestauranteNovo,
+                                    taxa = detalhesSuccess?.restaurante?.taxaEntrega ?: 0.0
+                                )
                                 personalizacaoViewModel.carregarGrupos(prato)
                                 navController.navigate("personalizacao")
                             }
@@ -611,6 +639,13 @@ fun PedidosApp(activity: ComponentActivity) {
                                 navController.navigate("home") {
                                     popUpTo("home") { inclusive = false }
                                     launchSingleTop = true
+                                }
+                            },
+                            onAcompanharPedido = {
+                                val pid = pedido.id
+                                pedidoViewModel.resetar()
+                                navController.navigate("pedido_detalhes/$pid") {
+                                    popUpTo("home") { inclusive = false }
                                 }
                             }
                         )

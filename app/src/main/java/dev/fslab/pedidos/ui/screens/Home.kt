@@ -1,6 +1,7 @@
 package dev.fslab.pedidos.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -553,15 +554,16 @@ fun RecomendadoCard(
 ) {
     val context = LocalContext.current
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
-        modifier = Modifier.width(280.dp).height(240.dp).clickable { onClick() }
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.width(280.dp).height(245.dp).clickable { onClick() }
     ) {
         Column {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(140.dp)
+                    .height(145.dp)
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
@@ -576,8 +578,8 @@ fun RecomendadoCard(
                 Box(
                     modifier = Modifier
                         .padding(12.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.Black.copy(alpha = 0.6f))
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color.Black.copy(alpha = 0.65f))
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
@@ -607,21 +609,22 @@ fun RecomendadoCard(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .padding(start = 8.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(LocalPedidosColors.current.successBackground.copy(alpha = 0.2f))
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(LocalPedidosColors.current.successBackground.copy(alpha = 0.15f))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
-                        Text(
-                            text = String.format("%.1f", restaurante.avaliacaoMedia.coerceAtLeast(4.0)),
-                            color = LocalPedidosColors.current.primary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
                         Icon(
                             imageVector = Icons.Default.Star,
-                            contentDescription = "Star",
-                            tint = LocalPedidosColors.current.primary,
-                            modifier = Modifier.size(12.dp).padding(start = 2.dp)
+                            contentDescription = null,
+                            tint = Color(0xFFFBBF24),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text(
+                            text = if (restaurante.avaliacaoMedia > 0) String.format("%.1f", restaurante.avaliacaoMedia) else "Novo",
+                            color = textColor,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
@@ -630,8 +633,8 @@ fun RecomendadoCard(
                 val cats = restaurante.categorias?.joinToString(" • ") { it.nome } ?: "Lanches • Bebidas"
                 
                 Text(
-                    text = "$cats • Fast Food",
-                    color = textColor.copy(alpha = 0.6f),
+                    text = cats,
+                    color = textColor.copy(alpha = 0.55f),
                     fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -640,14 +643,14 @@ fun RecomendadoCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.TwoWheeler,
-                        contentDescription = "Delivery",
-                        tint = LocalPedidosColors.current.primary,
-                        modifier = Modifier.size(16.dp)
+                        contentDescription = null,
+                        tint = Color(0xFF14B822),
+                        modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = if(restaurante.taxaEntrega <= 0.0) "Entrega Grátis" else "R$ ${String.format("%.2f", restaurante.taxaEntrega)}",
-                        color = LocalPedidosColors.current.primary,
+                        color = if(restaurante.taxaEntrega <= 0.0) Color(0xFF14B822) else textColor.copy(alpha = 0.7f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -667,21 +670,24 @@ fun PopularItem(
 ) {
     val context = LocalContext.current
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
             .clickable { onClick() }
+            .border(1.dp, textColor.copy(alpha = 0.05f), RoundedCornerShape(20.dp))
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(85.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(textColor.copy(alpha = 0.03f))
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
@@ -693,27 +699,28 @@ fun PopularItem(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
-                Row(
-                    Modifier
-                        .align(Alignment.TopStart)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
                         .padding(4.dp)
                         .clip(RoundedCornerShape(4.dp))
                         .background(Color.Black.copy(alpha = 0.6f))
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
-                    Text(
-                        text = String.format("%.1f", restaurante.avaliacaoMedia.coerceAtLeast(4.0)),
-                        color = LocalPedidosColors.current.featureOrange,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = "Star",
-                        tint = LocalPedidosColors.current.featureOrange,
-                        modifier = Modifier.size(10.dp).padding(start = 2.dp)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = Color(0xFFFBBF24),
+                            modifier = Modifier.size(10.dp)
+                        )
+                        Text(
+                            text = if (restaurante.avaliacaoMedia > 0) String.format("%.1f", restaurante.avaliacaoMedia) else "Novo",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.width(16.dp))
@@ -722,7 +729,9 @@ fun PopularItem(
                     text = restaurante.nome,
                     color = textColor,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
+                    fontSize = 17.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 
@@ -730,38 +739,46 @@ fun PopularItem(
 
                 Text(
                     text = cats,
-                    color = textColor.copy(alpha = 0.6f),
-                    fontSize = 12.sp,
+                    color = textColor.copy(alpha = 0.5f),
+                    fontSize = 13.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Schedule,
-                        contentDescription = "Time",
-                        tint = textColor.copy(alpha = 0.5f),
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "${restaurante.estimativaEntregaMin}-${restaurante.estimativaEntregaMax} min",
-                        color = textColor.copy(alpha = 0.6f),
-                        fontSize = 12.sp
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Icon(
-                        imageVector = Icons.Default.TwoWheeler,
-                        contentDescription = "Delivery",
-                        tint = if (restaurante.taxaEntrega <= 0.0) LocalPedidosColors.current.primary else textColor.copy(alpha = 0.5f),
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = if(restaurante.taxaEntrega <= 0.0) "Entrega Grátis" else "R$ ${String.format("%.2f", restaurante.taxaEntrega)}",
-                        color = if (restaurante.taxaEntrega <= 0.0) LocalPedidosColors.current.primary else textColor.copy(alpha = 0.6f),
-                        fontSize = 12.sp
-                    )
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = null,
+                            tint = textColor.copy(alpha = 0.4f),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${restaurante.estimativaEntregaMin}-${restaurante.estimativaEntregaMax} min",
+                            color = textColor.copy(alpha = 0.6f),
+                            fontSize = 12.sp
+                        )
+                    }
+                    
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.TwoWheeler,
+                            contentDescription = null,
+                            tint = if (restaurante.taxaEntrega <= 0.0) Color(0xFF14B822) else textColor.copy(alpha = 0.4f),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if(restaurante.taxaEntrega <= 0.0) "Grátis" else "R$ ${String.format("%.2f", restaurante.taxaEntrega)}",
+                            color = if (restaurante.taxaEntrega <= 0.0) Color(0xFF14B822) else textColor.copy(alpha = 0.6f),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }

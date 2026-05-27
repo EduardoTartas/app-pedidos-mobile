@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -289,7 +290,7 @@ fun DetalhesHeader(
                 .background(Color.Black.copy(alpha = 0.5f))
         ) {
             Icon(
-                imageVector = Icons.Default.ArrowBack,
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Voltar",
                 tint = Color.White,
                 modifier = Modifier.size(24.dp)
@@ -354,7 +355,7 @@ fun DetalhesInfoRow(restaurante: Restaurante, textColor: Color) {
                 modifier = Modifier.size(16.dp)
             )
             Text(
-                text = String.format("%.1f", restaurante.avaliacaoMedia.coerceAtLeast(0.0)),
+                text = if (restaurante.avaliacaoMedia > 0) String.format("%.1f", restaurante.avaliacaoMedia) else "Novo",
                 color = textColor,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
@@ -531,7 +532,7 @@ fun SecaoTitulo(secao: String, textColor: Color) {
 }
 
 // ═══════════════════════════════════════════
-// ITEM DO PRATO
+// ITEM DO PRATO — Premium e Visual
 // ═══════════════════════════════════════════
 @Composable
 fun PratoItem(
@@ -541,30 +542,66 @@ fun PratoItem(
     onAdicionar: () -> Unit = {}
 ) {
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clickable { onAdicionar() }
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Foto do prato (ESQUERDA)
+            // Coluna esquerda: nome, descrição, preço
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = prato.nome,
+                    color = textColor,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                if (!prato.descricao.isNullOrBlank()) {
+                    Text(
+                        text = prato.descricao,
+                        color = textColor.copy(alpha = 0.55f),
+                        fontSize = 13.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 18.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "R$ ${String.format("%.2f", prato.preco)}",
+                    color = Color(0xFF14B822),
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 16.sp
+                )
+            }
+
+            // Foto do prato (DIREITA)
             Box(
                 modifier = Modifier
-                    .size(90.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(textColor.copy(alpha = 0.05f))
+                    .size(100.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(textColor.copy(alpha = 0.04f))
                     .border(
                         width = 1.dp,
-                        color = textColor.copy(alpha = 0.10f),
-                        shape = RoundedCornerShape(14.dp)
+                        color = textColor.copy(alpha = 0.08f),
+                        shape = RoundedCornerShape(16.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -579,70 +616,9 @@ fun PratoItem(
                     Icon(
                         imageVector = Icons.Default.Restaurant,
                         contentDescription = null,
-                        tint = textColor.copy(alpha = 0.2f),
-                        modifier = Modifier.size(32.dp)
+                        tint = textColor.copy(alpha = 0.15f),
+                        modifier = Modifier.size(36.dp)
                     )
-                }
-            }
-
-            // Coluna direita: nome, descrição, preço, botão
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = prato.nome,
-                    color = textColor,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                if (!prato.descricao.isNullOrBlank()) {
-                    Text(
-                        text = prato.descricao,
-                        color = textColor.copy(alpha = 0.55f),
-                        fontSize = 12.sp,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = 17.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "R$ ${String.format("%.2f", prato.preco)}",
-                        color = textColor,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 15.sp
-                    )
-
-                    // Botão Adicionar
-                    OutlinedButton(
-                        onClick = onAdicionar,
-                        modifier = Modifier.height(32.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.5.dp, Color(0xFF14B822)),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color(0xFF14B822)
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text("Adicionar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
                 }
             }
         }
