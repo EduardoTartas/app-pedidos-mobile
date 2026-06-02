@@ -4,12 +4,9 @@ import dev.fslab.pedidos.model.CriarPedidoRequest
 import dev.fslab.pedidos.model.CriarPedidoResponse
 import dev.fslab.pedidos.model.ListaPedidosResponse
 import dev.fslab.pedidos.model.Pedido
+import dev.fslab.pedidos.model.PedidoStatusRequest
 import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.POST
-import retrofit2.http.Path
-import retrofit2.http.Query
+import retrofit2.http.*
 
 data class PedidoResponse(
     val message: String,
@@ -31,5 +28,10 @@ interface PedidoApi {
     suspend fun obterPedido(
         @Path("id") id: String
     ): Response<PedidoResponse>
-}
 
+    @PATCH("pedidos/{id}/status")
+    suspend fun atualizarStatus(
+        @Path("id") id: String,
+        @Body body: PedidoStatusRequest
+    ): Response<PedidoResponse>
+}

@@ -45,7 +45,7 @@ fun CarrinhoScreen(
     enderecos: List<Endereco> = emptyList(),
     onBack: () -> Unit = {},
     onNavigateNovoEndereco: () -> Unit = {},
-    onFinalizarPedido: () -> Unit = {},
+    onFinalizarPedido: (Endereco, String) -> Unit = { _, _ -> },
     onVoltarAoRestaurante: () -> Unit = {},
     pedidoState: PedidoUiState = PedidoUiState.Idle,
     onDismissErro: () -> Unit = {}
@@ -212,7 +212,8 @@ fun CarrinhoScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 val icon = when (formaPagamento) {
-                                    FormaPagamento.CARTAO -> Icons.Default.CreditCard
+                                    FormaPagamento.CARTAO_CREDITO -> Icons.Default.CreditCard
+                                    FormaPagamento.CARTAO_DEBITO -> Icons.Default.CreditCard
                                     FormaPagamento.PIX -> Icons.Default.QrCode
                                     FormaPagamento.DINHEIRO -> Icons.Default.AttachMoney
                                 }
@@ -268,7 +269,11 @@ fun CarrinhoScreen(
                     shadowElevation = 16.dp
                 ) {
                     Button(
-                        onClick = onFinalizarPedido,
+                        onClick = {
+                            if (enderecoEfetivo != null) {
+                                onFinalizarPedido(enderecoEfetivo, formaPagamento.name.lowercase())
+                            }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(20.dp)
@@ -350,6 +355,18 @@ private fun CarrinhoItemPremium(item: ItemCarrinho, viewModel: CarrinhoViewModel
                     color = colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
+                )
+            }
+            if (item.observacao.isNotBlank()) {
+                Text(
+                    "Obs: ${item.observacao}",
+                    fontSize = 11.sp,
+                    color = colors.textTertiary,
+                    fontWeight = FontWeight.Medium,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp)
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))

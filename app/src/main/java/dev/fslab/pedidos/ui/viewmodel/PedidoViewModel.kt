@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.fslab.pedidos.model.AdicionalPedidoRequest
 import dev.fslab.pedidos.model.CriarPedidoRequest
+import dev.fslab.pedidos.model.Endereco
+import dev.fslab.pedidos.model.EnderecoEntregaRequest
 import dev.fslab.pedidos.model.ItemCarrinho
 import dev.fslab.pedidos.model.ItemPedidoRequest
 import dev.fslab.pedidos.model.Pedido
@@ -32,13 +34,12 @@ class PedidoViewModel : ViewModel() {
 
     /**
      * Converte os itens do carrinho no formato aceito pela API e envia o pedido.
-     *
-     * @param restauranteId  ID do restaurante
-     * @param itens          Lista de [ItemCarrinho] do ViewModel do carrinho
      */
     fun realizarPedido(
         restauranteId: String,
-        itens: List<ItemCarrinho>
+        itens: List<ItemCarrinho>,
+        endereco: Endereco?,
+        formaPagamento: String = "pix"
     ) {
         if (restauranteId.isBlank()) {
             _uiState.value = PedidoUiState.Error("Restaurante inválido.")
@@ -46,6 +47,10 @@ class PedidoViewModel : ViewModel() {
         }
         if (itens.isEmpty()) {
             _uiState.value = PedidoUiState.Error("O carrinho está vazio.")
+            return
+        }
+        if (endereco == null) {
+            _uiState.value = PedidoUiState.Error("Selecione um endereço de entrega.")
             return
         }
 
@@ -66,13 +71,28 @@ class PedidoViewModel : ViewModel() {
                     ItemPedidoRequest(
                         pratoId = itemCarrinho.prato.id,
                         quantidade = itemCarrinho.quantidade,
+                        observacao = itemCarrinho.observacao,
                         adicionais = adicionais
                     )
                 }
 
+                // Mapeia o endereço para o formato do snapshot da API
+                val enderecoEntrega = EnderecoEntregaRequest(
+                    logradouro = endereco.rua,
+                    numero = endereco.numero,
+                    bairro = endereco.bairro,
+                    cidade = endereco.cidade,
+                    estado = endereco.estado,
+                    cep = endereco.cep.replace("-", "").replace(".", ""),
+                    complemento = endereco.complemento,
+                    label = endereco.label
+                )
+
                 val request = CriarPedidoRequest(
                     restauranteId = restauranteId,
-                    itens = itensMapeados
+                    itens = itensMapeados,
+                    enderecoEntrega = enderecoEntrega,
+                    formaPagamento = formaPagamento
                 )
 
                 val response = api.criarPedido(request)

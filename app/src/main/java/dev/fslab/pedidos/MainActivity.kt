@@ -513,12 +513,14 @@ fun PedidosApp(activity: ComponentActivity) {
                     // Aqui sabemos que é o mesmo restaurante ou o carrinho foi esvaziado.
                     PratoPersonalizacaoScreen(
                         onBack = { navController.popBackStack() },
-                        onAdicionarAoCarrinho = { state ->
+                        onAdicionarAoCarrinho = { state, qtd ->
                             // Adiciona direto — sem verificação de conflito aqui
                             carrinhoViewModel.adicionarItem(
                                 prato = state.prato,
                                 selecoes = state.selecoes,
-                                grupos = state.grupos
+                                grupos = state.grupos,
+                                observacao = state.observacao,
+                                quantidade = qtd
                             )
                             personalizacaoViewModel.resetar()
                             navController.popBackStack()
@@ -582,7 +584,7 @@ fun PedidosApp(activity: ComponentActivity) {
                     val restauranteId by carrinhoViewModel.restauranteId.collectAsState()
                     val pedidoState by pedidoViewModel.uiState.collectAsState()
 
-                    // Garante que os endereços estejam carregados (usa a instância Activity-scoped)
+                    // Garante que os endereços estejam carregados
                     LaunchedEffect(userId) {
                         if (userId.isNotEmpty()) {
                             homeViewModel.carregarDados(userId)
@@ -592,10 +594,9 @@ fun PedidosApp(activity: ComponentActivity) {
                     // Navega para a tela de confirmação ao criar pedido com sucesso
                     LaunchedEffect(pedidoState) {
                         if (pedidoState is PedidoUiState.Success) {
-                            carrinhoViewModel.limpar()
+                            // Navega para confirmação e remove carrinho do stack
                             navController.navigate("pedido_confirmacao") {
-                                // Remove o carrinho e o restaurante do back-stack
-                                popUpTo("home") { inclusive = false }
+                                popUpTo("carrinho") { inclusive = true }
                                 launchSingleTop = true
                             }
                         }
@@ -611,10 +612,12 @@ fun PedidosApp(activity: ComponentActivity) {
                         onNavigateNovoEndereco = {
                             navController.navigate("novo_endereco")
                         },
-                        onFinalizarPedido = {
+                        onFinalizarPedido = { end, pagamento ->
                             pedidoViewModel.realizarPedido(
                                 restauranteId = restauranteId,
-                                itens = carrinhoItens
+                                itens = carrinhoItens,
+                                endereco = end,
+                                formaPagamento = pagamento
                             )
                         },
                         onVoltarAoRestaurante = {
@@ -627,18 +630,23 @@ fun PedidosApp(activity: ComponentActivity) {
 
                 composable("pedido_confirmacao") {
                     val pedidoState by pedidoViewModel.uiState.collectAsState()
-                    val nomeRestaurante by carrinhoViewModel.nomeRestaurante.collectAsState()
+                    val nomeRestauranteSnapshot = remember { carrinhoViewModel.nomeRestaurante.value }
                     val pedido = (pedidoState as? PedidoUiState.Success)?.pedido
+
+                    // Limpa o carrinho assim que entra na tela de confirmação, 
+                    // mas já capturamos o nome do restaurante acima via snapshot
+                    LaunchedEffect(Unit) {
+                        carrinhoViewModel.limpar()
+                    }
 
                     if (pedido != null) {
                         PedidoConfirmacaoScreen(
                             pedido = pedido,
-                            nomeRestaurante = nomeRestaurante,
+                            nomeRestaurante = nomeRestauranteSnapshot,
                             onVoltarInicio = {
                                 pedidoViewModel.resetar()
                                 navController.navigate("home") {
-                                    popUpTo("home") { inclusive = false }
-                                    launchSingleTop = true
+                                    popUpTo("home") { inclusive = true }
                                 }
                             },
                             onAcompanharPedido = {
@@ -650,10 +658,10 @@ fun PedidosApp(activity: ComponentActivity) {
                             }
                         )
                     } else {
-                        // Segurança: se o pedido sumir (ex: processo morreu), volta para home
+                        // Se o estado for perdido (ex: process death), volta para home
                         LaunchedEffect(Unit) {
                             navController.navigate("home") {
-                                popUpTo("home") { inclusive = false }
+                                popUpTo(0)
                             }
                         }
                     }

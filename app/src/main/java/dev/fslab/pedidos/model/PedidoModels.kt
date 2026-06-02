@@ -8,18 +8,36 @@ import com.google.gson.annotations.SerializedName
 
 data class CriarPedidoRequest(
     @SerializedName("restaurante_id") val restauranteId: String,
-    val itens: List<ItemPedidoRequest>
+    val itens: List<ItemPedidoRequest>,
+    @SerializedName("endereco_entrega") val enderecoEntrega: EnderecoEntregaRequest,
+    @SerializedName("forma_pagamento") val formaPagamento: String = "pix"
 )
 
 data class ItemPedidoRequest(
     @SerializedName("prato_id") val pratoId: String,
     val quantidade: Int,
+    val observacao: String = "",
     val adicionais: List<AdicionalPedidoRequest> = emptyList()
 )
 
 data class AdicionalPedidoRequest(
     @SerializedName("opcao_id") val opcaoId: String,
     val quantidade: Int = 1
+)
+
+data class PedidoStatusRequest(
+    val status: String
+)
+
+data class EnderecoEntregaRequest(
+    val logradouro: String,
+    val numero: String,
+    val bairro: String,
+    val cidade: String,
+    val estado: String,
+    val cep: String, // Sem traço (backend regex: /^\d{8}$/)
+    val complemento: String = "",
+    val label: String = ""
 )
 
 // ═══════════════════════════════════════════════════════
@@ -66,6 +84,7 @@ data class ItemPedidoCriado(
     @SerializedName("prato_nome") val pratoNome: String,
     @SerializedName("preco_unitario") val precoUnitario: Double,
     val quantidade: Int,
+    val observacao: String? = "",
     val adicionais: List<AdicionalPedidoCriado>
 )
 

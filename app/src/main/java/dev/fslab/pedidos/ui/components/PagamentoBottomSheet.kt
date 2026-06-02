@@ -110,9 +110,10 @@ private fun PagamentoItem(
     val colors = LocalPedidosColors.current
 
     val icon: ImageVector = when (forma) {
-        FormaPagamento.CARTAO -> Icons.Default.CreditCard
-        FormaPagamento.PIX    -> Icons.Default.QrCode
-        FormaPagamento.DINHEIRO -> Icons.Default.AttachMoney
+        FormaPagamento.CARTAO_CREDITO -> Icons.Default.CreditCard
+        FormaPagamento.CARTAO_DEBITO  -> Icons.Default.CreditCard
+        FormaPagamento.PIX             -> Icons.Default.QrCode
+        FormaPagamento.DINHEIRO        -> Icons.Default.AttachMoney
     }
 
     Row(

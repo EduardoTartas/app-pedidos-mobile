@@ -133,6 +133,44 @@ fun PedidoDetalhesScreen(
                                 fontWeight = FontWeight.Bold
                             )
                         }
+
+                        // ─── BOTÃO CANCELAR (SE PENDENTE) ───
+                        if (pedido.status == "criado" || pedido.status == "pendente") {
+                            item {
+                                val isCancelling by viewModel.isCancelling.collectAsState()
+                                
+                                Spacer(Modifier.height(24.dp))
+                                Button(
+                                    onClick = { viewModel.cancelarPedido(pedido.id) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp)
+                                        .height(50.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.Transparent,
+                                        contentColor = Color.Red
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red.copy(alpha = 0.3f)),
+                                    enabled = !isCancelling
+                                ) {
+                                    if (isCancelling) {
+                                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.Red)
+                                    } else {
+                                        Icon(Icons.Default.Cancel, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("CANCELAR PEDIDO", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    }
+                                }
+                                Text(
+                                    "Você só pode cancelar enquanto o restaurante não inicia o preparo.",
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 8.dp),
+                                    textAlign = TextAlign.Center,
+                                    fontSize = 10.sp,
+                                    color = colors.textTertiary
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -183,6 +221,28 @@ private fun ItemLinha(item: dev.fslab.pedidos.model.ItemPedidoCriado, colors: de
                 fontWeight = FontWeight.Bold,
                 color = colors.textPrimary
             )
+        }
+
+        if (!item.observacao.isNullOrBlank()) {
+            Surface(
+                color = Color(0xFFFFB01E).copy(alpha = 0.08f),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(Icons.Default.Notes, contentDescription = null, tint = Color(0xFFFFB01E), modifier = Modifier.size(12.dp))
+                    Text(
+                        text = "Obs: ${item.observacao}",
+                        fontSize = 11.sp,
+                        color = Color(0xFFB47B00),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
         
         // Adicionais
@@ -307,7 +367,7 @@ private fun ResumoLinha(label: String, value: String, colors: dev.fslab.pedidos.
 @Composable
 private fun StatusBadgeCompact(status: String) {
     val (label, bgColor, textColor) = when (status) {
-        "criado" -> Triple("Pendente", Color(0xFFFFB01E).copy(alpha = 0.1f), Color(0xFFFFB01E))
+        "criado", "pendente" -> Triple("Pendente", Color(0xFFFFB01E).copy(alpha = 0.1f), Color(0xFFFFB01E))
         "em_preparo" -> Triple("Preparando", Color(0xFF3B82F6).copy(alpha = 0.1f), Color(0xFF3B82F6))
         "a_caminho" -> Triple("No caminho", Color(0xFF8B5CF6).copy(alpha = 0.1f), Color(0xFF8B5CF6))
         "entregue" -> Triple("Entregue", Color(0xFF14B822).copy(alpha = 0.1f), Color(0xFF14B822))
@@ -320,7 +380,7 @@ private fun StatusBadgeCompact(status: String) {
 }
 
 private fun mapearStatusLabel(status: String): String = when (status) {
-    "criado" -> "Pedido realizado"
+    "criado", "pendente" -> "Pedido realizado"
     "em_preparo" -> "Na cozinha"
     "a_caminho" -> "Saiu para entrega"
     "entregue" -> "Entregue"

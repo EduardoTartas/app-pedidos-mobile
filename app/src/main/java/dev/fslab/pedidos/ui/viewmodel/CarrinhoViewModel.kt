@@ -9,10 +9,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-enum class FormaPagamento(val label: String, val iconKey: String) {
-    CARTAO("Cartão de Crédito / Débito", "card"),
+enum class FormaPagamento(val label: String, val apiValue: String) {
+    CARTAO_CREDITO("Cartão de Crédito", "cartao_credito"),
+    CARTAO_DEBITO("Cartão de Débito", "cartao_debito"),
     PIX("Pix", "pix"),
-    DINHEIRO("Dinheiro", "money")
+    DINHEIRO("Dinheiro", "dinheiro")
 }
 
 /** Representa um conflito pendente de restaurante diferente */
@@ -25,7 +26,9 @@ data class ConflitoPendente(
 data class ItemParaAdicionar(
     val prato: Prato,
     val selecoes: Map<String, Set<String>>,
-    val grupos: List<GrupoComOpcoes>
+    val grupos: List<GrupoComOpcoes>,
+    val observacao: String = "",
+    val quantidade: Int = 1
 )
 
 class CarrinhoViewModel : ViewModel() {
@@ -49,7 +52,7 @@ class CarrinhoViewModel : ViewModel() {
     private val _enderecoSelecionado = MutableStateFlow<Endereco?>(null)
     val enderecoSelecionado: StateFlow<Endereco?> = _enderecoSelecionado.asStateFlow()
 
-    private val _formaPagamento = MutableStateFlow(FormaPagamento.CARTAO)
+    private val _formaPagamento = MutableStateFlow(FormaPagamento.PIX)
     val formaPagamento: StateFlow<FormaPagamento> = _formaPagamento.asStateFlow()
 
     /** Quantidade total de itens no carrinho (considerando `quantidade` de cada item) */
@@ -71,7 +74,9 @@ class CarrinhoViewModel : ViewModel() {
         selecoes: Map<String, Set<String>>,
         grupos: List<GrupoComOpcoes>,
         restauranteId: String,
-        nomeRestaurante: String
+        nomeRestaurante: String,
+        observacao: String = "",
+        quantidade: Int = 1
     ): Boolean {
         val carrinhoAtualId = _restauranteId.value
         val carrinhoVazio = _itens.value.isEmpty()
@@ -80,14 +85,14 @@ class CarrinhoViewModel : ViewModel() {
             // Mesmo restaurante ou carrinho vazio: adiciona direto
             _restauranteId.value = restauranteId
             _nomeRestaurante.value = nomeRestaurante
-            adicionarItem(prato, selecoes, grupos)
+            adicionarItem(prato, selecoes, grupos, observacao, quantidade)
             true  // adicionado com sucesso
         } else {
             // Restaurante diferente: sinaliza conflito para a UI mostrar modal
             _conflitoPendente.value = ConflitoPendente(
                 nomeRestauranteAtual = _nomeRestaurante.value,
                 nomeRestauranteNovo = nomeRestaurante,
-                itemParaAdicionar = ItemParaAdicionar(prato, selecoes, grupos)
+                itemParaAdicionar = ItemParaAdicionar(prato, selecoes, grupos, observacao, quantidade)
             )
             false  // conflito pendente — NÃO navegar de volta ainda
         }
@@ -105,7 +110,9 @@ class CarrinhoViewModel : ViewModel() {
         adicionarItem(
             conflito.itemParaAdicionar.prato,
             conflito.itemParaAdicionar.selecoes,
-            conflito.itemParaAdicionar.grupos
+            conflito.itemParaAdicionar.grupos,
+            conflito.itemParaAdicionar.observacao,
+            conflito.itemParaAdicionar.quantidade
         )
         _conflitoPendente.value = null
     }
@@ -121,7 +128,9 @@ class CarrinhoViewModel : ViewModel() {
     fun adicionarItem(
         prato: Prato,
         selecoes: Map<String, Set<String>>,
-        grupos: List<GrupoComOpcoes>
+        grupos: List<GrupoComOpcoes>,
+        observacao: String = "",
+        quantidade: Int = 1
     ) {
         val opcoesSelecionadas: List<AdicionalOpcao> = grupos.flatMap { gc ->
             val ids = selecoes[gc.grupo.id] ?: emptySet()
@@ -135,8 +144,9 @@ class CarrinhoViewModel : ViewModel() {
             prato = prato,
             selecoes = selecoes,
             opcoesSelecionadas = opcoesSelecionadas,
-            quantidade = 1,
-            precoTotal = precoTotal
+            quantidade = quantidade,
+            precoTotal = precoTotal,
+            observacao = observacao
         )
 
         _itens.value = _itens.value + novoItem
@@ -169,6 +179,7 @@ class CarrinhoViewModel : ViewModel() {
     }
 
     fun selecionarEndereco(endereco: Endereco) {
+        _enderecoSelecionado.value = null // Reseta para forçar recomposição
         _enderecoSelecionado.value = endereco
     }
 
@@ -179,7 +190,7 @@ class CarrinhoViewModel : ViewModel() {
     fun limpar() {
         _itens.value = emptyList()
         _enderecoSelecionado.value = null
-        _formaPagamento.value = FormaPagamento.CARTAO
+        _formaPagamento.value = FormaPagamento.PIX
         _nomeRestaurante.value = ""
         _restauranteId.value = ""
         _taxaEntrega.value = 0.0

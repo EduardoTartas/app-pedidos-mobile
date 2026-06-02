@@ -12,5 +12,6 @@ data class ItemCarrinho(
     /** Opções completas para exibição e cálculo */
     val opcoesSelecionadas: List<AdicionalOpcao>,
     val quantidade: Int = 1,
-    val precoTotal: Double
+    val precoTotal: Double,
+    val observacao: String = ""
 )
