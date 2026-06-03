@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -65,6 +66,16 @@ fun CarrinhoScreen(
         if (enderecoSelecionado == null) {
             val principal = enderecos.find { it.principal } ?: enderecos.first()
             viewModel.selecionarEndereco(principal)
+        }
+    }
+
+    val context = LocalContext.current
+
+    // Feedback de erro
+    LaunchedEffect(pedidoState) {
+        if (pedidoState is PedidoUiState.Error) {
+            android.widget.Toast.makeText(context, pedidoState.message, android.widget.Toast.LENGTH_LONG).show()
+            onDismissErro()
         }
     }
 
@@ -271,7 +282,7 @@ fun CarrinhoScreen(
                     Button(
                         onClick = {
                             if (enderecoEfetivo != null) {
-                                onFinalizarPedido(enderecoEfetivo, formaPagamento.name.lowercase())
+                                onFinalizarPedido(enderecoEfetivo, formaPagamento.apiValue)
                             }
                         },
                         modifier = Modifier

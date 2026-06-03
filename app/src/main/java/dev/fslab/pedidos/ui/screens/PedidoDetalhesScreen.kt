@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.ImageLoader
@@ -55,6 +56,38 @@ fun PedidoDetalhesScreen(
             .allowHardware(true)
             .crossfade(true)
             .build()
+    }
+
+    var showCancelDialog by remember { mutableStateOf(false) }
+
+    if (showCancelDialog) {
+        AlertDialog(
+            onDismissRequest = { showCancelDialog = false },
+            containerColor = colors.surface,
+            titleContentColor = colors.textPrimary,
+            textContentColor = colors.textSecondary,
+            icon = { Icon(Icons.Default.Cancel, contentDescription = null, tint = Color.Red, modifier = Modifier.size(40.dp)) },
+            title = { Text("Cancelar Pedido?", fontWeight = FontWeight.Black, fontSize = 18.sp) },
+            text = { Text("Deseja realmente cancelar este pedido? Esta ação não poderá ser desfeita.", textAlign = TextAlign.Center) },
+            confirmButton = {
+                Button(
+                    onClick = { 
+                        (uiState as? PedidoDetalhesUiState.Success)?.pedido?.let { viewModel.cancelarPedido(it.id) }
+                        showCancelDialog = false 
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("CANCELAR AGORA", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelDialog = false }) {
+                    Text("MANTER", color = colors.textTertiary, fontWeight = FontWeight.Bold)
+                }
+            },
+            shape = RoundedCornerShape(24.dp)
+        )
     }
 
     Scaffold(
@@ -141,7 +174,8 @@ fun PedidoDetalhesScreen(
                                 
                                 Spacer(Modifier.height(24.dp))
                                 Button(
-                                    onClick = { viewModel.cancelarPedido(pedido.id) },
+                                    onClick = { showCancelDialog = true },
+
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(horizontal = 20.dp)
@@ -188,7 +222,7 @@ private fun PedidoHeader(pedido: Pedido, imageLoader: ImageLoader, colors: dev.f
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
-                model = pedido.restaurante?.fotoRestaurante,
+                model = pedido.restauranteFoto,
                 imageLoader = imageLoader,
                 contentDescription = null,
                 modifier = Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)),
@@ -196,7 +230,7 @@ private fun PedidoHeader(pedido: Pedido, imageLoader: ImageLoader, colors: dev.f
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(pedido.restaurante?.nome ?: "Restaurante", fontSize = 18.sp, fontWeight = FontWeight.Black, color = colors.textPrimary)
+                Text(pedido.restauranteNome, fontSize = 18.sp, fontWeight = FontWeight.Black, color = colors.textPrimary)
                 Text("Pedido #${pedido.id.takeLast(6).uppercase()}", fontSize = 13.sp, color = colors.textSecondary)
             }
             StatusBadgeCompact(pedido.status)
@@ -234,7 +268,7 @@ private fun ItemLinha(item: dev.fslab.pedidos.model.ItemPedidoCriado, colors: de
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Icon(Icons.Default.Notes, contentDescription = null, tint = Color(0xFFFFB01E), modifier = Modifier.size(12.dp))
+                    Icon(Icons.AutoMirrored.Filled.Notes, contentDescription = null, tint = Color(0xFFFFB01E), modifier = Modifier.size(12.dp))
                     Text(
                         text = "Obs: ${item.observacao}",
                         fontSize = 11.sp,

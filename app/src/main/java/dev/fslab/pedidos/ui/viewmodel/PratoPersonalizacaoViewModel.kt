@@ -75,10 +75,8 @@ class PratoPersonalizacaoViewModel : ViewModel() {
                     }
                 }.awaitAll()
 
-                // 3. Pré-selecionar primeira opção de grupos com max == 1 (variação/radio)
-                val selecoesIniciais = gruposComOpcoes
-                    .filter { it.grupo.max == 1 && it.opcoes.isNotEmpty() }
-                    .associate { gc -> gc.grupo.id to setOf(gc.opcoes.first().id) }
+                // 3. NÃO pré-selecionar mais nada por padrão (deixa o cliente escolher)
+                val selecoesIniciais = emptyMap<String, Set<String>>()
 
                 _uiState.value = PersonalizacaoUiState.Success(
                     prato = prato,

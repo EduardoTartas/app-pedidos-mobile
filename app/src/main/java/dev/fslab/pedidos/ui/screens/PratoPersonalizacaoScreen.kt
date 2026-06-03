@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.automirrored.filled.Notes
 import coil.compose.AsyncImage
 import dev.fslab.pedidos.model.AdicionalOpcao
 import dev.fslab.pedidos.ui.viewmodel.GrupoComOpcoes
@@ -209,7 +210,7 @@ fun PratoPersonalizacaoScreen(
                         item {
                             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Icon(Icons.Default.Notes, contentDescription = null, tint = textColor, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.AutoMirrored.Filled.Notes, contentDescription = null, tint = textColor, modifier = Modifier.size(18.dp))
                                     Text("Alguma observação?", color = textColor, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                 }
                                 Spacer(Modifier.height(12.dp))

@@ -104,12 +104,28 @@ fun PedidosApp(activity: ComponentActivity) {
     val homeViewModel: dev.fslab.pedidos.ui.viewmodel.HomeViewModel = viewModel()
     val homeState by homeViewModel.uiState.collectAsState()
 
+    val user by authViewModel.currentUser.collectAsState()
+    val userId = user?.id ?: ""
+
     val coroutineScope = rememberCoroutineScope()
 
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    // NAVEGAÇÃO GLOBAL DE PEDIDOS:
+    // Monitora o estado de sucesso do pedido e navega para confirmação
+    val pedidoState by pedidoViewModel.uiState.collectAsState()
+    LaunchedEffect(pedidoState) {
+        if (pedidoState is PedidoUiState.Success && currentRoute != "pedido_confirmacao") {
+            navController.navigate("pedido_confirmacao") {
+                popUpTo("carrinho") { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+
     PedidosTheme(darkTheme = isDarkTheme) {
-        val navController = rememberNavController()
-        val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry?.destination?.route
         
         // Trava reforçada: Só mostra se a rota atual estiver na lista e não for nula/splash
         val showBottomBar = currentRoute != null && 
@@ -354,9 +370,6 @@ fun PedidosApp(activity: ComponentActivity) {
                 }
 
                 composable("home") {
-                    val user by authViewModel.currentUser.collectAsState()
-                    val userId = user?.id ?: ""
-
                     LaunchedEffect(userId) {
                         if (userId.isNotEmpty()) {
                             homeViewModel.carregarDados(userId)
@@ -530,9 +543,6 @@ fun PedidosApp(activity: ComponentActivity) {
                 }
 
                 composable("novo_endereco") {
-                    val user by authViewModel.currentUser.collectAsState()
-                    val userId = user?.id ?: ""
-
                     // Flag: indica que o endereço foi criado e estamos aguardando o reload
                     var aguardandoAtualizacao by remember { mutableStateOf(false) }
 
@@ -578,27 +588,13 @@ fun PedidosApp(activity: ComponentActivity) {
                 }
 
                 composable("carrinho") {
-                    val user by authViewModel.currentUser.collectAsState()
-                    val userId = user?.id ?: ""
                     val nomeRestaurante by carrinhoViewModel.nomeRestaurante.collectAsState()
                     val restauranteId by carrinhoViewModel.restauranteId.collectAsState()
-                    val pedidoState by pedidoViewModel.uiState.collectAsState()
 
                     // Garante que os endereços estejam carregados
                     LaunchedEffect(userId) {
                         if (userId.isNotEmpty()) {
                             homeViewModel.carregarDados(userId)
-                        }
-                    }
-
-                    // Navega para a tela de confirmação ao criar pedido com sucesso
-                    LaunchedEffect(pedidoState) {
-                        if (pedidoState is PedidoUiState.Success) {
-                            // Navega para confirmação e remove carrinho do stack
-                            navController.navigate("pedido_confirmacao") {
-                                popUpTo("carrinho") { inclusive = true }
-                                launchSingleTop = true
-                            }
                         }
                     }
 
@@ -630,18 +626,19 @@ fun PedidosApp(activity: ComponentActivity) {
 
                 composable("pedido_confirmacao") {
                     val pedidoState by pedidoViewModel.uiState.collectAsState()
+                    // Captura o pedido inicial via remember para evitar race conditions
+                    // caso o ViewModel seja resetado durante a animação/transição
+                    val pedidoInicial = remember { (pedidoState as? PedidoUiState.Success)?.pedido }
                     val nomeRestauranteSnapshot = remember { carrinhoViewModel.nomeRestaurante.value }
-                    val pedido = (pedidoState as? PedidoUiState.Success)?.pedido
 
-                    // Limpa o carrinho assim que entra na tela de confirmação, 
-                    // mas já capturamos o nome do restaurante acima via snapshot
+                    // Limpa o carrinho assim que entra na tela de confirmação
                     LaunchedEffect(Unit) {
                         carrinhoViewModel.limpar()
                     }
 
-                    if (pedido != null) {
+                    if (pedidoInicial != null) {
                         PedidoConfirmacaoScreen(
-                            pedido = pedido,
+                            pedido = pedidoInicial,
                             nomeRestaurante = nomeRestauranteSnapshot,
                             onVoltarInicio = {
                                 pedidoViewModel.resetar()
@@ -650,7 +647,7 @@ fun PedidosApp(activity: ComponentActivity) {
                                 }
                             },
                             onAcompanharPedido = {
-                                val pid = pedido.id
+                                val pid = pedidoInicial.id
                                 pedidoViewModel.resetar()
                                 navController.navigate("pedido_detalhes/$pid") {
                                     popUpTo("home") { inclusive = false }
@@ -658,7 +655,7 @@ fun PedidosApp(activity: ComponentActivity) {
                             }
                         )
                     } else {
-                        // Se o estado for perdido (ex: process death), volta para home
+                        // Segurança: se não houver pedido, volta para home
                         LaunchedEffect(Unit) {
                             navController.navigate("home") {
                                 popUpTo(0)

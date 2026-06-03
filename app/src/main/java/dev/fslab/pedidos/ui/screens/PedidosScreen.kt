@@ -110,7 +110,7 @@ private fun PedidoCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Foto do restaurante
                 AsyncImage(
-                    model = pedido.restaurante?.fotoRestaurante,
+                    model = pedido.restauranteFoto,
                     imageLoader = imageLoader,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)),
@@ -121,7 +121,7 @@ private fun PedidoCard(
                 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        pedido.restaurante?.nome ?: "Restaurante",
+                        pedido.restauranteNome,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.textPrimary

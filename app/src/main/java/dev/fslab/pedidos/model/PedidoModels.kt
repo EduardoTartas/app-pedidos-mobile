@@ -69,15 +69,25 @@ data class ClienteSimplificado(
 
 data class Pedido(
     @SerializedName("_id") val id: String,
-    @SerializedName("restaurante_id") val restaurante: RestauranteSimplificado?,
-    @SerializedName("cliente_id") val cliente: ClienteSimplificado?,
+    @SerializedName("restaurante_id") val restauranteId: Any?, // Pode ser String ou RestauranteSimplificado
+    @SerializedName("cliente_id") val clienteId: Any?,         // Pode ser String ou ClienteSimplificado
     val status: String,
     val itens: List<ItemPedidoCriado>,
     val totais: TotaisPedido,
     @SerializedName("forma_pagamento") val formaPagamento: String?,
     @SerializedName("historico_status") val historicoStatus: List<HistoricoStatus> = emptyList(),
     @SerializedName("createdAt") val criadoEm: String?
-)
+) {
+    // Helpers para lidar com população dinâmica
+    val restauranteNome: String
+        get() = (restauranteId as? Map<*, *>)?.get("nome")?.toString() 
+                ?: (restauranteId as? RestauranteSimplificado)?.nome 
+                ?: "Restaurante"
+
+    val restauranteFoto: String?
+        get() = (restauranteId as? Map<*, *>)?.get("foto_restaurante")?.toString()
+                ?: (restauranteId as? RestauranteSimplificado)?.fotoRestaurante
+}
 
 data class ItemPedidoCriado(
     @SerializedName("prato_id") val pratoId: Any?,
