@@ -33,7 +33,9 @@ data class ConflitoPendente(
 data class ItemParaAdicionar(
     val prato: Prato,
     val selecoes: Map<String, Set<String>>,
-    val grupos: List<GrupoComOpcoes>
+    val grupos: List<GrupoComOpcoes>,
+    val observacao: String = "",
+    val quantidade: Int = 1
 )
 
 class CarrinhoViewModel : ViewModel() {
@@ -45,6 +47,9 @@ class CarrinhoViewModel : ViewModel() {
 
     private val _restauranteId = MutableStateFlow("")
     val restauranteId: StateFlow<String> = _restauranteId.asStateFlow()
+
+    private val _taxaEntrega = MutableStateFlow(0.0)
+    val taxaEntrega: StateFlow<Double> = _taxaEntrega.asStateFlow()
 
     private val _conflitoPendente = MutableStateFlow<ConflitoPendente?>(null)
     val conflitoPendente: StateFlow<ConflitoPendente?> = _conflitoPendente.asStateFlow()
@@ -76,7 +81,9 @@ class CarrinhoViewModel : ViewModel() {
         selecoes: Map<String, Set<String>>,
         grupos: List<GrupoComOpcoes>,
         restauranteId: String,
-        nomeRestaurante: String
+        nomeRestaurante: String,
+        observacao: String = "",
+        quantidade: Int = 1
     ): Boolean {
         val carrinhoAtualId = _restauranteId.value
         val carrinhoVazio = _itens.value.isEmpty()
@@ -84,13 +91,13 @@ class CarrinhoViewModel : ViewModel() {
         return if (carrinhoVazio || carrinhoAtualId == restauranteId) {
             _restauranteId.value = restauranteId
             _nomeRestaurante.value = nomeRestaurante
-            adicionarItem(prato, selecoes, grupos)
-            true
+            adicionarItem(prato, selecoes, grupos, observacao, quantidade)
+            true  // adicionado com sucesso
         } else {
             _conflitoPendente.value = ConflitoPendente(
                 nomeRestauranteAtual = _nomeRestaurante.value,
                 nomeRestauranteNovo = nomeRestaurante,
-                itemParaAdicionar = ItemParaAdicionar(prato, selecoes, grupos)
+                itemParaAdicionar = ItemParaAdicionar(prato, selecoes, grupos, observacao, quantidade)
             )
             false
         }
@@ -105,7 +112,9 @@ class CarrinhoViewModel : ViewModel() {
         adicionarItem(
             conflito.itemParaAdicionar.prato,
             conflito.itemParaAdicionar.selecoes,
-            conflito.itemParaAdicionar.grupos
+            conflito.itemParaAdicionar.grupos,
+            conflito.itemParaAdicionar.observacao,
+            conflito.itemParaAdicionar.quantidade
         )
         _conflitoPendente.value = null
     }
@@ -118,7 +127,9 @@ class CarrinhoViewModel : ViewModel() {
     fun adicionarItem(
         prato: Prato,
         selecoes: Map<String, Set<String>>,
-        grupos: List<GrupoComOpcoes>
+        grupos: List<GrupoComOpcoes>,
+        observacao: String = "",
+        quantidade: Int = 1
     ) {
         val opcoesSelecionadas: List<AdicionalOpcao> = grupos.flatMap { gc ->
             val ids = selecoes[gc.grupo.id] ?: emptySet()
@@ -132,8 +143,9 @@ class CarrinhoViewModel : ViewModel() {
             prato = prato,
             selecoes = selecoes,
             opcoesSelecionadas = opcoesSelecionadas,
-            quantidade = 1,
-            precoTotal = precoTotal
+            quantidade = quantidade,
+            precoTotal = precoTotal,
+            observacao = observacao
         )
 
         _itens.value = _itens.value + novoItem
@@ -156,12 +168,14 @@ class CarrinhoViewModel : ViewModel() {
         _itens.value = _itens.value.filter { it.id != itemId }
     }
 
-    fun definirRestaurante(nome: String, id: String = "") {
+    fun definirRestaurante(nome: String, id: String = "", taxa: Double = 0.0) {
         _nomeRestaurante.value = nome
         if (id.isNotEmpty()) _restauranteId.value = id
+        _taxaEntrega.value = taxa
     }
 
     fun selecionarEndereco(endereco: Endereco) {
+        _enderecoSelecionado.value = null // Reseta para forçar recomposição
         _enderecoSelecionado.value = endereco
     }
 
@@ -175,6 +189,7 @@ class CarrinhoViewModel : ViewModel() {
         _formaPagamento.value = FormaPagamento.PIX
         _nomeRestaurante.value = ""
         _restauranteId.value = ""
+        _taxaEntrega.value = 0.0
         _conflitoPendente.value = null
     }
 }

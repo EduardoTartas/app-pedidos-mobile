@@ -1,6 +1,7 @@
 package dev.fslab.pedidos.network
 
 import dev.fslab.pedidos.model.BasicResponse
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.PATCH
 import retrofit2.http.Path
@@ -15,5 +16,5 @@ interface UsuarioApi {
     suspend fun atualizar(
         @Path("id") id: String,
         @Body body: Map<String, String>
-    ): BasicResponse
+    ): Response<BasicResponse>
 }

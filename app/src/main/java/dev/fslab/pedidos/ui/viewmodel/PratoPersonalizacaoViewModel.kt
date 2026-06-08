@@ -35,7 +35,8 @@ sealed class PersonalizacaoUiState {
         val grupos: List<GrupoComOpcoes>,
         /** grupoId → conjunto de opcaoIds selecionadas */
         val selecoes: Map<String, Set<String>> = emptyMap(),
-        val observacao: String = ""
+        val observacao: String = "",
+        val quantidade: Int = 1
     ) : PersonalizacaoUiState()
     data class Error(val message: String) : PersonalizacaoUiState()
 }
@@ -74,10 +75,14 @@ class PratoPersonalizacaoViewModel : ViewModel() {
                     }
                 }.awaitAll()
 
+                // 3. NÃO pré-selecionar mais nada por padrão (deixa o cliente escolher)
+                val selecoesIniciais = emptyMap<String, Set<String>>()
+
                 _uiState.value = PersonalizacaoUiState.Success(
                     prato = prato,
                     grupos = gruposComOpcoes,
-                    selecoes = emptyMap()
+                    selecoes = selecoesIniciais,
+                    quantidade = 1
                 )
             } catch (e: Exception) {
                 _uiState.value = PersonalizacaoUiState.Error(
@@ -120,14 +125,20 @@ class PratoPersonalizacaoViewModel : ViewModel() {
         _uiState.value = current.copy(observacao = texto)
     }
 
-    /** Preço total = preço base + soma das opções selecionadas */
+    fun mudarQuantidade(delta: Int) {
+        val current = _uiState.value as? PersonalizacaoUiState.Success ?: return
+        val novaQtd = (current.quantidade + delta).coerceAtLeast(1)
+        _uiState.value = current.copy(quantidade = novaQtd)
+    }
+
+    /** Preço total = (preço base + soma das opções selecionadas) * quantidade */
     fun precoTotal(): Double {
         val state = _uiState.value as? PersonalizacaoUiState.Success ?: return 0.0
         val extras = state.grupos.sumOf { gc ->
             val ids = state.selecoes[gc.grupo.id] ?: emptySet()
             gc.opcoes.filter { it.id in ids }.sumOf { it.preco }
         }
-        return state.prato.preco + extras
+        return (state.prato.preco + extras) * state.quantidade
     }
 
     /**

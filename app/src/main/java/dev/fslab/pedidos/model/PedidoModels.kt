@@ -31,7 +31,7 @@ data class EnderecoEntregaRequest(
             bairro       = e.bairro,
             cidade       = e.cidade,
             estado       = e.estado,
-            cep          = e.cep.replace("-", ""), // garante 8 dígitos sem traço
+            cep          = e.cep.replace("-", "").replace(".", ""), // garante 8 dígitos sem traço
             complemento  = e.complemento,
             label        = e.label
         )
@@ -46,8 +46,9 @@ data class CriarPedidoRequest(
 )
 
 data class ItemPedidoRequest(
-    @SerializedName("prato_id")  val pratoId: String,
+    @SerializedName("prato_id")   val pratoId: String,
     @SerializedName("quantidade") val quantidade: Int,
+    @SerializedName("observacao") val observacao: String = "",
     @SerializedName("adicionais") val adicionais: List<AdicionalPedidoRequest> = emptyList()
 )
 
@@ -56,27 +57,59 @@ data class AdicionalPedidoRequest(
     @SerializedName("quantidade") val quantidade: Int = 1
 )
 
+data class PedidoStatusRequest(
+    @SerializedName("status") val status: String
+)
+
 // ═══════════════════════════════════════════════════════
 // RESPONSE — Dados retornados após criar o pedido
 // ═══════════════════════════════════════════════════════
 
 data class CriarPedidoResponse(
-    val message: String,
-    val data: PedidoCriado?
+    @SerializedName("message") val message: String,
+    @SerializedName("data")    val data: Pedido?
 )
 
-data class PedidoCriado(
-    @SerializedName("_id")         val id: String,
-    @SerializedName("restaurante_id") val restauranteId: Any?,
-    @SerializedName("cliente_id")  val clienteId: Any?,
-    @SerializedName("status")      val status: String,
-    @SerializedName("itens")       val itens: List<ItemPedidoCriado>,
-    @SerializedName("totais")      val totais: TotaisPedido,
-    @SerializedName("endereco_entrega") val enderecoEntrega: EnderecoEntregaResponse?,
-    @SerializedName("forma_pagamento")  val formaPagamento: String?,
-    @SerializedName("historico_status") val historicoStatus: List<HistoricoStatus>,
-    @SerializedName("createdAt")   val criadoEm: String?
+data class ListaPedidosResponse(
+    @SerializedName("message") val message: String,
+    @SerializedName("data")    val data: PaginatedResponse<Pedido>?
 )
+
+data class RestauranteSimplificado(
+    @SerializedName("_id") val id: String,
+    @SerializedName("nome") val nome: String,
+    @SerializedName("foto_restaurante") val fotoRestaurante: String?
+)
+
+data class ClienteSimplificado(
+    @SerializedName("_id") val id: String,
+    @SerializedName("nome") val nome: String,
+    @SerializedName("email") val email: String,
+    @SerializedName("telefone") val telefone: String?
+)
+
+data class Pedido(
+    @SerializedName("_id") val id: String,
+    @SerializedName("restaurante_id") val restauranteId: Any?, // Pode ser String ou RestauranteSimplificado
+    @SerializedName("cliente_id") val clienteId: Any?,         // Pode ser String ou ClienteSimplificado
+    @SerializedName("status") val status: String,
+    @SerializedName("itens") val itens: List<ItemPedidoCriado>,
+    @SerializedName("totais") val totais: TotaisPedido,
+    @SerializedName("endereco_entrega") val enderecoEntrega: EnderecoEntregaResponse? = null,
+    @SerializedName("forma_pagamento") val formaPagamento: String?,
+    @SerializedName("historico_status") val historicoStatus: List<HistoricoStatus> = emptyList(),
+    @SerializedName("createdAt") val criadoEm: String?
+) {
+    // Helpers para lidar com população dinâmica
+    val restauranteNome: String
+        get() = (restauranteId as? Map<*, *>)?.get("nome")?.toString() 
+                ?: (restauranteId as? RestauranteSimplificado)?.nome 
+                ?: "Restaurante"
+
+    val restauranteFoto: String?
+        get() = (restauranteId as? Map<*, *>)?.get("foto_restaurante")?.toString()
+                ?: (restauranteId as? RestauranteSimplificado)?.fotoRestaurante
+}
 
 /** Snapshot do endereço que vem na resposta da API */
 data class EnderecoEntregaResponse(
@@ -91,11 +124,12 @@ data class EnderecoEntregaResponse(
 )
 
 data class ItemPedidoCriado(
-    @SerializedName("prato_id")      val pratoId: Any?,
-    @SerializedName("prato_nome")    val pratoNome: String,
+    @SerializedName("prato_id")       val pratoId: Any?,
+    @SerializedName("prato_nome")     val pratoNome: String,
     @SerializedName("preco_unitario") val precoUnitario: Double,
-    @SerializedName("quantidade")    val quantidade: Int,
-    @SerializedName("adicionais")    val adicionais: List<AdicionalPedidoCriado>
+    @SerializedName("quantidade")     val quantidade: Int,
+    @SerializedName("observacao")     val observacao: String? = "",
+    @SerializedName("adicionais")     val adicionais: List<AdicionalPedidoCriado>
 )
 
 data class AdicionalPedidoCriado(

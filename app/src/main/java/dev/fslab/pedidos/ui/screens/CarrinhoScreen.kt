@@ -3,6 +3,7 @@ package dev.fslab.pedidos.ui.screens
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -11,12 +12,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -39,9 +38,6 @@ import dev.fslab.pedidos.ui.viewmodel.PedidoUiState
 
 private val Verde = Color(0xFF14B822)
 
-// ═══════════════════════════════════════════════════════
-// TELA PRINCIPAL DO CARRINHO
-// ═══════════════════════════════════════════════════════
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CarrinhoScreen(
@@ -50,7 +46,7 @@ fun CarrinhoScreen(
     enderecos: List<Endereco> = emptyList(),
     onBack: () -> Unit = {},
     onNavigateNovoEndereco: () -> Unit = {},
-    onFinalizarPedido: () -> Unit = {},
+    onFinalizarPedido: (Endereco, FormaPagamento) -> Unit = { _, _ -> },
     onVoltarAoRestaurante: () -> Unit = {},
     pedidoState: PedidoUiState = PedidoUiState.Idle,
     onDismissErro: () -> Unit = {}
@@ -59,170 +55,159 @@ fun CarrinhoScreen(
     val itens by viewModel.itens.collectAsState()
     val enderecoSelecionado by viewModel.enderecoSelecionado.collectAsState()
     val formaPagamento by viewModel.formaPagamento.collectAsState()
+    val taxaEntrega by viewModel.taxaEntrega.collectAsState()
 
-    // Encontra o endereço efetivo para exibição:
-    // Prioridade: endereço salvo no VM → principal → primeiro da lista
     val enderecoEfetivo = enderecoSelecionado
         ?: enderecos.find { it.principal }
         ?: enderecos.firstOrNull()
 
-    // Sincroniza o endereço selecionado sempre que a lista muda.
-    // Isso garante que após criar um novo endereço e voltar,
-    // o novo endereço apareça disponível no bottom sheet.
     LaunchedEffect(enderecos) {
         if (enderecos.isEmpty()) return@LaunchedEffect
-
-        val atualSelecionado = enderecoSelecionado
-        when {
-            // Nenhum endereço selecionado ainda → usa principal ou primeiro
-            atualSelecionado == null -> {
-                val principal = enderecos.find { it.principal } ?: enderecos.first()
-                viewModel.selecionarEndereco(principal)
-            }
-            // O endereço selecionado não existe mais na lista atualizada
-            // (ex: foi deletado) → reseleciona o principal
-            enderecos.none { it.id == atualSelecionado.id } -> {
-                val principal = enderecos.find { it.principal } ?: enderecos.first()
-                viewModel.selecionarEndereco(principal)
-            }
-            // O endereço selecionado existe mas pode ter sido atualizado
-            // → sincroniza com a versão atualizada da lista
-            else -> {
-                val atualizado = enderecos.find { it.id == atualSelecionado.id }
-                if (atualizado != null && atualizado != atualSelecionado) {
-                    viewModel.selecionarEndereco(atualizado)
-                }
-            }
+        if (enderecoSelecionado == null) {
+            val principal = enderecos.find { it.principal } ?: enderecos.first()
+            viewModel.selecionarEndereco(principal)
         }
     }
 
-    // Controla se o sheet de endereço deve ser reaberto ao voltar
-    // da tela de novo endereço (navegação de volta)
+    val context = LocalContext.current
+
+    // Feedback de erro
+    LaunchedEffect(pedidoState) {
+        if (pedidoState is PedidoUiState.Error) {
+            android.widget.Toast.makeText(context, pedidoState.message, android.widget.Toast.LENGTH_LONG).show()
+            onDismissErro()
+        }
+    }
+
     var showEnderecoSheet by remember { mutableStateOf(false) }
     var showPagamentoSheet by remember { mutableStateOf(false) }
-    var reopenEnderecoSheetOnUpdate by remember { mutableStateOf(false) }
-
-    // Estado para o modal de confirmação de remoção do último item
-    var itemParaRemover by remember { mutableStateOf<dev.fslab.pedidos.model.ItemCarrinho?>(null) }
-    var showConfirmacaoRemoverUltimo by remember { mutableStateOf(false) }
-
-    // Função que decide se mostra confirmação ou remove diretamente
-    fun onTentarRemover(item: dev.fslab.pedidos.model.ItemCarrinho) {
-        if (itens.size == 1 && item.quantidade == 1) {
-            // Último item: pede confirmação
-            itemParaRemover = item
-            showConfirmacaoRemoverUltimo = true
-        } else {
-            viewModel.removerItem(item.id)
-        }
-    }
-
-    fun onTentarDecrementar(item: dev.fslab.pedidos.model.ItemCarrinho) {
-        if (itens.size == 1 && item.quantidade == 1) {
-            // Ao chegar em 0 no último item: pede confirmação
-            itemParaRemover = item
-            showConfirmacaoRemoverUltimo = true
-        } else {
-            viewModel.decrementarItem(item.id)
-        }
-    }
-
-    LaunchedEffect(enderecos, reopenEnderecoSheetOnUpdate) {
-        if (reopenEnderecoSheetOnUpdate && enderecos.isNotEmpty()) {
-            showEnderecoSheet = true
-            reopenEnderecoSheetOnUpdate = false
-        }
-    }
-
 
     val subtotal = itens.sumOf { it.precoTotal * it.quantidade }
+    val total = subtotal + taxaEntrega
 
     Scaffold(
         containerColor = colors.background,
         topBar = {
-            CarrinhoTopBar(
-                nomeRestaurante = nomeRestaurante,
-                onBack = onBack
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            "Finalizar Pedido",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.textPrimary
+                        )
+                        if (nomeRestaurante.isNotBlank()) {
+                            Text(
+                                nomeRestaurante,
+                                fontSize = 12.sp,
+                                color = colors.textSecondary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = colors.textPrimary)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.background)
             )
         }
     ) { innerPadding ->
-
         if (itens.isEmpty()) {
-            // Estado vazio
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "🛒",
-                        fontSize = 60.sp
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Seu carrinho está vazio",
-                        color = colors.textPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Adicione itens do cardápio para continuar",
-                        color = colors.textPrimary.copy(alpha = 0.5f),
-                        fontSize = 14.sp
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = onBack,
-                        colors = ButtonDefaults.buttonColors(containerColor = Verde),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Text(
-                            text = "Ver cardápio",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
+            EmptyCarrinho(onBack, colors)
         } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
+            Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
-                    // ─── Seção de Endereço ───
+                    // ─── ENDEREÇO ───
                     item {
-                        EnderecoSection(
-                            endereco = enderecoEfetivo,
-                            onAlterar = { showEnderecoSheet = true }
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = colors.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(Verde.copy(alpha = 0.1f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.LocationOn,
+                                        contentDescription = null,
+                                        tint = Verde,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        "Entrega em",
+                                        fontSize = 12.sp,
+                                        color = colors.textSecondary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        enderecoEfetivo?.let { "${it.rua}, ${it.numero}" } ?: "Selecione um endereço",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colors.textPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                Text(
+                                    "Trocar",
+                                    color = Verde,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Black,
+                                    modifier = Modifier
+                                        .clickable { showEnderecoSheet = true }
+                                        .padding(8.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // ─── ITENS ───
+                    item {
+                        Text(
+                            "Itens do pedido",
+                            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 12.dp),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black,
+                            color = colors.textPrimary.copy(alpha = 0.4f),
+                            letterSpacing = 0.5.sp
                         )
                     }
 
-                    // ─── Divisor ───
-                    item { HorizontalDivider(color = colors.textPrimary.copy(alpha = 0.07f)) }
-
-                    // ─── Itens do Carrinho ───
                     items(itens, key = { it.id }) { item ->
-                        CarrinhoItemRow(
-                            item = item,
+                        CarrinhoItemPremium(
+                            item = item, 
                             onIncrementar = { viewModel.incrementarItem(item.id) },
-                            onDecrementar = { onTentarDecrementar(item) },
-                            onRemover = { onTentarRemover(item) }
+                            onDecrementar = { viewModel.decrementarItem(item.id) },
+                            onRemover = { viewModel.removerItem(item.id) },
+                            colors = colors
                         )
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 20.dp),
-                            color = colors.textPrimary.copy(alpha = 0.05f)
+                            thickness = 0.5.dp,
+                            color = colors.inputBorder.copy(alpha = 0.5f)
                         )
                     }
 
-                    // ─── Seção de Pagamento ───
+                    // ─── PAGAMENTO ───
                     item {
                         PagamentoSection(
                             formaPagamento = formaPagamento,
@@ -230,86 +215,27 @@ fun CarrinhoScreen(
                         )
                     }
 
-                    item { HorizontalDivider(color = colors.textPrimary.copy(alpha = 0.07f)) }
-
-                    // ─── Resumo de Valores ───
+                    // ─── RESUMO ───
                     item {
-                        ResumoValores(subtotal = subtotal)
+                        ResumoValores(subtotal = subtotal, taxaEntrega = taxaEntrega)
                     }
                 }
 
-                // ─── Botão Finalizar ───
-                BotaoFinalizar(onClick = onFinalizarPedido)
+                // ─── BOTÃO CONFIRMAR ───
+                BotaoFinalizar(
+                    onClick = {
+                        if (enderecoEfetivo != null) {
+                            onFinalizarPedido(enderecoEfetivo, formaPagamento)
+                        }
+                    },
+                    isLoading = pedidoState is PedidoUiState.Loading,
+                    enabled = enderecoEfetivo != null
+                )
             }
         }
     }
 
-    // Modal de confirmação para remover o último item
-    if (showConfirmacaoRemoverUltimo && itemParaRemover != null) {
-        AlertDialog(
-            onDismissRequest = {
-                showConfirmacaoRemoverUltimo = false
-                itemParaRemover = null
-            },
-            containerColor = Verde.copy(alpha = 0.97f).let {
-                if (androidx.compose.foundation.isSystemInDarkTheme())
-                    androidx.compose.ui.graphics.Color(0xFF1A202C)
-                else
-                    androidx.compose.ui.graphics.Color.White
-            },
-            icon = {
-                Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.Delete,
-                    contentDescription = null,
-                    tint = Verde,
-                    modifier = Modifier.size(32.dp)
-                )
-            },
-            title = {
-                Text(
-                    text = "Esvaziar carrinho?",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = LocalPedidosColors.current.textPrimary
-                )
-            },
-            text = {
-                Text(
-                    text = "Esse é o único item do seu carrinho. Ao removê-lo, você será redirecionado de volta ao restaurante.",
-                    fontSize = 14.sp,
-                    color = LocalPedidosColors.current.textPrimary.copy(alpha = 0.7f),
-                    lineHeight = 20.sp
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.removerItem(itemParaRemover!!.id)
-                        showConfirmacaoRemoverUltimo = false
-                        itemParaRemover = null
-                        onVoltarAoRestaurante()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Verde),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Remover e voltar", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showConfirmacaoRemoverUltimo = false
-                        itemParaRemover = null
-                    }
-                ) {
-                    Text("Cancelar", color = Verde, fontWeight = FontWeight.Bold)
-                }
-            },
-            shape = RoundedCornerShape(20.dp)
-        )
-    }
-
-    // Bottom Sheet de Endereço
+    // Bottom Sheets
     if (showEnderecoSheet) {
         EnderecosBottomSheet(
             enderecos = enderecos,
@@ -317,379 +243,137 @@ fun CarrinhoScreen(
             onDismiss = { showEnderecoSheet = false },
             onNovoEnderecoClick = {
                 showEnderecoSheet = false
-                // Sinaliza para reabrir o sheet quando a lista atualizar
-                reopenEnderecoSheetOnUpdate = true
                 onNavigateNovoEndereco()
             },
-            onEnderecoSelected = { endereco ->
-                viewModel.selecionarEndereco(endereco)
-            }
+            onEnderecoSelected = { viewModel.selecionarEndereco(it); showEnderecoSheet = false }
         )
     }
 
-    // Bottom Sheet de Pagamento
     if (showPagamentoSheet) {
         PagamentoBottomSheet(
             selectedForma = formaPagamento,
             onDismiss = { showPagamentoSheet = false },
-            onFormaSelected = { forma ->
-                viewModel.selecionarFormaPagamento(forma)
+            onFormaSelected = { viewModel.selecionarFormaPagamento(it); showPagamentoSheet = false }
+        )
+    }
+}
+
+@Composable
+private fun EmptyCarrinho(onBack: () -> Unit, colors: dev.fslab.pedidos.ui.theme.PedidosColors) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+            Box(modifier = Modifier.size(120.dp).clip(CircleShape).background(colors.surface), contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.ShoppingCart, contentDescription = null, modifier = Modifier.size(48.dp), tint = colors.textTertiary.copy(alpha = 0.3f))
             }
-        )
-    }
-
-    // ─── Diálogo de erro do pedido ───────────────────────────────────────────
-    if (pedidoState is PedidoUiState.Error) {
-        AlertDialog(
-            onDismissRequest = onDismissErro,
-            containerColor = if (androidx.compose.foundation.isSystemInDarkTheme())
-                androidx.compose.ui.graphics.Color(0xFF1A202C)
-            else
-                androidx.compose.ui.graphics.Color.White,
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null,
-                    tint = androidx.compose.ui.graphics.Color(0xFFE53935),
-                    modifier = Modifier.size(32.dp)
-                )
-            },
-            title = {
-                Text(
-                    text = "Erro ao realizar pedido",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = LocalPedidosColors.current.textPrimary
-                )
-            },
-            text = {
-                Text(
-                    text = (pedidoState as PedidoUiState.Error).message,
-                    fontSize = 14.sp,
-                    color = LocalPedidosColors.current.textPrimary.copy(alpha = 0.7f),
-                    lineHeight = 20.sp
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = onDismissErro,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = androidx.compose.ui.graphics.Color(0xFFE53935)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Fechar", color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold)
-                }
-            },
-            shape = RoundedCornerShape(20.dp)
-        )
-    }
-
-    // ─── Overlay de loading ──────────────────────────────────────────────────
-    if (pedidoState is PedidoUiState.Loading) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f)),
-            contentAlignment = Alignment.Center
-        ) {
-            androidx.compose.material3.Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = androidx.compose.material3.CardDefaults.cardColors(
-                    containerColor = if (androidx.compose.foundation.isSystemInDarkTheme())
-                        androidx.compose.ui.graphics.Color(0xFF1A202C)
-                    else
-                        androidx.compose.ui.graphics.Color.White
-                )
+            Spacer(Modifier.height(24.dp))
+            Text("Seu carrinho está vazio", fontWeight = FontWeight.Black, fontSize = 20.sp, color = colors.textPrimary)
+            Spacer(Modifier.height(8.dp))
+            Text("Você ainda não adicionou pratos ao seu carrinho. Que tal dar uma olhada no cardápio?", textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontSize = 14.sp, color = colors.textSecondary)
+            Spacer(Modifier.height(32.dp))
+            Button(
+                onClick = onBack, 
+                colors = ButtonDefaults.buttonColors(containerColor = Verde),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    androidx.compose.material3.CircularProgressIndicator(
-                        color = Verde,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Enviando pedido...",
-                        color = LocalPedidosColors.current.textPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp
-                    )
-                }
+                Text("VOLTAR AO CARDÁPIO", fontWeight = FontWeight.Bold)
             }
         }
     }
 }
 
-
-// ═══════════════════════════════════════════════════════
-// TOP BAR
-// ═══════════════════════════════════════════════════════
 @Composable
-private fun CarrinhoTopBar(
-    nomeRestaurante: String,
-    onBack: () -> Unit
+private fun CarrinhoItemPremium(
+    item: ItemCarrinho, 
+    onIncrementar: () -> Unit,
+    onDecrementar: () -> Unit,
+    onRemover: () -> Unit,
+    colors: dev.fslab.pedidos.ui.theme.PedidosColors
 ) {
-    val colors = LocalPedidosColors.current
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.background)
-            .statusBarsPadding()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        // Botão voltar
-        IconButton(
-            onClick = onBack,
-            modifier = Modifier.align(Alignment.CenterStart)
-        ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Voltar",
-                tint = colors.textPrimary
-            )
-        }
-
-        // Título centralizado
-        Column(
-            modifier = Modifier.align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Meu Carrinho",
-                color = colors.textPrimary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
-            if (nomeRestaurante.isNotBlank()) {
-                Text(
-                    text = nomeRestaurante,
-                    color = colors.textPrimary.copy(alpha = 0.55f),
-                    fontSize = 13.sp
-                )
-            }
-        }
-    }
-}
-
-// ═══════════════════════════════════════════════════════
-// SEÇÃO DE ENDEREÇO
-// ═══════════════════════════════════════════════════════
-@Composable
-private fun EnderecoSection(
-    endereco: Endereco?,
-    onAlterar: () -> Unit
-) {
-    val colors = LocalPedidosColors.current
-
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 18.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = Icons.Default.LocationOn,
-            contentDescription = null,
-            tint = Verde,
-            modifier = Modifier.size(22.dp)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "ENTREGAR EM:",
-                color = colors.textPrimary.copy(alpha = 0.45f),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.5.sp
-            )
-            if (endereco != null) {
+            Text(item.prato.nome, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = colors.textPrimary)
+            if (item.opcoesSelecionadas.isNotEmpty()) {
                 Text(
-                    text = "${endereco.rua}, ${endereco.numero} - ${endereco.bairro}",
-                    color = colors.textPrimary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    item.opcoesSelecionadas.joinToString(", ") { it.nome },
+                    fontSize = 12.sp,
+                    color = colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            } else {
+            }
+            if (item.observacao.isNotBlank()) {
                 Text(
-                    text = "Nenhum endereço selecionado",
-                    color = colors.textPrimary.copy(alpha = 0.5f),
-                    fontSize = 14.sp
+                    "Obs: ${item.observacao}",
+                    fontSize = 11.sp,
+                    color = colors.textTertiary,
+                    fontWeight = FontWeight.Medium,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp)
                 )
             }
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = "Alterar",
-            color = Verde,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.clickable { onAlterar() }
-        )
-    }
-}
-
-// ═══════════════════════════════════════════════════════
-// ITEM DO CARRINHO
-// ═══════════════════════════════════════════════════════
-@Composable
-private fun CarrinhoItemRow(
-    item: ItemCarrinho,
-    onIncrementar: () -> Unit,
-    onDecrementar: () -> Unit,
-    onRemover: () -> Unit
-) {
-    val colors = LocalPedidosColors.current
-
-    // Descrição das opções selecionadas
-    val descricaoOpcoes = item.opcoesSelecionadas.joinToString(", ") { it.nome }.ifBlank {
-        item.prato.descricao?.take(50) ?: ""
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.prato.nome,
-                    color = colors.textPrimary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                )
-                if (descricaoOpcoes.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = descricaoOpcoes,
-                        color = colors.textPrimary.copy(alpha = 0.5f),
-                        fontSize = 12.sp,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "R$ ${String.format("%.2f", item.precoTotal * item.quantidade).replace(".", ",")}",
-                color = colors.textPrimary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp
+                "R$ ${String.format("%.2f", item.precoTotal * item.quantidade).replace(".", ",")}",
+                fontWeight = FontWeight.Black,
+                fontSize = 15.sp,
+                color = Verde
             )
         }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
+        
         Row(
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(colors.surface)
+                .border(1.dp, colors.inputBorder.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                .padding(4.dp)
         ) {
-            // Controle de quantidade
-            QuantidadeControl(
-                quantidade = item.quantidade,
-                onMinus = onDecrementar,
-                onPlus = onIncrementar
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Botão remover
             IconButton(
-                onClick = onRemover,
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(colors.textPrimary.copy(alpha = 0.06f))
+                onClick = onDecrementar, 
+                modifier = Modifier.size(28.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Remover",
-                    tint = colors.textPrimary.copy(alpha = 0.45f),
-                    modifier = Modifier.size(18.dp)
-                )
+                Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(16.dp), tint = colors.textPrimary)
+            }
+            Text(
+                "${item.quantidade}", 
+                modifier = Modifier.padding(horizontal = 8.dp), 
+                fontWeight = FontWeight.ExtraBold, 
+                fontSize = 14.sp,
+                color = colors.textPrimary
+            )
+            IconButton(
+                onClick = onIncrementar, 
+                modifier = Modifier.size(28.dp).background(Verde, CircleShape)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
             }
         }
-    }
-}
 
-// ═══════════════════════════════════════════════════════
-// CONTROLE DE QUANTIDADE ( — 1 + )
-// ═══════════════════════════════════════════════════════
-@Composable
-private fun QuantidadeControl(
-    quantidade: Int,
-    onMinus: () -> Unit,
-    onPlus: () -> Unit
-) {
-    val colors = LocalPedidosColors.current
+        Spacer(Modifier.width(12.dp))
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(colors.surface)
-            .padding(horizontal = 4.dp, vertical = 2.dp)
-    ) {
-        // Botão −
-        Box(
+        IconButton(
+            onClick = onRemover,
             modifier = Modifier
-                .size(30.dp)
-                .clip(CircleShape)
-                .background(Verde)
-                .clickable { onMinus() },
-            contentAlignment = Alignment.Center
+                .size(36.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(colors.textPrimary.copy(alpha = 0.06f))
         ) {
-            Text(
-                text = "−",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                lineHeight = 18.sp
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Text(
-            text = "$quantidade",
-            color = colors.textPrimary,
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp
-        )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        // Botão +
-        Box(
-            modifier = Modifier
-                .size(30.dp)
-                .clip(CircleShape)
-                .background(Verde)
-                .clickable { onPlus() },
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "+",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                lineHeight = 18.sp
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Remover",
+                tint = colors.textPrimary.copy(alpha = 0.45f),
+                modifier = Modifier.size(18.dp)
             )
         }
     }
 }
 
-// ═══════════════════════════════════════════════════════
-// SEÇÃO DE PAGAMENTO
-// ═══════════════════════════════════════════════════════
 @Composable
 private fun PagamentoSection(
     formaPagamento: FormaPagamento,
@@ -704,149 +388,106 @@ private fun PagamentoSection(
         FormaPagamento.DINHEIRO       -> Icons.Default.AttachMoney
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 18.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Text(
+        "Forma de Pagamento",
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp),
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Black,
+        color = colors.textPrimary.copy(alpha = 0.4f),
+        letterSpacing = 0.5.sp
+    )
+    
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = Verde,
-            modifier = Modifier.size(22.dp)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Verde.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = Verde, modifier = Modifier.size(20.dp))
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(formaPagamento.label, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                Text("Pague ao receber ou via app", fontSize = 11.sp, color = colors.textSecondary)
+            }
             Text(
-                text = "PAGAMENTO:",
-                color = colors.textPrimary.copy(alpha = 0.45f),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.5.sp
-            )
-            Text(
-                text = formaPagamento.label,
-                color = colors.textPrimary,
+                "Trocar",
+                color = Verde,
                 fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Black,
+                modifier = Modifier
+                    .clickable { onAlterar() }
+                    .padding(8.dp)
             )
         }
-        Text(
-            text = "Alterar",
-            color = Verde,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.clickable { onAlterar() }
-        )
     }
 }
 
-// ═══════════════════════════════════════════════════════
-// RESUMO DE VALORES
-// ═══════════════════════════════════════════════════════
 @Composable
-private fun ResumoValores(subtotal: Double) {
+private fun ResumoValores(subtotal: Double, taxaEntrega: Double) {
     val colors = LocalPedidosColors.current
-    // Entrega grátis por enquanto (pode receber como parâmetro futuramente)
-    val taxaEntrega = 0.0
     val total = subtotal + taxaEntrega
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 20.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "Subtotal",
-                color = colors.textPrimary.copy(alpha = 0.65f),
-                fontSize = 14.sp
-            )
-            Text(
-                text = "R$ ${String.format("%.2f", subtotal).replace(".", ",")}",
-                color = colors.textPrimary.copy(alpha = 0.65f),
-                fontSize = 14.sp
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "Entrega",
-                color = colors.textPrimary.copy(alpha = 0.65f),
-                fontSize = 14.sp
-            )
-            Text(
-                text = if (taxaEntrega <= 0.0) "Grátis" else "R$ ${String.format("%.2f", taxaEntrega)}",
-                color = if (taxaEntrega <= 0.0) Verde else colors.textPrimary.copy(alpha = 0.65f),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        HorizontalDivider(color = colors.textPrimary.copy(alpha = 0.08f))
-
-        Spacer(modifier = Modifier.height(14.dp))
-
+    Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
+        ResumoLinha("Subtotal", "R$ ${String.format("%.2f", subtotal).replace(".", ",")}", colors)
+        ResumoLinha("Taxa de entrega", if (taxaEntrega <= 0) "Grátis" else "R$ ${String.format("%.2f", taxaEntrega).replace(".", ",")}", colors, isGreen = taxaEntrega <= 0)
+        Spacer(modifier = Modifier.height(12.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Bottom
         ) {
-            Text(
-                text = "Total",
-                color = colors.textPrimary,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "R$ ${String.format("%.2f", total).replace(".", ",")}",
-                color = colors.textPrimary,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold
-            )
+            Text("Total", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+            Text("R$ ${String.format("%.2f", total).replace(".", ",")}", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = colors.textPrimary)
         }
     }
 }
 
-// ═══════════════════════════════════════════════════════
-// BOTÃO FINALIZAR PEDIDO
-// ═══════════════════════════════════════════════════════
 @Composable
-private fun BotaoFinalizar(onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(LocalPedidosColors.current.background)
-            .navigationBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 16.dp)
+private fun BotaoFinalizar(onClick: () -> Unit, isLoading: Boolean, enabled: Boolean) {
+    val colors = LocalPedidosColors.current
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = colors.background,
+        shadowElevation = 16.dp
     ) {
         Button(
             onClick = onClick,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(54.dp),
+                .padding(20.dp)
+                .height(58.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Verde),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+            enabled = !isLoading && enabled
         ) {
-            Text(
-                text = "FINALIZAR PEDIDO",
-                color = Color.White,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 15.sp,
-                letterSpacing = 1.sp
-            )
+            if (isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            } else {
+                Text("CONFIRMAR PEDIDO", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, letterSpacing = 1.sp)
+            }
         }
+    }
+}
+
+@Composable
+private fun ResumoLinha(label: String, value: String, colors: dev.fslab.pedidos.ui.theme.PedidosColors, isGreen: Boolean = false) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, fontSize = 14.sp, color = colors.textSecondary)
+        Text(value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (isGreen) Verde else colors.textPrimary)
     }
 }

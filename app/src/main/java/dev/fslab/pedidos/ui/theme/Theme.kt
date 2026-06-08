@@ -16,7 +16,6 @@ import androidx.compose.ui.platform.LocalView
 import android.app.Activity
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 
@@ -46,18 +45,17 @@ data class PedidosColors(
     val successText: Color,
     val success: Color,
     val lightGray: Color,
-    // Cores para cards de features (variam entre light/dark)
+    // Cores para cards de features
     val featureBlue: Color,
     val featureGreen: Color,
     val featureOrange: Color,
     val featureCyan: Color,
-    val featurePink: Color,
     val featureRed: Color,
-    val isDark: Boolean = false  // Flag para identificar o tema
+    val isDark: Boolean = false
 )
 
 /**
- * Cores para tema claro — Paleta Purple/Violet premium
+ * Cores para tema claro — Paleta RanGo Verde/Branco
  */
 val LightPedidosColors = PedidosColors(
     background = PrimaryLightWhite,
@@ -72,7 +70,7 @@ val LightPedidosColors = PedidosColors(
     primary = PrimaryGreen,
     primaryDark = PrimaryNavy,
     iconGray = IconGray,
-    inputBorder = Color(0xFFE5E7EB),
+    inputBorder = BorderGray,
     mediumGray = MediumGray,
     errorBackground = ErrorBackground,
     errorText = ErrorText,
@@ -80,20 +78,18 @@ val LightPedidosColors = PedidosColors(
     error = Color(0xFFDC2626),
     successBackground = SuccessBackground,
     successText = SuccessText,
-    success = Color(0xFF10B981),
+    success = SuccessText,
     lightGray = LightGray,
-    // Cores para cards de features (Light — roxo como destaque)
-    featureBlue = Color(0xFF7C6AF6),
-    featureGreen = Color(0xFF10B981),
-    featureOrange = Color(0xFFF59E0B),
-    featureCyan = Color(0xFF06B6D4),
-    featurePink = Color(0xFFEC4899),
-    featureRed = Color(0xFFEF4444),
+    featureBlue = FeatureBlue,
+    featureGreen = FeatureGreen,
+    featureOrange = FeatureOrange,
+    featureCyan = FeatureCyan,
+    featureRed = FeatureRed,
     isDark = false
 )
 
 /**
- * Cores para tema escuro — Paleta Purple/Navy premium
+ * Cores para tema escuro — Paleta RanGo Verde/Navy
  */
 val DarkPedidosColors = PedidosColors(
     background = PrimaryNavy,
@@ -118,26 +114,18 @@ val DarkPedidosColors = PedidosColors(
     successText = Color(0xFF6EEDB0),
     success = Color(0xFF4ADE80),
     lightGray = Color(0xFF1A202C),
-    // Cores para cards de features (Dark — mais vibrantes sobre fundo escuro)
     featureBlue = Color(0xFF6B8AFF),
     featureGreen = Color(0xFF4ADE80),
     featureOrange = Color(0xFFFFBB5C),
     featureCyan = Color(0xFF22D3EE),
-    featurePink = Color(0xFFF472B6),
     featureRed = Color(0xFFFF6B81),
     isDark = true
 )
 
-/**
- * CompositionLocal para acessar as cores customizadas
- * compositionLocalOf permite mudanças dinâmicas e propaga recomposição
- * ao invés de usar um objeto singleton, usamos CompositionLocal
- * para que as cores possam ser reativas e mudem conforme o tema sem precisar reiniciar a aplicação
- */
 val LocalPedidosColors = compositionLocalOf { LightPedidosColors }
 
 /**
- * DarkColorScheme - Paleta Material 3 para tema escuro (Purple/Navy)
+ * DarkColorScheme - Paleta Material 3 para tema escuro (RanGo)
  */
 private val DarkColorScheme = darkColorScheme(
     primary = PrimaryGreen,
@@ -153,7 +141,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 /**
- * LightColorScheme - Paleta Material 3 para tema claro (Purple/Violet)
+ * LightColorScheme - Paleta Material 3 para tema claro (RanGo)
  */
 private val LightColorScheme = lightColorScheme(
     primary = PrimaryGreen,
@@ -168,59 +156,40 @@ private val LightColorScheme = lightColorScheme(
     onSurface = TextPrimary
 )
 
-/**
- * PedidosTheme - Função composable que aplica o tema à aplicação
- */
 @Composable
 fun PedidosTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-
-    // Material Color Scheme
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme)
-                dynamicDarkColorScheme(context)
-            else
-                dynamicLightColorScheme(context)
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
 
-    // Suas cores customizadas
-    val pedidosColors =
-        if (darkTheme) DarkPedidosColors
-        else LightPedidosColors
+    val pedidosColors = if (darkTheme) DarkPedidosColors else LightPedidosColors
 
-    // Controle da System UI
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-
-            // Cor da Status Bar
+            
+            @Suppress("DEPRECATION")
             window.statusBarColor = pedidosColors.background.toArgb()
-
-            // Cor da Navigation Bar
+            
+            @Suppress("DEPRECATION")
             window.navigationBarColor = pedidosColors.background.toArgb()
 
-            val insetsController =
-                WindowCompat.getInsetsController(window, view)
-
-            // Define cor dos ícones:
-            // true = ícones escuros
-            // false = ícones claros
+            val insetsController = WindowCompat.getInsetsController(window, view)
             insetsController.isAppearanceLightStatusBars = !darkTheme
             insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 
-    // Aplica tema
     CompositionLocalProvider(
         LocalPedidosColors provides pedidosColors
     ) {

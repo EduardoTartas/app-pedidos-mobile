@@ -111,8 +111,8 @@ private fun PagamentoItem(
     val icon: ImageVector = when (forma) {
         FormaPagamento.CARTAO_CREDITO -> Icons.Default.CreditCard
         FormaPagamento.CARTAO_DEBITO  -> Icons.Default.CreditCard
-        FormaPagamento.PIX            -> Icons.Default.QrCode
-        FormaPagamento.DINHEIRO       -> Icons.Default.AttachMoney
+        FormaPagamento.PIX             -> Icons.Default.QrCode
+        FormaPagamento.DINHEIRO        -> Icons.Default.AttachMoney
     }
 
     Row(
