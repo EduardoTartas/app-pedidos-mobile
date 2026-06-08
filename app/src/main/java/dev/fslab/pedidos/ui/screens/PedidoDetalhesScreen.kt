@@ -70,22 +70,38 @@ fun PedidoDetalhesScreen(
             title = { Text("Cancelar Pedido?", fontWeight = FontWeight.Black, fontSize = 18.sp) },
             text = { Text("Deseja realmente cancelar este pedido? Esta ação não poderá ser desfeita.", textAlign = TextAlign.Center) },
             confirmButton = {
-                Button(
-                    onClick = { 
-                        (uiState as? PedidoDetalhesUiState.Success)?.pedido?.let { viewModel.cancelarPedido(it.id) }
-                        showCancelDialog = false 
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                    shape = RoundedCornerShape(12.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp, start = 12.dp, end = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("CANCELAR AGORA", fontWeight = FontWeight.Bold)
+                    TextButton(
+                        onClick = { showCancelDialog = false },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Text("MANTER", color = colors.textTertiary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                    Button(
+                        onClick = { 
+                            (uiState as? PedidoDetalhesUiState.Success)?.pedido?.let { viewModel.cancelarPedido(it.id) }
+                            showCancelDialog = false 
+                        },
+                        modifier = Modifier.weight(1.6f).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Text(
+                            text = "CANCELAR AGORA", 
+                            fontWeight = FontWeight.Bold, 
+                            fontSize = 10.sp,
+                            maxLines = 1
+                        )
+                    }
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { showCancelDialog = false }) {
-                    Text("MANTER", color = colors.textTertiary, fontWeight = FontWeight.Bold)
-                }
-            },
+            dismissButton = null,
             shape = RoundedCornerShape(24.dp)
         )
     }
