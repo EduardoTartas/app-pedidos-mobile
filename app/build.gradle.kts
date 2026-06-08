@@ -19,7 +19,14 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        // Usando configuração padrão do sistema para evitar erro de arquivo ausente
+    }
+
     buildTypes {
+        getByName("debug") {
+            // Removendo referência ao signingConfig customizado
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(

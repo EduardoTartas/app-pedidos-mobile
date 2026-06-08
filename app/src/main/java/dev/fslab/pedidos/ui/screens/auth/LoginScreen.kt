@@ -313,12 +313,21 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Esqueci a senha
+                    // Termos e Esqueci a senha
                     Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Text(
+                            text = "Termos e Privacidade",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = colors.textSecondary,
+                            modifier = Modifier.clickable { 
+                                // TODO: Abrir link ou modal de termos
+                            }.padding(vertical = 8.dp)
+                        )
+
                         Text(
                                 text = "Esqueci a senha",
                                 style = MaterialTheme.typography.labelMedium,

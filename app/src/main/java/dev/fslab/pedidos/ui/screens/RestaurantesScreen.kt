@@ -34,6 +34,7 @@ import coil.decode.SvgDecoder
 import coil.request.ImageRequest
 import dev.fslab.pedidos.model.Categoria
 import dev.fslab.pedidos.model.Restaurante
+import dev.fslab.pedidos.ui.components.ErrorStateComponent
 import dev.fslab.pedidos.ui.viewmodel.FiltrosAvancados
 import dev.fslab.pedidos.ui.viewmodel.RestaurantesUiState
 import dev.fslab.pedidos.ui.viewmodel.RestaurantesViewModel
@@ -42,6 +43,7 @@ import dev.fslab.pedidos.ui.viewmodel.RestaurantesViewModel
 @Composable
 fun RestaurantesScreen(
     bottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
+    onNavigateDetalhes: (String) -> Unit = {},
     viewModel: RestaurantesViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -73,16 +75,10 @@ fun RestaurantesScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 is RestaurantesUiState.Error -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = state.message, color = Color.Red)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.carregarDados() }) {
-                            Text("Tentar Novamente")
-                        }
-                    }
+                    ErrorStateComponent(
+                        message = state.message,
+                        onRetry = { viewModel.carregarDados() }
+                    )
                 }
                 is RestaurantesUiState.Success -> {
                     LazyColumn(
@@ -149,7 +145,7 @@ fun RestaurantesScreen(
                             items = state.restaurantes,
                             key = { it.id } // OTIMIZAÇÃO: Chave estável
                         ) { restaurante ->
-                            RestauranteCard(restaurante, cardColor, textColors, imageLoader)
+                            RestauranteCard(restaurante, cardColor, textColors, imageLoader, onClick = { onNavigateDetalhes(restaurante.id) })
                         }
                     }
 
@@ -675,7 +671,8 @@ fun RestauranteCard(
     restaurante: Restaurante, 
     cardColor: Color, 
     textColor: Color,
-    imageLoader: ImageLoader
+    imageLoader: ImageLoader,
+    onClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     Card(
@@ -684,7 +681,7 @@ fun RestauranteCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clickable { /* TODO: navegar para detalhes do restaurante */ }
+            .clickable { onClick() }
     ) {
         Column {
             Box(

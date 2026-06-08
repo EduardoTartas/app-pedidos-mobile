@@ -6,8 +6,11 @@ import androidx.lifecycle.viewModelScope
 import dev.fslab.pedidos.model.Categoria
 import dev.fslab.pedidos.model.Endereco
 import dev.fslab.pedidos.model.Restaurante
+import dev.fslab.pedidos.model.RefreshRequest
 import dev.fslab.pedidos.network.RetrofitClient
 import dev.fslab.pedidos.utils.LocationPreferences
+import dev.fslab.pedidos.utils.NetworkUtils
+import dev.fslab.pedidos.utils.NetworkResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -71,66 +74,51 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
-            try {
-                // Fetch paralelo usando async para ganhar tempo
-                val catsDeferred = async { RetrofitClient.categoriaApi.listarCategorias(limit = 100) }
-                val restsDeferred = async { RetrofitClient.restauranteApi.listarRestaurantes(limit = 100) }
-                val endsDeferred = if (!usuarioId.isNullOrEmpty()) {
-                    async { RetrofitClient.enderecoApi.listarPorUsuario(usuarioId) }
-                } else null
+            // Usando safeApiCall para evitar crashes se a API estiver offline
+            val catsResult = NetworkUtils.safeApiCall { RetrofitClient.categoriaApi.listarCategorias(limit = 100) }
+            val restsResult = NetworkUtils.safeApiCall { RetrofitClient.restauranteApi.listarRestaurantes(limit = 100) }
+            
+            val endsResult = if (!usuarioId.isNullOrEmpty()) {
+                NetworkUtils.safeApiCall { RetrofitClient.enderecoApi.listarPorUsuario(usuarioId) }
+            } else null
 
-                val catsTask = catsDeferred.await()
-                val restsTask = restsDeferred.await()
-                
-                if (catsTask.isSuccessful) {
-                    val rawCats = catsTask.body()?.data?.docs ?: emptyList()
-                    todasCategorias = rawCats.sortedWith(compareByDescending { it.nome.equals("Tudo", ignoreCase = true) })
-                }
-                if (restsTask.isSuccessful) {
-                    val rawRests = restsTask.body()?.data?.docs ?: emptyList()
-                    // Correção visual: troca crase por apóstrofo para evitar fusão de caracteres (Ex: Paulo`s -> Paulo's)
-                    todosRestaurantes = rawRests.map { rest ->
-                        rest.copy(nome = rest.nome.replace("`", "'"))
+            // Processar Categorias
+            if (catsResult is NetworkResult.Success) {
+                val rawCats = catsResult.data.data?.docs ?: emptyList()
+                todasCategorias = rawCats.sortedWith(compareByDescending { it.nome.equals("Tudo", ignoreCase = true) })
+            }
+
+            // Processar Restaurantes
+            if (restsResult is NetworkResult.Success) {
+                val rawRests = restsResult.data.data?.docs ?: emptyList()
+                todosRestaurantes = rawRests.map { it.copy(nome = it.nome.replace("`", "'")) }
+            }
+
+            // Processar Endereços
+            if (endsResult is NetworkResult.Success) {
+                val novaLista = endsResult.data.data ?: emptyList()
+                listaEnderecos = novaLista
+                if (novaLista.isNotEmpty()) {
+                    val savedId = LocationPreferences.getSelectedId(getApplication())
+                    val idAindaExiste = listaEnderecos.any { it.id == savedId }
+                    if (savedId == null || (!idAindaExiste && savedId != "gps_location")) {
+                        val principal = listaEnderecos.find { it.principal } ?: listaEnderecos.firstOrNull()
+                        principal?.let { LocationPreferences.saveSelectedId(getApplication(), it.id) }
                     }
                 }
+            }
 
-                // Gestão de Endereços
-                if (endsDeferred != null) {
-                    val endResp = endsDeferred.await()
-                    if (endResp.isSuccessful) {
-                        val novaLista = endResp.body()?.data ?: emptyList()
-                        listaEnderecos = novaLista
-                        
-                        if (novaLista.isNotEmpty()) {
-                            val savedId = LocationPreferences.getSelectedId(getApplication())
-                            val idAindaExiste = listaEnderecos.any { it.id == savedId }
-                            val isGpsLocation = savedId == "gps_location"
-                            
-                            if (savedId == null || (!idAindaExiste && !isGpsLocation)) {
-                                val principal = listaEnderecos.find { it.principal } ?: listaEnderecos.firstOrNull()
-                                principal?.let {
-                                    LocationPreferences.saveSelectedId(getApplication(), it.id)
-                                }
-                            }
-                        } else {
-                            LocationPreferences.saveSelectedId(getApplication(), "gps_location")
-                        }
-                    }
-                } else {
-                    listaEnderecos = emptyList()
-                }
-                
+            // Se falhou tudo (Erro de conexão) e não temos nada carregado, mostramos erro
+            if (catsResult is NetworkResult.Error && restsResult is NetworkResult.Error && todasCategorias.isEmpty()) {
+                _uiState.value = HomeUiState.Error(catsResult.message)
+                return@launch // SAIR DA COROUTINE AQUI PARA NÃO CHAMAR PUBLISHSTATE
+            } else {
                 publishState()
-            } catch (e: Exception) {
-                if (_uiState.value !is HomeUiState.Success) {
-                    _uiState.value = HomeUiState.Error("Falha na sincronização.")
-                }
             }
         }
     }
 
     private suspend fun publishState() {
-        // Movemos o processamento pesado de filtros para o Dispatcher Default (Worker Thread)
         withContext(Dispatchers.Default) {
             val currentSelectedId = LocationPreferences.getSelectedId(getApplication())
             val selectedEndereco = listaEnderecos.find { it.id == currentSelectedId } 
@@ -145,21 +133,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 filtrados = filtrados.filter { r -> r.categorias?.any { it.id == effectiveCatId } == true }
             }
             
-            // OTIMIZAÇÃO: Busca insensível a acentos e maiúsculas
             if (searchText.isNotBlank()) {
                 val normalizedQuery = normalizarString(searchText)
-                filtrados = filtrados.filter { 
-                    normalizarString(it.nome).contains(normalizedQuery) 
-                }
+                filtrados = filtrados.filter { normalizarString(it.nome).contains(normalizedQuery) }
             }
 
             val fallbackId = if (selectedEndereco != null) selectedEndereco.id else "gps_location"
             
-            if (fallbackId == "gps_location" && currentSelectedId == null) {
-                LocationPreferences.saveSelectedId(getApplication(), "gps_location")
-            }
-
-            // Voltamos para a Main Thread para atualizar a UI
             withContext(Dispatchers.Main) {
                 _uiState.value = HomeUiState.Success(
                     categorias = todasCategorias,
@@ -212,7 +192,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { publishState() }
     }
 
-    // Helper para remover acentos e deixar em minúsculo
     private fun normalizarString(texto: String): String {
         val normalizada = java.text.Normalizer.normalize(texto, java.text.Normalizer.Form.NFD)
         return normalizada.replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "").lowercase()
