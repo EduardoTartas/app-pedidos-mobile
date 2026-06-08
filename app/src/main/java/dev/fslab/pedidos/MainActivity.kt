@@ -590,6 +590,9 @@ fun PedidosApp(activity: ComponentActivity) {
                 composable("carrinho") {
                     val nomeRestaurante by carrinhoViewModel.nomeRestaurante.collectAsState()
                     val restauranteId by carrinhoViewModel.restauranteId.collectAsState()
+                    val pedidoState by pedidoViewModel.uiState.collectAsState()
+                    val enderecoSelecionado by carrinhoViewModel.enderecoSelecionado.collectAsState()
+                    val formaPagamento by carrinhoViewModel.formaPagamento.collectAsState()
 
                     // Garante que os endereços estejam carregados
                     LaunchedEffect(userId) {

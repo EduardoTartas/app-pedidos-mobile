@@ -46,7 +46,7 @@ fun CarrinhoScreen(
     enderecos: List<Endereco> = emptyList(),
     onBack: () -> Unit = {},
     onNavigateNovoEndereco: () -> Unit = {},
-    onFinalizarPedido: (Endereco, String) -> Unit = { _, _ -> },
+    onFinalizarPedido: (Endereco, FormaPagamento) -> Unit = { _, _ -> },
     onVoltarAoRestaurante: () -> Unit = {},
     pedidoState: PedidoUiState = PedidoUiState.Idle,
     onDismissErro: () -> Unit = {}
@@ -193,7 +193,13 @@ fun CarrinhoScreen(
                     }
 
                     items(itens, key = { it.id }) { item ->
-                        CarrinhoItemPremium(item, viewModel, colors)
+                        CarrinhoItemPremium(
+                            item = item, 
+                            onIncrementar = { viewModel.incrementarItem(item.id) },
+                            onDecrementar = { viewModel.decrementarItem(item.id) },
+                            onRemover = { viewModel.removerItem(item.id) },
+                            colors = colors
+                        )
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 20.dp),
                             thickness = 0.5.dp,
@@ -203,103 +209,28 @@ fun CarrinhoScreen(
 
                     // ─── PAGAMENTO ───
                     item {
-                        Text(
-                            "Forma de Pagamento",
-                            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Black,
-                            color = colors.textPrimary.copy(alpha = 0.4f),
-                            letterSpacing = 0.5.sp
+                        PagamentoSection(
+                            formaPagamento = formaPagamento,
+                            onAlterar = { showPagamentoSheet = true }
                         )
-                        
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = colors.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                val icon = when (formaPagamento) {
-                                    FormaPagamento.CARTAO_CREDITO -> Icons.Default.CreditCard
-                                    FormaPagamento.CARTAO_DEBITO -> Icons.Default.CreditCard
-                                    FormaPagamento.PIX -> Icons.Default.QrCode
-                                    FormaPagamento.DINHEIRO -> Icons.Default.AttachMoney
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(Verde.copy(alpha = 0.1f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(icon, contentDescription = null, tint = Verde, modifier = Modifier.size(20.dp))
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(formaPagamento.label, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
-                                    Text("Pague ao receber ou via app", fontSize = 11.sp, color = colors.textSecondary)
-                                }
-                                Text(
-                                    "Trocar",
-                                    color = Verde,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Black,
-                                    modifier = Modifier
-                                        .clickable { showPagamentoSheet = true }
-                                        .padding(8.dp)
-                                )
-                            }
-                        }
                     }
 
                     // ─── RESUMO ───
                     item {
-                        Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
-                            ResumoLinha("Subtotal", "R$ ${String.format("%.2f", subtotal).replace(".", ",")}", colors)
-                            ResumoLinha("Taxa de entrega", if (taxaEntrega <= 0) "Grátis" else "R$ ${String.format("%.2f", taxaEntrega).replace(".", ",")}", colors, isGreen = taxaEntrega <= 0)
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.Bottom
-                            ) {
-                                Text("Total", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
-                                Text("R$ ${String.format("%.2f", total).replace(".", ",")}", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = colors.textPrimary)
-                            }
-                        }
+                        ResumoValores(subtotal = subtotal, taxaEntrega = taxaEntrega)
                     }
                 }
 
                 // ─── BOTÃO CONFIRMAR ───
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = colors.background,
-                    shadowElevation = 16.dp
-                ) {
-                    Button(
-                        onClick = {
-                            if (enderecoEfetivo != null) {
-                                onFinalizarPedido(enderecoEfetivo, formaPagamento.apiValue)
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp)
-                            .height(58.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Verde),
-                        enabled = pedidoState !is PedidoUiState.Loading && enderecoEfetivo != null
-                    ) {
-                        if (pedidoState is PedidoUiState.Loading) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                        } else {
-                            Text("CONFIRMAR PEDIDO", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, letterSpacing = 1.sp)
+                BotaoFinalizar(
+                    onClick = {
+                        if (enderecoEfetivo != null) {
+                            onFinalizarPedido(enderecoEfetivo, formaPagamento)
                         }
-                    }
-                }
+                    },
+                    isLoading = pedidoState is PedidoUiState.Loading,
+                    enabled = enderecoEfetivo != null
+                )
             }
         }
     }
@@ -352,7 +283,13 @@ private fun EmptyCarrinho(onBack: () -> Unit, colors: dev.fslab.pedidos.ui.theme
 }
 
 @Composable
-private fun CarrinhoItemPremium(item: ItemCarrinho, viewModel: CarrinhoViewModel, colors: dev.fslab.pedidos.ui.theme.PedidosColors) {
+private fun CarrinhoItemPremium(
+    item: ItemCarrinho, 
+    onIncrementar: () -> Unit,
+    onDecrementar: () -> Unit,
+    onRemover: () -> Unit,
+    colors: dev.fslab.pedidos.ui.theme.PedidosColors
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -380,7 +317,7 @@ private fun CarrinhoItemPremium(item: ItemCarrinho, viewModel: CarrinhoViewModel
                     modifier = Modifier.padding(top = 2.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 "R$ ${String.format("%.2f", item.precoTotal * item.quantidade).replace(".", ",")}",
                 fontWeight = FontWeight.Black,
@@ -398,7 +335,7 @@ private fun CarrinhoItemPremium(item: ItemCarrinho, viewModel: CarrinhoViewModel
                 .padding(4.dp)
         ) {
             IconButton(
-                onClick = { viewModel.decrementarItem(item.id) }, 
+                onClick = onDecrementar, 
                 modifier = Modifier.size(28.dp)
             ) {
                 Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(16.dp), tint = colors.textPrimary)
@@ -411,10 +348,134 @@ private fun CarrinhoItemPremium(item: ItemCarrinho, viewModel: CarrinhoViewModel
                 color = colors.textPrimary
             )
             IconButton(
-                onClick = { viewModel.incrementarItem(item.id) }, 
+                onClick = onIncrementar, 
                 modifier = Modifier.size(28.dp).background(Verde, CircleShape)
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+            }
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        IconButton(
+            onClick = onRemover,
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(colors.textPrimary.copy(alpha = 0.06f))
+        ) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Remover",
+                tint = colors.textPrimary.copy(alpha = 0.45f),
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun PagamentoSection(
+    formaPagamento: FormaPagamento,
+    onAlterar: () -> Unit
+) {
+    val colors = LocalPedidosColors.current
+
+    val icon: ImageVector = when (formaPagamento) {
+        FormaPagamento.CARTAO_CREDITO -> Icons.Default.CreditCard
+        FormaPagamento.CARTAO_DEBITO  -> Icons.Default.CreditCard
+        FormaPagamento.PIX            -> Icons.Default.QrCode
+        FormaPagamento.DINHEIRO       -> Icons.Default.AttachMoney
+    }
+
+    Text(
+        "Forma de Pagamento",
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp),
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Black,
+        color = colors.textPrimary.copy(alpha = 0.4f),
+        letterSpacing = 0.5.sp
+    )
+    
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Verde.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = Verde, modifier = Modifier.size(20.dp))
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(formaPagamento.label, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                Text("Pague ao receber ou via app", fontSize = 11.sp, color = colors.textSecondary)
+            }
+            Text(
+                "Trocar",
+                color = Verde,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier
+                    .clickable { onAlterar() }
+                    .padding(8.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ResumoValores(subtotal: Double, taxaEntrega: Double) {
+    val colors = LocalPedidosColors.current
+    val total = subtotal + taxaEntrega
+
+    Column(modifier = Modifier.padding(20.dp).fillMaxWidth()) {
+        ResumoLinha("Subtotal", "R$ ${String.format("%.2f", subtotal).replace(".", ",")}", colors)
+        ResumoLinha("Taxa de entrega", if (taxaEntrega <= 0) "Grátis" else "R$ ${String.format("%.2f", taxaEntrega).replace(".", ",")}", colors, isGreen = taxaEntrega <= 0)
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Text("Total", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+            Text("R$ ${String.format("%.2f", total).replace(".", ",")}", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = colors.textPrimary)
+        }
+    }
+}
+
+@Composable
+private fun BotaoFinalizar(onClick: () -> Unit, isLoading: Boolean, enabled: Boolean) {
+    val colors = LocalPedidosColors.current
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = colors.background,
+        shadowElevation = 16.dp
+    ) {
+        Button(
+            onClick = onClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+                .height(58.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Verde),
+            enabled = !isLoading && enabled
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            } else {
+                Text("CONFIRMAR PEDIDO", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, letterSpacing = 1.sp)
             }
         }
     }

@@ -141,6 +141,21 @@ class PratoPersonalizacaoViewModel : ViewModel() {
         return (state.prato.preco + extras) * state.quantidade
     }
 
+    /**
+     * Valida se todos os grupos obrigatórios atingiram o mínimo de seleções.
+     * Retorna lista de nomes dos grupos ainda não satisfeitos.
+     * Lista vazia = pode adicionar ao carrinho.
+     */
+    fun validarObrigatorios(): List<String> {
+        val state = _uiState.value as? PersonalizacaoUiState.Success ?: return emptyList()
+        return state.grupos
+            .filter { gc ->
+                gc.grupo.obrigatorio &&
+                (state.selecoes[gc.grupo.id]?.size ?: 0) < gc.grupo.min
+            }
+            .map { it.grupo.nome }
+    }
+
     fun resetar() {
         _uiState.value = PersonalizacaoUiState.Idle
     }

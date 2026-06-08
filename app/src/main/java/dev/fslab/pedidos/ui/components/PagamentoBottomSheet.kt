@@ -49,7 +49,6 @@ fun PagamentoBottomSheet(
                 .fillMaxWidth()
                 .padding(bottom = 32.dp)
         ) {
-            // Título
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -65,7 +64,7 @@ fun PagamentoBottomSheet(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Opções de pagamento
+            // Itera pelas 4 formas de pagamento da API
             FormaPagamento.entries.forEach { forma ->
                 PagamentoItem(
                     forma = forma,
@@ -76,7 +75,6 @@ fun PagamentoBottomSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Botão Confirmar
             Button(
                 onClick = {
                     onFormaSelected(tempSelected)
@@ -109,6 +107,7 @@ private fun PagamentoItem(
 ) {
     val colors = LocalPedidosColors.current
 
+    // Cartão de crédito e débito compartilham o ícone CreditCard
     val icon: ImageVector = when (forma) {
         FormaPagamento.CARTAO_CREDITO -> Icons.Default.CreditCard
         FormaPagamento.CARTAO_DEBITO  -> Icons.Default.CreditCard
@@ -123,7 +122,6 @@ private fun PagamentoItem(
             .padding(horizontal = 24.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Ícone
         Box(
             modifier = Modifier
                 .size(42.dp)
@@ -149,7 +147,6 @@ private fun PagamentoItem(
             modifier = Modifier.weight(1f)
         )
 
-        // Indicador de seleção
         Box(
             modifier = Modifier
                 .size(22.dp)
@@ -167,18 +164,10 @@ private fun PagamentoItem(
             } else {
                 Box(
                     modifier = Modifier
-                        .size(22.dp)
+                        .fillMaxSize()
                         .clip(CircleShape)
-                        .background(Color.Transparent)
-                ) {
-                    // Círculo vazio (borda)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .background(colors.textPrimary.copy(alpha = 0.15f))
-                    )
-                }
+                        .background(colors.textPrimary.copy(alpha = 0.15f))
+                )
             }
         }
     }

@@ -123,10 +123,49 @@ fun PedidoConfirmacaoScreen(
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = colors.textPrimary.copy(alpha = 0.07f))
 
+                        // Endereço de entrega (Layout em Bloco para não quebrar)
+                        pedido.enderecoEntrega?.let { end ->
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    "Entregar em",
+                                    color = colors.textPrimary.copy(alpha = 0.45f),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = 0.5.sp
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "${end.logradouro}, ${end.numero}",
+                                    color = colors.textPrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    "${end.bairro} • ${end.cidade}/${end.estado}",
+                                    color = colors.textPrimary.copy(alpha = 0.6f),
+                                    fontSize = 12.sp
+                                )
+                            }
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = colors.textPrimary.copy(alpha = 0.07f))
+                        }
+
+                        // Forma de pagamento
+                        pedido.formaPagamento?.let { fp ->
+                            val label = when (fp) {
+                                "cartao_credito" -> "Cartão de Crédito"
+                                "cartao_debito"  -> "Cartão de Débito"
+                                "pix"            -> "Pix"
+                                "dinheiro"       -> "Dinheiro"
+                                else             -> fp
+                            }
+                            ResumoRow("Pagamento", label, colors)
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = colors.textPrimary.copy(alpha = 0.07f))
+                        }
+
                         pedido.itens.forEach { item ->
                             ResumoRow(
                                 label = "${item.quantidade}x ${item.pratoNome}",
-                                value = "R$ ${String.format("%.2f", (item.precoUnitario * item.quantidade) + item.adicionais.sumOf { it.precoUnitario * it.quantidade })}",
+                                value = "R$ ${String.format("%.2f", (item.precoUnitario * item.quantidade) + item.adicionais.sumOf { it.precoUnitario * it.quantidade }).replace(".", ",")}",
                                 colors = colors
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -135,14 +174,14 @@ fun PedidoConfirmacaoScreen(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = colors.textPrimary.copy(alpha = 0.07f))
 
                         if (pedido.totais.taxaEntrega > 0) {
-                            ResumoRow("Taxa de entrega", "R$ ${String.format("%.2f", pedido.totais.taxaEntrega)}", colors)
+                            ResumoRow("Taxa de entrega", "R$ ${String.format("%.2f", pedido.totais.taxaEntrega).replace(".", ",")}", colors)
                         } else {
                             ResumoRow("Entrega", "Grátis", colors, valueColor = Verde)
                         }
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = colors.textPrimary.copy(alpha = 0.07f))
 
-                        ResumoRow("Total pago", "R$ ${String.format("%.2f", pedido.totais.total)}", colors, bold = true, labelColor = colors.textPrimary, valueColor = colors.textPrimary)
+                        ResumoRow("Total pago", "R$ ${String.format("%.2f", pedido.totais.total).replace(".", ",")}", colors, bold = true, labelColor = colors.textPrimary, valueColor = colors.textPrimary)
                     }
                 }
             }
@@ -193,8 +232,7 @@ private fun ResumoRow(
             text = label,
             color = labelColor ?: colors.textPrimary.copy(alpha = 0.6f),
             fontSize = 14.sp,
-            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-            modifier = Modifier.weight(1f)
+            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal
         )
         Text(
             text = value,

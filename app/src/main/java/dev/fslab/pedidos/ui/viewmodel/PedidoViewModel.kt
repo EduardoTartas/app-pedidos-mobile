@@ -34,12 +34,20 @@ class PedidoViewModel : ViewModel() {
 
     /**
      * Converte os itens do carrinho no formato aceito pela API e envia o pedido.
+     *
+     * MELHORIA-05: A API agora exige [enderecoEntrega] e [formaPagamento] no payload.
+     * O endereço é enviado como snapshot — preservado mesmo se o usuário alterar depois.
+     *
+     * @param restauranteId   ID do restaurante
+     * @param itens           Lista de [ItemCarrinho] do ViewModel do carrinho
+     * @param endereco        Endereço de entrega selecionado (obrigatório)
+     * @param formaPagamento  Forma de pagamento escolhida pelo usuário
      */
     fun realizarPedido(
         restauranteId: String,
         itens: List<ItemCarrinho>,
         endereco: Endereco?,
-        formaPagamento: String = "pix"
+        formaPagamento: FormaPagamento = FormaPagamento.PIX
     ) {
         if (restauranteId.isBlank()) {
             _uiState.value = PedidoUiState.Error("Restaurante inválido.")
@@ -50,7 +58,9 @@ class PedidoViewModel : ViewModel() {
             return
         }
         if (endereco == null) {
-            _uiState.value = PedidoUiState.Error("Selecione um endereço de entrega.")
+            _uiState.value = PedidoUiState.Error(
+                "Selecione um endereço de entrega antes de finalizar o pedido."
+            )
             return
         }
 
@@ -69,30 +79,18 @@ class PedidoViewModel : ViewModel() {
                     }
 
                     ItemPedidoRequest(
-                        pratoId = itemCarrinho.prato.id,
+                        pratoId    = itemCarrinho.prato.id,
                         quantidade = itemCarrinho.quantidade,
                         observacao = itemCarrinho.observacao,
                         adicionais = adicionais
                     )
                 }
 
-                // Mapeia o endereço para o formato do snapshot da API
-                val enderecoEntrega = EnderecoEntregaRequest(
-                    logradouro = endereco.rua,
-                    numero = endereco.numero,
-                    bairro = endereco.bairro,
-                    cidade = endereco.cidade,
-                    estado = endereco.estado,
-                    cep = endereco.cep.replace("-", "").replace(".", ""),
-                    complemento = endereco.complemento,
-                    label = endereco.label
-                )
-
                 val request = CriarPedidoRequest(
-                    restauranteId = restauranteId,
-                    itens = itensMapeados,
-                    enderecoEntrega = enderecoEntrega,
-                    formaPagamento = formaPagamento
+                    restauranteId   = restauranteId,
+                    itens           = itensMapeados,
+                    enderecoEntrega = EnderecoEntregaRequest.fromEndereco(endereco),
+                    formaPagamento  = formaPagamento.apiValue
                 )
 
                 val response = api.criarPedido(request)
@@ -106,7 +104,6 @@ class PedidoViewModel : ViewModel() {
                     }
                 } else {
                     val errorBody = response.errorBody()?.string() ?: ""
-                    // Tenta extrair a mensagem da API (JSON {"message":"..."})
                     val mensagem = extrairMensagemErro(errorBody, response.code())
                     _uiState.value = PedidoUiState.Error(mensagem)
                 }

@@ -1,5 +1,7 @@
 package dev.fslab.pedidos.ui.screens
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -7,6 +9,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,9 +34,12 @@ import dev.fslab.pedidos.model.AdicionalOpcao
 import dev.fslab.pedidos.ui.viewmodel.GrupoComOpcoes
 import dev.fslab.pedidos.ui.viewmodel.PersonalizacaoUiState
 import dev.fslab.pedidos.ui.viewmodel.PratoPersonalizacaoViewModel
+import kotlinx.coroutines.launch
 
 private val Verde = Color(0xFF14B822)
+private val Vermelho = Color(0xFFEF4444)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PratoPersonalizacaoScreen(
     onBack: () -> Unit,
@@ -48,9 +54,29 @@ fun PratoPersonalizacaoScreen(
     val textColor = if (isLight) Color(0xFF111827) else Color.White
     val subText   = textColor.copy(alpha = 0.55f)
 
+    // Controla quais grupos estão com erro de validação (destaque vermelho)
+    var gruposComErro by remember { mutableStateOf(setOf<String>()) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+
     Scaffold(
         containerColor = bgColor,
         modifier = Modifier.fillMaxSize(),
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(bottom = 90.dp)
+            ) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = Vermelho,
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+        },
         bottomBar = {
             if (uiState is PersonalizacaoUiState.Success) {
                 val state = uiState as PersonalizacaoUiState.Success
@@ -66,8 +92,8 @@ fun PratoPersonalizacaoScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .navigationBarsPadding() // Espaço da barra de navegação do Android
-                            .imePadding() // Garante que suba com o teclado se necessário, embora Scaffold já ajude
+                            .navigationBarsPadding()
+                            .imePadding()
                             .padding(horizontal = 20.dp, vertical = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -106,7 +132,39 @@ fun PratoPersonalizacaoScreen(
 
                         // Botão Adicionar
                         Button(
-                            onClick = { onAdicionarAoCarrinho(state, state.quantidade) },
+                            onClick = { 
+                                val pendentes = viewModel.validarObrigatorios()
+                                if (pendentes.isEmpty()) {
+                                    onAdicionarAoCarrinho(state, state.quantidade)
+                                } else {
+                                    // Marca grupos com erro e rola até o primeiro
+                                    val gruposPendentesIds = state.grupos
+                                        .filter { it.grupo.nome in pendentes }
+                                        .map { it.grupo.id }
+                                        .toSet()
+                                    gruposComErro = gruposPendentesIds
+
+                                    val primeiroGrupoIdx = state.grupos.indexOfFirst { it.grupo.id in gruposPendentesIds }
+                                    if (primeiroGrupoIdx >= 0) {
+                                        var itemIdx = 2 // foto + info
+                                        for (i in 0 until primeiroGrupoIdx) {
+                                            itemIdx += 1 + state.grupos[i].opcoes.size + 1
+                                        }
+                                        coroutineScope.launch {
+                                            listState.animateScrollToItem(itemIdx)
+                                        }
+                                    }
+
+                                    val msg = if (pendentes.size == 1)
+                                        "Selecione uma opção em: ${pendentes.first()}"
+                                    else
+                                        "Opções obrigatórias pendentes: ${pendentes.joinToString(", ")}"
+
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(msg)
+                                    }
+                                }
+                            },
                             modifier = Modifier.weight(1f).height(52.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Verde),
@@ -155,6 +213,7 @@ fun PratoPersonalizacaoScreen(
 
                 is PersonalizacaoUiState.Success -> {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 24.dp)
                     ) {
@@ -195,8 +254,16 @@ fun PratoPersonalizacaoScreen(
                         // Grupos
                         state.grupos.forEach { gc ->
                             val selectedCount = state.selecoes[gc.grupo.id]?.size ?: 0
-                            item { PersonalizacaoGrupoHeader(gc, selectedCount, cardColor, textColor, subText) }
-                            items(gc.opcoes) { opcao ->
+                            val temErro = gc.grupo.id in gruposComErro
+
+                            if (selectedCount >= gc.grupo.min) {
+                                gruposComErro = gruposComErro - gc.grupo.id
+                            }
+
+                            item(key = "header_${gc.grupo.id}") { 
+                                PersonalizacaoGrupoHeader(gc, selectedCount, cardColor, textColor, subText, temErro) 
+                            }
+                            items(gc.opcoes, key = { "opcao_${it.id}" }) { opcao ->
                                 val selecionado = state.selecoes[gc.grupo.id]?.contains(opcao.id) == true
                                 PersonalizacaoOpcaoRow(opcao, gc.grupo.max == 1, selecionado, textColor, subText) {
                                     viewModel.selecionar(gc.grupo.id, opcao.id, gc.grupo.max)
@@ -217,7 +284,7 @@ fun PratoPersonalizacaoScreen(
                                 OutlinedTextField(
                                     value = state.observacao,
                                     onValueChange = { viewModel.aoMudarObservacao(it) },
-                                    modifier = Modifier.fillMaxWidth().height(120.dp), // Aumentado um pouco
+                                    modifier = Modifier.fillMaxWidth().height(120.dp),
                                     placeholder = { Text("Ex: Tirar a cebola, maionese à parte, etc.", fontSize = 13.sp, color = subText) },
                                     shape = RoundedCornerShape(12.dp),
                                     colors = OutlinedTextFieldDefaults.colors(
@@ -237,13 +304,26 @@ fun PratoPersonalizacaoScreen(
 }
 
 @Composable
-private fun PersonalizacaoGrupoHeader(gc: GrupoComOpcoes, selectedCount: Int, cardColor: Color, textColor: Color, subText: Color) {
+private fun PersonalizacaoGrupoHeader(
+    gc: GrupoComOpcoes, 
+    selectedCount: Int, 
+    cardColor: Color, 
+    textColor: Color, 
+    subText: Color,
+    temErro: Boolean = false
+) {
     val completo = selectedCount >= gc.grupo.min && gc.grupo.min > 0
     val badgeBg  = if (completo) Verde.copy(alpha = 0.15f) else textColor.copy(alpha = 0.08f)
     val badgeText = if (completo) Verde else textColor.copy(alpha = 0.6f)
+    
+    val animatedBgColor by animateColorAsState(
+        targetValue = if (temErro) Vermelho.copy(alpha = 0.15f) else cardColor,
+        animationSpec = tween(500),
+        label = "bgError"
+    )
 
     Row(
-        modifier = Modifier.fillMaxWidth().background(cardColor).padding(horizontal = 20.dp, vertical = 14.dp),
+        modifier = Modifier.fillMaxWidth().background(animatedBgColor).padding(horizontal = 20.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
