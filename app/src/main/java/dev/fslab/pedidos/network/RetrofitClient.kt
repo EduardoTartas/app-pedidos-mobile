@@ -1,6 +1,7 @@
 package dev.fslab.pedidos.network
 
 
+import dev.fslab.pedidos.BuildConfig
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -22,7 +23,7 @@ object RetrofitClient {
      * Com `adb reverse tcp:5020 tcp:5020` ativo, o dispositivo físico enxerga o host local via loopback.
      * Ajuste APP_PORT quando necessário.
      */
-    const val BASE_URL = "http://127.0.0.1:5020/"
+    val BASE_URL: String = BuildConfig.API_BASE_URL
 
     private val gson = GsonBuilder()
         .setLenient()
