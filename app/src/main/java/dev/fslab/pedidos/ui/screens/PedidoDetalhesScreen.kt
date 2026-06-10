@@ -60,20 +60,76 @@ fun PedidoDetalhesScreen(
 
     var showCancelDialog by remember { mutableStateOf(false) }
     var showAvaliacaoDialog by remember { mutableStateOf(false) }
+    var showSuccessDialog by remember { mutableStateOf(false) }
     var nota by remember { mutableIntStateOf(5) }
     var descricaoAvaliacao by remember { mutableStateOf("") }
 
     val avaliacaoSucesso by viewModel.avaliacaoSucesso.collectAsState()
-    
+
     LaunchedEffect(avaliacaoSucesso) {
         if (avaliacaoSucesso) {
             showAvaliacaoDialog = false
+            showSuccessDialog = true
             viewModel.resetAvaliacao()
-            android.widget.Toast.makeText(context, "Avaliação enviada com sucesso!", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
+    // ...
+    if (showSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { showSuccessDialog = false },
+            containerColor = colors.surface,
+            shape = RoundedCornerShape(28.dp),
+            confirmButton = {
+                Button(
+                    onClick = { showSuccessDialog = false },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Verde),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text("FECHAR", fontWeight = FontWeight.Black)
+                }
+            },
+            title = null,
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(Verde.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Verde,
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(20.dp))
+                    Text(
+                        "Avaliação enviada!",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = colors.textPrimary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Obrigado por ajudar o restaurante a melhorar!",
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        color = colors.textSecondary,
+                        lineHeight = 20.sp
+                    )
+                }
+            }
+        )
+    }
 
-    if (showCancelDialog) {
+    if (showAvaliacaoDialog) {
 // ... existing cancel dialog ...
         AlertDialog(
             onDismissRequest = { showCancelDialog = false },

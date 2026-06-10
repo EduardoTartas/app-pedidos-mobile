@@ -52,6 +52,11 @@ fun PedidosScreen(
             .build()
     }
 
+    // Atualiza a lista sempre que a tela for aberta
+    LaunchedEffect(Unit) {
+        viewModel.carregarPedidos()
+    }
+
     Scaffold(
         containerColor = colors.background,
         topBar = {
@@ -153,7 +158,7 @@ private fun PedidoCard(
             )
 
             // Avaliar Pedido Chip
-            if (pedido.status == "entregue") {
+            if (pedido.status == "entregue" && pedido.avaliacaoId == null) {
                 Spacer(modifier = Modifier.height(14.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
