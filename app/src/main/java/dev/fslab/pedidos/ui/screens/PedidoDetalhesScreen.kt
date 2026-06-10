@@ -129,8 +129,7 @@ fun PedidoDetalhesScreen(
         )
     }
 
-    if (showAvaliacaoDialog) {
-// ... existing cancel dialog ...
+    if (showCancelDialog) {
         AlertDialog(
             onDismissRequest = { showCancelDialog = false },
             containerColor = colors.surface,
