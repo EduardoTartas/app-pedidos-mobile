@@ -1,16 +1,25 @@
 package dev.fslab.pedidos.ui.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.fslab.pedidos.model.Categoria
+import dev.fslab.pedidos.model.Endereco
 import dev.fslab.pedidos.model.Restaurante
+import dev.fslab.pedidos.model.RefreshRequest
 import dev.fslab.pedidos.network.RetrofitClient
+import dev.fslab.pedidos.utils.LocationPreferences
+import dev.fslab.pedidos.utils.NetworkUtils
+import dev.fslab.pedidos.utils.NetworkResult
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 sealed class HomeUiState {
     object Loading : HomeUiState()
@@ -20,170 +29,171 @@ sealed class HomeUiState {
         val populares: List<Restaurante>,
         val textoBusca: String = "",
         val categoriaSelecionadaId: String? = null,
+        val labelEndereco: String = "",
         val cidadeUsuario: String = "Sua localização",
         val estadoUsuario: String = "",
-        val atualizando: Boolean = false
+        val atualizando: Boolean = false,
+        val enderecos: List<Endereco> = emptyList(),
+        val enderecoSelecionadoId: String? = null
     ) : HomeUiState()
     data class Error(val message: String) : HomeUiState()
 }
 
-class HomeViewModel : ViewModel() {
+class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    private var todasCategorias: List<Categoria> = emptyList()
-    private var todosRestaurantes: List<Restaurante> = emptyList()
-    private var dadosCarregados = false
-    private var trabalhoBusca: Job? = null
+    private var todasCategorias = emptyList<Categoria>()
+    private var todosRestaurantes = emptyList<Restaurante>()
+    private var listaEnderecos = emptyList<Endereco>()
     
-    private var textoBuscaAtual = ""
-    private var categoriaAtualId: String? = null
+    private var searchText = ""
+    private var selectedCategoryId: String? = null
+    
+    private var loadJob: Job? = null
+    private var searchJob: Job? = null
+    private var inicializado = false
+    
+    private var gpsCidade: String? = null
+    private var gpsEstado: String? = null
 
-    private var cidadeAtual = "Sua localização"
-    private var estadoAtualUF = ""
+    fun isInicializado() = inicializado
 
-    init {
-        carregarDados()
-    }
+    private var lastUserId: String? = null
 
-    fun carregarDados() {
-        viewModelScope.launch {
+    fun carregarDados(usuarioId: String? = null, silent: Boolean = false, force: Boolean = false) {
+        if (!force && !silent && inicializado && lastUserId == usuarioId) {
+            return
+        }
+
+        if (!silent && (!inicializado || force)) {
             _uiState.value = HomeUiState.Loading
-            try {
-                // Obter categorias
-                val categoriasResponse = RetrofitClient.categoriaApi.listarCategorias(limit = 100)
-                if (categoriasResponse.isSuccessful) {
-                    val catsBrutos = categoriasResponse.body()?.data?.docs ?: emptyList()
-                    val catTudo = catsBrutos.find { it.nome.equals("Tudo", ignoreCase = true) }
-                    todasCategorias = if (catTudo != null) {
-                        listOf(catTudo) + catsBrutos.filter { it.id != catTudo.id }
-                    } else {
-                        catsBrutos
-                    }
-                    if (catTudo != null && categoriaAtualId == null) {
-                        categoriaAtualId = catTudo.id
+        }
+        inicializado = true
+        lastUserId = usuarioId
+
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            // Usando safeApiCall para evitar crashes se a API estiver offline
+            val catsResult = NetworkUtils.safeApiCall { RetrofitClient.categoriaApi.listarCategorias(limit = 100) }
+            val restsResult = NetworkUtils.safeApiCall { RetrofitClient.restauranteApi.listarRestaurantes(limit = 100) }
+            
+            val endsResult = if (!usuarioId.isNullOrEmpty()) {
+                NetworkUtils.safeApiCall { RetrofitClient.enderecoApi.listarPorUsuario(usuarioId) }
+            } else null
+
+            // Processar Categorias
+            if (catsResult is NetworkResult.Success) {
+                val rawCats = catsResult.data.data?.docs ?: emptyList()
+                todasCategorias = rawCats.sortedWith(compareByDescending { it.nome.equals("Tudo", ignoreCase = true) })
+            }
+
+            // Processar Restaurantes
+            if (restsResult is NetworkResult.Success) {
+                val rawRests = restsResult.data.data?.docs ?: emptyList()
+                todosRestaurantes = rawRests.map { it.copy(nome = it.nome.replace("`", "'")) }
+            }
+
+            // Processar Endereços
+            if (endsResult is NetworkResult.Success) {
+                val novaLista = endsResult.data.data ?: emptyList()
+                listaEnderecos = novaLista
+                if (novaLista.isNotEmpty()) {
+                    val savedId = LocationPreferences.getSelectedId(getApplication())
+                    val idAindaExiste = listaEnderecos.any { it.id == savedId }
+                    if (savedId == null || (!idAindaExiste && savedId != "gps_location")) {
+                        val principal = listaEnderecos.find { it.principal } ?: listaEnderecos.firstOrNull()
+                        principal?.let { LocationPreferences.saveSelectedId(getApplication(), it.id) }
                     }
                 }
-                
-                // Obter restaurantes
-                val restaurantesResponse = RetrofitClient.restauranteApi.listarRestaurantes(limit = 100, nome = null, categoria = null)
-                if (restaurantesResponse.isSuccessful) {
-                    todosRestaurantes = restaurantesResponse.body()?.data?.docs ?: emptyList()
-                    dadosCarregados = true
-                } else {
-                    _uiState.value = HomeUiState.Error("Erro ao carregar restaurantes.")
-                    return@launch
-                }
-                
-                aplicarFiltrosLocais()
-            } catch (e: Exception) {
-                _uiState.value = HomeUiState.Error(e.localizedMessage ?: "Erro desconhecido de conexão.")
+            }
+
+            // Se falhou tudo (Erro de conexão) e não temos nada carregado, mostramos erro
+            if (catsResult is NetworkResult.Error && restsResult is NetworkResult.Error && todasCategorias.isEmpty()) {
+                _uiState.value = HomeUiState.Error(catsResult.message)
+                return@launch // SAIR DA COROUTINE AQUI PARA NÃO CHAMAR PUBLISHSTATE
+            } else {
+                publishState()
             }
         }
     }
 
-    fun atualizarDados() {
-        val estadoAtual = _uiState.value as? HomeUiState.Success ?: return
+    private suspend fun publishState() {
+        withContext(Dispatchers.Default) {
+            val currentSelectedId = LocationPreferences.getSelectedId(getApplication())
+            val selectedEndereco = listaEnderecos.find { it.id == currentSelectedId } 
+                ?: if (currentSelectedId != "gps_location") listaEnderecos.find { it.principal } ?: listaEnderecos.firstOrNull() 
+                else null
+            
+            val catTudo = todasCategorias.find { it.nome.equals("Tudo", ignoreCase = true) }
+            val effectiveCatId = if (selectedCategoryId == null) catTudo?.id else selectedCategoryId
+            
+            var filtrados = todosRestaurantes
+            if (effectiveCatId != null && effectiveCatId != catTudo?.id) {
+                filtrados = filtrados.filter { r -> r.categorias?.any { it.id == effectiveCatId } == true }
+            }
+            
+            if (searchText.isNotBlank()) {
+                val normalizedQuery = normalizarString(searchText)
+                filtrados = filtrados.filter { normalizarString(it.nome).contains(normalizedQuery) }
+            }
 
-        viewModelScope.launch {
-            _uiState.value = estadoAtual.copy(atualizando = true)
-            try {
-                val categoriasResponse = RetrofitClient.categoriaApi.listarCategorias(limit = 100)
-                if (categoriasResponse.isSuccessful) {
-                    val catsBrutos = categoriasResponse.body()?.data?.docs ?: emptyList()
-                    val catTudo = catsBrutos.find { it.nome.equals("Tudo", ignoreCase = true) }
-                    todasCategorias = if (catTudo != null) {
-                        listOf(catTudo) + catsBrutos.filter { it.id != catTudo.id }
-                    } else {
-                        catsBrutos
-                    }
-                    if (catTudo != null && categoriaAtualId == null) {
-                        categoriaAtualId = catTudo.id
-                    }
-                }
-                
-                val restaurantesResponse = RetrofitClient.restauranteApi.listarRestaurantes(limit = 100, nome = null, categoria = null)
-                if (restaurantesResponse.isSuccessful) {
-                    todosRestaurantes = restaurantesResponse.body()?.data?.docs ?: emptyList()
-                    dadosCarregados = true
-                }
-                
-                aplicarFiltrosLocais()
-            } catch (e: Exception) {
-                aplicarFiltrosLocais()
+            val fallbackId = if (selectedEndereco != null) selectedEndereco.id else "gps_location"
+            
+            withContext(Dispatchers.Main) {
+                _uiState.value = HomeUiState.Success(
+                    categorias = todasCategorias,
+                    recomendados = filtrados.take(5),
+                    populares = filtrados,
+                    textoBusca = searchText,
+                    categoriaSelecionadaId = effectiveCatId,
+                    labelEndereco = selectedEndereco?.label ?: "",
+                    cidadeUsuario = selectedEndereco?.cidade ?: gpsCidade ?: "Sua localização",
+                    estadoUsuario = selectedEndereco?.estado ?: gpsEstado ?: "",
+                    enderecos = listaEnderecos,
+                    enderecoSelecionadoId = fallbackId,
+                    atualizando = false
+                )
             }
         }
     }
 
-    private fun aplicarFiltrosLocais() {
-        if (!dadosCarregados) return
-
-        val catSelecionada = todasCategorias.find { it.id == categoriaAtualId }
-        val idBuscaCategoria = if (catSelecionada?.nome.equals("Tudo", ignoreCase = true)) null else categoriaAtualId
-
-        var filtrados = todosRestaurantes
-
-        // Filtrar por categoria
-        if (idBuscaCategoria != null) {
-            filtrados = filtrados.filter { restaurante -> 
-                restaurante.categorias?.any { cat -> cat.id == idBuscaCategoria } == true 
-            }
-        }
-
-        // Filtrar por texto da busca
-        if (textoBuscaAtual.isNotBlank()) {
-            filtrados = filtrados.filter { 
-                it.nome.contains(textoBuscaAtual, ignoreCase = true) 
-            }
-        }
-
-        val recomendados = filtrados.take(5)
-        val populares = if (filtrados.size > 5) filtrados.drop(5) else filtrados
-
-        _uiState.value = HomeUiState.Success(
-            categorias = todasCategorias,
-            recomendados = recomendados,
-            populares = populares,
-            textoBusca = textoBuscaAtual,
-            categoriaSelecionadaId = categoriaAtualId,
-            cidadeUsuario = cidadeAtual,
-            estadoUsuario = estadoAtualUF
-        )
-    }
-
-    fun aoMudarTextoBusca(busca: String) {
-        textoBuscaAtual = busca
-        // Atualiza a UI imediatamente para não perder o foco
-        val estadoAtual = _uiState.value as? HomeUiState.Success
-        if (estadoAtual != null) {
-            _uiState.value = estadoAtual.copy(textoBusca = busca)
-        }
-
-        // Debounce da busca
-        trabalhoBusca?.cancel()
-        trabalhoBusca = viewModelScope.launch {
-            delay(300)
-            aplicarFiltrosLocais()
-        }
-    }
-
-    fun aoSelecionarCategoria(idCategoria: String?) {
-        if (categoriaAtualId == idCategoria) return
-        categoriaAtualId = idCategoria
-        
-        aplicarFiltrosLocais()
+    fun selecionarEndereco(endereco: Endereco) {
+        LocationPreferences.saveSelectedId(getApplication(), endereco.id)
+        viewModelScope.launch { publishState() }
     }
 
     fun definirLocalizacao(cidade: String, estado: String) {
-        cidadeAtual = cidade
-        estadoAtualUF = estado
+        gpsCidade = cidade
+        gpsEstado = estado
+        viewModelScope.launch { publishState() }
+    }
+
+    fun atualizarDados(usuarioId: String? = null) {
+        val estado = _uiState.value as? HomeUiState.Success
+        if (estado != null) _uiState.value = estado.copy(atualizando = true)
+        carregarDados(usuarioId, silent = true, force = true)
+    }
+
+    fun aoMudarTextoBusca(busca: String) {
+        searchText = busca
+        val estado = _uiState.value as? HomeUiState.Success
+        if (estado != null) _uiState.value = estado.copy(textoBusca = busca)
         
-        val estadoAtual = _uiState.value as? HomeUiState.Success
-        if (estadoAtual != null) {
-            _uiState.value = estadoAtual.copy(
-                cidadeUsuario = cidade,
-                estadoUsuario = estado
-            )
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            delay(300)
+            publishState()
         }
+    }
+
+    fun aoSelecionarCategoria(id: String?) {
+        selectedCategoryId = id
+        viewModelScope.launch { publishState() }
+    }
+
+    private fun normalizarString(texto: String): String {
+        val normalizada = java.text.Normalizer.normalize(texto, java.text.Normalizer.Form.NFD)
+        return normalizada.replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "").lowercase()
     }
 }
