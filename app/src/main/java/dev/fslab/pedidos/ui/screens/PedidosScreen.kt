@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -121,10 +122,12 @@ private fun PedidoCard(
                 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        pedido.restauranteNome,
+                        pedido.restauranteNome.replace("`", "'").replace("´", "'"),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = colors.textPrimary
+                        color = colors.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         "Pedido #${pedido.id.takeLast(6).uppercase()}",
@@ -148,7 +151,35 @@ private fun PedidoCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            
+
+            // Avaliar Pedido Chip
+            if (pedido.status == "entregue") {
+                Spacer(modifier = Modifier.height(14.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFEAB308).copy(alpha = 0.15f))
+                        .padding(vertical = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = null,
+                        tint = Color(0xFFEAB308),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Avalie este pedido",
+                        color = Color(0xFFEAB308),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(12.dp))
             
             Row(

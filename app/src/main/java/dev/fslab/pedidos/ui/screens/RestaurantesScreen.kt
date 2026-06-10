@@ -664,7 +664,7 @@ fun FilterOptionChip(
 }
 
 // ═══════════════════════════════════════════
-// CARD DO RESTAURANTE
+// CARD DO RESTAURANTE (Estilo Delivery Moderno)
 // ═══════════════════════════════════════════
 @Composable
 fun RestauranteCard(
@@ -674,140 +674,116 @@ fun RestauranteCard(
     imageLoader: ImageLoader,
     onClick: () -> Unit = {}
 ) {
-    val context = LocalContext.current
+    val subTextColor = textColor.copy(alpha = 0.6f)
+    val starColor = Color(0xFFEAB308) // Amarelo/Dourado padrão de delivery
+    val greenColor = Color(0xFF14B822)
+
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
             .clickable { onClick() }
+            .border(1.dp, textColor.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
     ) {
-        Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Logo do Restaurante
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp)
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(textColor.copy(alpha = 0.03f))
+                    .border(1.dp, textColor.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
             ) {
                 AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(restaurante.fotoRestaurante ?: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=600&auto=format&fit=crop")
-                        .crossfade(true)
-                        .build(),
+                    model = restaurante.fotoRestaurante?.takeIf { it.isNotBlank() } ?: "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=200&auto=format&fit=crop",
                     imageLoader = imageLoader,
-                    contentDescription = "Foto de ${restaurante.nome}",
+                    contentDescription = "Logo de ${restaurante.nome}",
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    modifier = Modifier.fillMaxSize()
                 )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp)
-                        .align(Alignment.BottomCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
-                            )
-                        )
-                )
-
-                Text(
-                    text = restaurante.nome,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(start = 14.dp, bottom = 12.dp)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(start = 14.dp, bottom = 36.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Badge de avaliação
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF14B822))
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = String.format("%.1f", restaurante.avaliacaoMedia.coerceAtLeast(4.0)),
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "Estrela",
-                            tint = Color.White,
-                            modifier = Modifier
-                                .size(11.dp)
-                                .padding(start = 2.dp)
-                        )
-                    }
-
-                    // Badge de tempo de entrega
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.Black.copy(alpha = 0.5f))
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Schedule,
-                            contentDescription = "Tempo",
-                            tint = Color.White,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "${restaurante.estimativaEntregaMin}-${restaurante.estimativaEntregaMax} min",
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val cats = restaurante.categorias?.joinToString(" • ") { it.nome } ?: "Culinária"
-                Text(
-                    text = cats,
-                    color = textColor.copy(alpha = 0.6f),
-                    fontSize = 13.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
+            Spacer(modifier = Modifier.width(16.dp))
 
-                Spacer(modifier = Modifier.width(8.dp))
+            // Informações principais
+            Column(modifier = Modifier.weight(1f)) {
+                // Nome e selo (se houver)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = restaurante.nome.replace("`", "'").replace("´", "'"),
+                        color = textColor,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // Avaliação e Categoria
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Avaliação",
+                        tint = starColor,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                        text = if (restaurante.avaliacaoMedia > 0) String.format("%.1f", restaurante.avaliacaoMedia) else "Novo",
+                        color = starColor,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                    Text("•", color = subTextColor, fontSize = 12.sp)
+                    
+                    val cats = restaurante.categorias?.joinToString(", ") { it.nome } ?: "Lanches"
+                    Text(
+                        text = cats,
+                        color = subTextColor,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
-                Text(
-                    text = if (restaurante.taxaEntrega <= 0.0) "Entrega Grátis"
-                    else "Entrega R$ ${String.format("%.2f", restaurante.taxaEntrega)}",
-                    color = if (restaurante.taxaEntrega <= 0.0) Color(0xFF14B822) else textColor.copy(alpha = 0.6f),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Tempo e Taxa de Entrega
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "${restaurante.estimativaEntregaMin}-${restaurante.estimativaEntregaMax} min",
+                        color = subTextColor,
+                        fontSize = 13.sp
+                    )
+                    Text("•", color = subTextColor, fontSize = 12.sp)
+                    Text(
+                        text = if (restaurante.taxaEntrega <= 0.0) "Entrega Grátis"
+                               else "R$ ${String.format("%.2f", restaurante.taxaEntrega)}",
+                        color = if (restaurante.taxaEntrega <= 0.0) greenColor else subTextColor,
+                        fontSize = 13.sp,
+                        fontWeight = if (restaurante.taxaEntrega <= 0.0) FontWeight.Medium else FontWeight.Normal
+                    )
+                }
             }
         }
     }

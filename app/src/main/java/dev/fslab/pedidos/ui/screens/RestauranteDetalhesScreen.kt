@@ -253,7 +253,7 @@ fun DetalhesHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(220.dp)
+            .height(260.dp)
     ) {
         // Foto de capa
         AsyncImage(
@@ -332,17 +332,27 @@ fun DetalhesInfoRow(restaurante: Restaurante, textColor: Color) {
     ) {
         // Nome do restaurante
         Text(
-            text = restaurante.nome,
+            text = restaurante.nome.replace("`", "'").replace("´", "'"),
             color = textColor,
             fontWeight = FontWeight.Bold,
-            fontSize = 22.sp,
+            fontSize = 24.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        if (!restaurante.descricao.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = restaurante.descricao,
+                color = textColor.copy(alpha = 0.65f),
+                fontSize = 14.sp,
+                lineHeight = 20.sp
+            )
+        }
 
-        // Info chips
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Info chips (FlowRow to prevent clipping on smaller screens)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -418,9 +428,13 @@ fun DetalhesBuscaBar(
     cardColor: Color,
     textColor: Color
 ) {
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     TextField(
         value = query,
         onValueChange = onQueryChange,
+        singleLine = true,
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { focusManager.clearFocus() }),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)

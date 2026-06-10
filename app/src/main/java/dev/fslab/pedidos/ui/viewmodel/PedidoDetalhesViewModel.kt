@@ -2,6 +2,7 @@ package dev.fslab.pedidos.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.fslab.pedidos.model.AvaliarPedidoRequest
 import dev.fslab.pedidos.model.Pedido
 import dev.fslab.pedidos.model.PedidoStatusRequest
 import dev.fslab.pedidos.network.RetrofitClient
@@ -19,12 +20,19 @@ sealed class PedidoDetalhesUiState {
 class PedidoDetalhesViewModel : ViewModel() {
 
     private val api = RetrofitClient.pedidoApi
+    private val avaliacaoApi = RetrofitClient.avaliacaoApi
 
     private val _uiState = MutableStateFlow<PedidoDetalhesUiState>(PedidoDetalhesUiState.Loading)
     val uiState: StateFlow<PedidoDetalhesUiState> = _uiState.asStateFlow()
 
     private val _isCancelling = MutableStateFlow(false)
     val isCancelling: StateFlow<Boolean> = _isCancelling.asStateFlow()
+
+    private val _isAvaliando = MutableStateFlow(false)
+    val isAvaliando: StateFlow<Boolean> = _isAvaliando.asStateFlow()
+    
+    private val _avaliacaoSucesso = MutableStateFlow(false)
+    val avaliacaoSucesso: StateFlow<Boolean> = _avaliacaoSucesso.asStateFlow()
 
     fun carregarPedido(pedidoId: String) {
         if (pedidoId.isBlank()) return
@@ -66,5 +74,34 @@ class PedidoDetalhesViewModel : ViewModel() {
                 _isCancelling.value = false
             }
         }
+    }
+
+    fun avaliarPedido(pedidoId: String, nota: Int, descricao: String) {
+        _isAvaliando.value = true
+        viewModelScope.launch {
+            try {
+                val response = avaliacaoApi.avaliarPedido(
+                    AvaliarPedidoRequest(
+                        pedidoId = pedidoId,
+                        nota = nota,
+                        descricao = descricao.takeIf { it.isNotBlank() }
+                    )
+                )
+                if (response.isSuccessful) {
+                    _avaliacaoSucesso.value = true
+                    carregarPedido(pedidoId) // Recarrega para ver se algo mudou (ex: se o endpoint devolve a nota no pedido)
+                } else {
+                    // Tratar erro
+                }
+            } catch (e: Exception) {
+                // Tratar erro
+            } finally {
+                _isAvaliando.value = false
+            }
+        }
+    }
+    
+    fun resetAvaliacao() {
+        _avaliacaoSucesso.value = false
     }
 }

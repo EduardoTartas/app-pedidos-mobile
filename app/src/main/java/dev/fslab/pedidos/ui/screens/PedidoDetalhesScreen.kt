@@ -59,8 +59,22 @@ fun PedidoDetalhesScreen(
     }
 
     var showCancelDialog by remember { mutableStateOf(false) }
+    var showAvaliacaoDialog by remember { mutableStateOf(false) }
+    var nota by remember { mutableIntStateOf(5) }
+    var descricaoAvaliacao by remember { mutableStateOf("") }
+
+    val avaliacaoSucesso by viewModel.avaliacaoSucesso.collectAsState()
+    
+    LaunchedEffect(avaliacaoSucesso) {
+        if (avaliacaoSucesso) {
+            showAvaliacaoDialog = false
+            viewModel.resetAvaliacao()
+            android.widget.Toast.makeText(context, "Avaliação enviada com sucesso!", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     if (showCancelDialog) {
+// ... existing cancel dialog ...
         AlertDialog(
             onDismissRequest = { showCancelDialog = false },
             containerColor = colors.surface,
@@ -102,6 +116,68 @@ fun PedidoDetalhesScreen(
                 }
             },
             dismissButton = null,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    if (showAvaliacaoDialog) {
+        val isAvaliando by viewModel.isAvaliando.collectAsState()
+        AlertDialog(
+            onDismissRequest = { if (!isAvaliando) showAvaliacaoDialog = false },
+            containerColor = colors.surface,
+            titleContentColor = colors.textPrimary,
+            textContentColor = colors.textSecondary,
+            title = { Text("Avaliar Pedido", fontWeight = FontWeight.Black, fontSize = 18.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+            text = { 
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Como foi sua experiência?", fontSize = 14.sp)
+                    Spacer(Modifier.height(16.dp))
+                    Row(horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                        for (i in 1..5) {
+                            IconButton(onClick = { nota = i }) {
+                                Icon(
+                                    imageVector = if (i <= nota) Icons.Default.Star else Icons.Default.StarBorder,
+                                    contentDescription = "$i Estrelas",
+                                    tint = Color(0xFFFBBF24),
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = descricaoAvaliacao,
+                        onValueChange = { descricaoAvaliacao = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Opcional: Deixe um comentário...", fontSize = 12.sp) },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Verde,
+                            unfocusedBorderColor = colors.inputBorder
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.avaliarPedido(pedidoId, nota, descricaoAvaliacao) },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Verde),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isAvaliando
+                ) {
+                    if (isAvaliando) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text("ENVIAR AVALIAÇÃO", fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAvaliacaoDialog = false }, modifier = Modifier.fillMaxWidth(), enabled = !isAvaliando) {
+                    Text("CANCELAR", color = colors.textTertiary, fontWeight = FontWeight.Bold)
+                }
+            },
             shape = RoundedCornerShape(24.dp)
         )
     }
@@ -219,6 +295,56 @@ fun PedidoDetalhesScreen(
                                     fontSize = 10.sp,
                                     color = colors.textTertiary
                                 )
+                            }
+                        }
+
+                        // ─── BOTÃO AVALIAR (SE ENTREGUE E NÃO AVALIADO) ───
+                        if (pedido.status == "entregue") {
+                            item {
+                                Spacer(Modifier.height(24.dp))
+                                if (pedido.avaliacaoId == null) {
+                                    Button(
+                                        onClick = { showAvaliacaoDialog = true },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 20.dp)
+                                            .height(50.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Verde),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("AVALIAR PEDIDO", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
+                                    }
+                                } else {
+                                    // Avaliação já enviada
+                                    val nota = (pedido.avaliacaoId as? Map<*, *>)?.get("nota")?.let { (it as Double).toInt() } ?: 5
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 20.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Color(0xFFEAB308).copy(alpha = 0.1f))
+                                            .padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column {
+                                            Text("Pedido Avaliado", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFEAB308))
+                                            Text("Obrigado pelo seu feedback!", fontSize = 11.sp, color = colors.textSecondary)
+                                        }
+                                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                            for (i in 1..5) {
+                                                Icon(
+                                                    imageVector = if (i <= nota) Icons.Default.Star else Icons.Default.StarBorder,
+                                                    contentDescription = null,
+                                                    tint = Color(0xFFEAB308),
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

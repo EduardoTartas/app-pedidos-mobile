@@ -12,6 +12,7 @@ data class Categoria(
 data class Restaurante(
     @SerializedName("_id") val id: String,
     val nome: String,
+    val descricao: String?,
     @SerializedName("foto_restaurante") val fotoRestaurante: String?,
     val status: String,
     @SerializedName("avaliacao_media") val avaliacaoMedia: Double,
