@@ -7,11 +7,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -42,26 +44,25 @@ fun PerfilScreen(
 ) {
     val colors = LocalPedidosColors.current
 
-    try {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colors.background)
+            .padding(bottom = bottomPadding + 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .background(colors.background)
-                .padding(horizontal = 16.dp)
-                .padding(top = 24.dp, bottom = bottomPadding + 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxWidth()
+                .height(280.dp)
+                .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+                .background(colors.surface)
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = "Perfil",
-                style = MaterialTheme.typography.headlineMedium,
-                color = colors.textPrimary,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             Box(
                 modifier = Modifier
                     .size(120.dp)
@@ -129,37 +130,16 @@ fun PerfilScreen(
                     textAlign = TextAlign.Center
                 )
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                PerfilInfoItem(label = "Telefone", value = user?.telefone.orEmpty())
-                PerfilInfoItem(label = "CPF", value = user?.cpf.orEmpty())
-            }
         }
-    } catch (t: Throwable) {
-        Log.e("PerfilScreen", "Erro ao renderizar PerfilScreen", t)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(colors.background)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "Erro ao carregar perfil",
-                    color = colors.textPrimary,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Button(onClick = onEditProfile, colors = ButtonDefaults.buttonColors(containerColor = colors.primary)) {
-                    Text(text = "Editar perfil", color = colors.textOnPrimary)
-                }
-            }
+            PerfilInfoItem(label = "Telefone", value = user?.telefone.orEmpty())
+            PerfilInfoItem(label = "CPF", value = user?.cpf.orEmpty())
         }
     }
 }
