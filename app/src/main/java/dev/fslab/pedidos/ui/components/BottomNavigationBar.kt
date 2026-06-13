@@ -21,15 +21,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeChild
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 
 /**
@@ -49,11 +46,10 @@ val bottomNavItems = listOf(
 )
 
 /**
- * Barra de navegação inferior global do app com suporte a efeito Haze (glassmorphism).
+ * Barra de navegação inferior global do app.
  *
  * @param cardColor     Cor de fundo do card (surface).
  * @param textColor     Cor do texto principal.
- * @param hazeState     Estado do Haze para efeito de desfoque (opcional).
  * @param selectedRoute Rota atualmente selecionada para destacar o item correto.
  * @param onNavigate    Callback chamado ao clicar num item; recebe a rota destino.
  */
@@ -69,24 +65,29 @@ fun BottomNavigationBar(
     NavigationBar(
         containerColor = cardColor.copy(alpha = 0.98f),
         contentColor = textColor,
-        tonalElevation = 4.dp,
+        tonalElevation = 0.dp,
+        windowInsets = WindowInsets(0, 0, 0, 0),
         modifier = Modifier
-            .height(80.dp)
-            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .padding(horizontal = 10.dp)
+            .height(76.dp)
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+            )
+            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+            .padding(horizontal = 8.dp, vertical = 2.dp)
     ) {
         bottomNavItems.forEach { item ->
             val isSelected = selectedRoute == item.route
 
             NavigationBarItem(
-                modifier = Modifier.padding(horizontal = 4.dp),
+                modifier = Modifier.padding(horizontal = 2.dp),
                 icon = {
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(14.dp))
+                            .size(width = 36.dp, height = 32.dp)
+                            .clip(RoundedCornerShape(11.dp))
                             .background(
-                                if (isSelected) colors.primary.copy(alpha = 0.14f)
+                                if (isSelected) colors.primary.copy(alpha = 0.12f)
                                 else Color.Transparent
                             ),
                         contentAlignment = Alignment.Center
@@ -94,7 +95,7 @@ fun BottomNavigationBar(
                         Icon(
                             imageVector = item.icon,
                             contentDescription = item.label,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 },
@@ -102,10 +103,12 @@ fun BottomNavigationBar(
                     Text(
                         text = item.label,
                         fontSize = 10.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                        lineHeight = 12.sp,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
                     )
                 },
                 selected = isSelected,
+                alwaysShowLabel = true,
                 onClick = {
                     if (!isSelected) onNavigate(item.route)
                 },
@@ -113,8 +116,8 @@ fun BottomNavigationBar(
                     selectedIconColor = colors.primary,
                     selectedTextColor = colors.primary,
                     indicatorColor = Color.Transparent,
-                    unselectedIconColor = textColor.copy(alpha = 0.5f),
-                    unselectedTextColor = textColor.copy(alpha = 0.5f)
+                    unselectedIconColor = textColor.copy(alpha = 0.58f),
+                    unselectedTextColor = textColor.copy(alpha = 0.58f)
                 )
             )
         }
