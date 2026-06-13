@@ -41,6 +41,9 @@ class RestaurantesViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<RestaurantesUiState>(RestaurantesUiState.Loading)
     val uiState: StateFlow<RestaurantesUiState> = _uiState.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     private var searchJob: Job? = null
     private var currentSearchQuery = ""
     private var currentFilter = "Todos"
@@ -53,9 +56,14 @@ class RestaurantesViewModel : ViewModel() {
         carregarDados()
     }
 
-    fun carregarDados() {
+    fun carregarDados(isRefresh: Boolean = false) {
         viewModelScope.launch {
-            _uiState.value = RestaurantesUiState.Loading
+            if (isRefresh) {
+                _isRefreshing.value = true
+            } else {
+                _uiState.value = RestaurantesUiState.Loading
+            }
+
             try {
                 // Carregar categorias para o filtro avançado
                 val categoriasResponse = RetrofitClient.categoriaApi.listarCategorias(limit = 100)
@@ -67,9 +75,17 @@ class RestaurantesViewModel : ViewModel() {
                 }
                 buscarRestaurantes()
             } catch (e: Exception) {
-                _uiState.value = RestaurantesUiState.Error(e.localizedMessage ?: "Erro de rede.")
+                if (!isRefresh) {
+                    _uiState.value = RestaurantesUiState.Error(e.localizedMessage ?: "Erro de rede.")
+                }
+            } finally {
+                _isRefreshing.value = false
             }
         }
+    }
+
+    fun refresh() {
+        carregarDados(isRefresh = true)
     }
 
     private suspend fun buscarRestaurantes() {

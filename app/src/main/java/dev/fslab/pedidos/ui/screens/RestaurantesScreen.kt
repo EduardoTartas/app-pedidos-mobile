@@ -1,5 +1,7 @@
 package dev.fslab.pedidos.ui.screens
-
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,6 +39,7 @@ import dev.fslab.pedidos.model.Restaurante
 import dev.fslab.pedidos.ui.components.ErrorStateComponent
 import dev.fslab.pedidos.ui.viewmodel.FiltrosAvancados
 import dev.fslab.pedidos.ui.viewmodel.RestaurantesUiState
+import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 import dev.fslab.pedidos.ui.viewmodel.RestaurantesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,14 +68,32 @@ fun RestaurantesScreen(
 
     // Estado do Bottom Sheet de filtros
     var showFilterSheet by remember { mutableStateOf(false) }
+    val colors = LocalPedidosColors.current
+    val pullRefreshState = rememberPullToRefreshState()
 
     Scaffold(
         containerColor = bgColor
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        val isRefreshing by viewModel.isRefreshing.collectAsState()
+
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { viewModel.refresh() },
+            state = pullRefreshState,
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    isRefreshing = isRefreshing,
+                    state = pullRefreshState,
+                    color = colors.primary,
+                    containerColor = colors.background
+                )
+            },
+            modifier = Modifier.fillMaxSize()
+        ) {
             when (val state = uiState) {
                 is RestaurantesUiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = colors.primary)
                 }
                 is RestaurantesUiState.Error -> {
                     ErrorStateComponent(
