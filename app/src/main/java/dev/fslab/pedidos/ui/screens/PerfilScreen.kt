@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,11 +16,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.Badge
+import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -159,8 +164,16 @@ fun PerfilScreen(
                 .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            PerfilInfoItem(label = "Telefone", value = user?.telefone.orEmpty())
-            PerfilInfoItem(label = "CPF", value = user?.cpf.orEmpty())
+            PerfilInfoItem(
+                label = "Telefone",
+                value = user?.telefone.orEmpty(),
+                icon = Icons.Outlined.Phone
+            )
+            PerfilInfoItem(
+                label = "CPF",
+                value = user?.cpf.orEmpty(),
+                icon = Icons.Outlined.Badge
+            )
         }
     }
 }
@@ -168,29 +181,52 @@ fun PerfilScreen(
 @Composable
 private fun PerfilInfoItem(
     label: String,
-    value: String
+    value: String,
+    icon: ImageVector
 ) {
     val colors = LocalPedidosColors.current
 
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(84.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(colors.surface)
             .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.Center
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = colors.textSecondary
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = value.ifBlank { "-" },
-            style = MaterialTheme.typography.bodyLarge,
-            color = colors.textPrimary
-        )
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(colors.primary.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = colors.primary,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.textSecondary
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = value.ifBlank { "-" },
+                style = MaterialTheme.typography.bodyLarge,
+                color = colors.textPrimary
+            )
+        }
     }
 }
