@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Badge
@@ -46,7 +47,8 @@ import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 fun PerfilScreen(
     user: User?,
     bottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
-    onEditProfile: () -> Unit = {}
+    onEditProfile: () -> Unit = {},
+    onLogout: () -> Unit = {}
 ) {
     val colors = LocalPedidosColors.current
 
@@ -174,6 +176,31 @@ fun PerfilScreen(
                 label = "CPF",
                 value = user?.cpf.orEmpty(),
                 icon = Icons.Outlined.Badge
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(14.dp))
+                .clickable(onClick = onLogout)
+                .padding(horizontal = 18.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.Logout,
+                contentDescription = null,
+                tint = colors.textSecondary,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = "Sair da conta",
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.textSecondary,
+                fontWeight = FontWeight.SemiBold
             )
         }
     }

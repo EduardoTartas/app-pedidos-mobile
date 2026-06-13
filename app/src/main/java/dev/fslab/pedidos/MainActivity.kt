@@ -422,7 +422,14 @@ fun PedidosApp(activity: ComponentActivity) {
                 composable("perfil") {
                     PerfilScreen(
                         user = currentUser,
-                        bottomPadding = innerPadding.calculateBottomPadding()
+                        bottomPadding = innerPadding.calculateBottomPadding(),
+                        onLogout = {
+                            authViewModel.logout()
+                            navController.navigate("login") {
+                                popUpTo("login") { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
                     )
                 }
 
