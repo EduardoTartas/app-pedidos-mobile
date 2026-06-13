@@ -20,8 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -119,14 +117,28 @@ fun PerfilScreen(
                 text = user?.nome?.ifBlank { "Usuario" } ?: "Usuario",
                 style = MaterialTheme.typography.headlineSmall,
                 color = colors.textPrimary,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Editar perfil",
+                style = MaterialTheme.typography.titleSmall,
+                color = colors.primary,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onEditProfile)
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             Text(
                 text = user?.email.orEmpty(),
@@ -137,24 +149,6 @@ fun PerfilScreen(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.fillMaxWidth()
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = onEditProfile,
-                modifier = Modifier
-                    .fillMaxWidth(0.62f)
-                    .height(44.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
-            ) {
-                Text(
-                    text = "Editar perfil",
-                    color = colors.textOnPrimary,
-                    style = MaterialTheme.typography.titleMedium,
-                    textAlign = TextAlign.Center
-                )
-            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
