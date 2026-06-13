@@ -55,17 +55,17 @@ fun PerfilScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(colors.background)
+            .background(colors.backgroundGradientEnd)
             .padding(bottom = bottomPadding + 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(280.dp)
-                .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+                .height(304.dp)
+                .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
                 .background(colors.surface)
                 .padding(horizontal = 24.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -80,7 +80,7 @@ fun PerfilScreen(
                         .size(136.dp)
                         .clip(CircleShape)
                         .border(width = 4.dp, color = colors.primary, shape = CircleShape)
-                        .background(colors.surface),
+                        .background(colors.primary.copy(alpha = 0.08f)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (!user?.fotoPerfil.isNullOrBlank()) {
@@ -119,24 +119,24 @@ fun PerfilScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Text(
                 text = user?.nome?.ifBlank { "Usuario" } ?: "Usuario",
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleLarge,
                 color = colors.textPrimary,
-                fontWeight = FontWeight.ExtraBold,
+                fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
                 text = "Editar perfil",
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelLarge,
                 color = colors.primary,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
@@ -146,12 +146,12 @@ fun PerfilScreen(
                     .padding(horizontal = 12.dp, vertical = 4.dp)
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = user?.email.orEmpty(),
                 style = MaterialTheme.typography.bodyMedium,
-                color = colors.textSecondary,
+                color = colors.textSecondary.copy(alpha = 0.92f),
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -159,7 +159,7 @@ fun PerfilScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Column(
             modifier = Modifier
@@ -179,13 +179,16 @@ fun PerfilScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(14.dp))
+                .background(
+                    colors.surface.copy(alpha = if (colors.isDark) 0.55f else 0.78f)
+                )
                 .clickable(onClick = onLogout)
-                .padding(horizontal = 18.dp, vertical = 12.dp),
+                .padding(horizontal = 18.dp, vertical = 11.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -198,9 +201,9 @@ fun PerfilScreen(
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = "Sair da conta",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.labelLarge,
                 color = colors.textSecondary,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Medium
             )
         }
     }
@@ -220,6 +223,11 @@ private fun PerfilInfoItem(
             .height(84.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(colors.surface)
+            .border(
+                width = 1.dp,
+                color = colors.inputBorder.copy(alpha = if (colors.isDark) 0.55f else 0.75f),
+                shape = RoundedCornerShape(20.dp)
+            )
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -227,7 +235,7 @@ private fun PerfilInfoItem(
             modifier = Modifier
                 .size(48.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(colors.primary.copy(alpha = 0.14f)),
+                .background(colors.primary.copy(alpha = 0.16f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -247,13 +255,15 @@ private fun PerfilInfoItem(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
-                color = colors.textSecondary
+                color = colors.textSecondary,
+                fontWeight = FontWeight.Medium
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = value.ifBlank { "-" },
-                style = MaterialTheme.typography.bodyLarge,
-                color = colors.textPrimary
+                style = MaterialTheme.typography.titleMedium,
+                color = colors.textPrimary,
+                fontWeight = FontWeight.Medium
             )
         }
 
@@ -262,7 +272,7 @@ private fun PerfilInfoItem(
         Icon(
             imageVector = Icons.Outlined.ChevronRight,
             contentDescription = null,
-            tint = colors.textSecondary.copy(alpha = 0.65f),
+            tint = colors.textSecondary.copy(alpha = 0.75f),
             modifier = Modifier.size(20.dp)
         )
     }
