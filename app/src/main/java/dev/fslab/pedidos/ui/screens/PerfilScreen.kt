@@ -2,6 +2,7 @@ package dev.fslab.pedidos.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -64,26 +66,49 @@ fun PerfilScreen(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Box(
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .border(width = 3.dp, color = colors.primary, shape = CircleShape)
-                    .background(colors.surface),
+                modifier = Modifier.size(148.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (!user?.fotoPerfil.isNullOrBlank()) {
-                    AsyncImage(
-                        model = user?.fotoPerfil,
-                        contentDescription = "Foto do usuario",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
+                Box(
+                    modifier = Modifier
+                        .size(136.dp)
+                        .clip(CircleShape)
+                        .border(width = 4.dp, color = colors.primary, shape = CircleShape)
+                        .background(colors.surface),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (!user?.fotoPerfil.isNullOrBlank()) {
+                        AsyncImage(
+                            model = user?.fotoPerfil,
+                            contentDescription = "Foto do usuario",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.Person,
+                            contentDescription = "Foto do usuario",
+                            tint = colors.primary,
+                            modifier = Modifier.size(72.dp)
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(colors.primary)
+                        .border(width = 2.dp, color = colors.surface, shape = CircleShape)
+                        .clickable(onClick = onEditProfile),
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
-                        imageVector = Icons.Filled.Person,
-                        contentDescription = "Foto do usuario",
-                        tint = colors.primary,
-                        modifier = Modifier.size(64.dp)
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = "Editar foto do usuario",
+                        tint = colors.textOnPrimary,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }

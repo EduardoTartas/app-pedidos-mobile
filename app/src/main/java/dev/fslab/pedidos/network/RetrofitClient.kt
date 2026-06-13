@@ -21,7 +21,7 @@ object RetrofitClient {
      * Com `adb reverse tcp:5020 tcp:5020` ativo, o dispositivo físico enxerga o host local via loopback.
      * Ajuste APP_PORT quando necessário.
      */
-    const val BASE_URL = "http://192.168.0.71:5020/"
+    const val BASE_URL = "http://127.0.0.1:5020/"
 
     private val gson = GsonBuilder()
         .setLenient()
