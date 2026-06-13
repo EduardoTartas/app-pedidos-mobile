@@ -154,8 +154,10 @@ fun PerfilScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             PerfilInfoItem(label = "Telefone", value = user?.telefone.orEmpty())
             PerfilInfoItem(label = "CPF", value = user?.cpf.orEmpty())
@@ -173,16 +175,18 @@ private fun PerfilInfoItem(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .height(84.dp)
+            .clip(RoundedCornerShape(20.dp))
             .background(colors.surface)
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             color = colors.textSecondary
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = value.ifBlank { "-" },
             style = MaterialTheme.typography.bodyLarge,
