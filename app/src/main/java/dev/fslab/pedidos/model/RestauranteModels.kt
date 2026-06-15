@@ -20,7 +20,15 @@ data class Restaurante(
     @SerializedName("estimativa_entrega_max") val estimativaEntregaMax: Int,
     @SerializedName("taxa_entrega") val taxaEntrega: Double,
     @SerializedName("categoria_ids") val categorias: List<Categoria>? = emptyList(),
-    @SerializedName("secoes_cardapio") val secoesCardapio: List<String>? = emptyList()
+    @SerializedName("secoes_cardapio") val secoesCardapio: List<String>? = emptyList(),
+    @SerializedName("horario_funcionamento") val horarioFuncionamento: List<HorarioFuncionamento>? = emptyList()
+)
+
+data class HorarioFuncionamento(
+    val dia: String,
+    val abertura: String,
+    val fechamento: String,
+    val fechado: Boolean
 )
 
 data class Prato(
