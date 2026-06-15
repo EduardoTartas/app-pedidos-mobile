@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -68,6 +69,49 @@ fun RestauranteDetalhesScreen(
 
     val lazyListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+
+    var showHorariosDialog by remember { mutableStateOf(false) }
+
+    if (showHorariosDialog && uiState is DetalhesUiState.Success) {
+        val horarios = (uiState as DetalhesUiState.Success).restaurante.horarioFuncionamento
+        AlertDialog(
+            onDismissRequest = { showHorariosDialog = false },
+            containerColor = bgColor,
+            titleContentColor = textColor,
+            textContentColor = textColor.copy(alpha = 0.8f),
+            title = { Text("Horário de Funcionamento", fontWeight = FontWeight.Bold, fontSize = 18.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val dias = listOf("segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo")
+                    val labels = listOf("Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo")
+                    
+                    dias.forEachIndexed { index, dia ->
+                        val hr = horarios?.find { it.dia == dia }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(labels[index], fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                            if (hr != null && !hr.fechado) {
+                                Text("${hr.abertura} às ${hr.fechamento}", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF14B822))
+                            } else {
+                                Text("Fechado", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFEF4444))
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showHorariosDialog = false },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF14B822))
+                ) {
+                    Text("FECHAR", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
 
     Scaffold(
         containerColor = bgColor
@@ -121,7 +165,8 @@ fun RestauranteDetalhesScreen(
                         item {
                             DetalhesInfoRow(
                                 restaurante = state.restaurante,
-                                textColor = textColor
+                                textColor = textColor,
+                                onVerHorarios = { showHorariosDialog = true }
                             )
                         }
 
@@ -253,7 +298,7 @@ fun DetalhesHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(220.dp)
+            .height(260.dp)
     ) {
         // Foto de capa
         AsyncImage(
@@ -323,8 +368,9 @@ fun DetalhesHeader(
 // ═══════════════════════════════════════════
 // INFO ROW — Nome, avaliação, tempo, taxa
 // ═══════════════════════════════════════════
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun DetalhesInfoRow(restaurante: Restaurante, textColor: Color) {
+fun DetalhesInfoRow(restaurante: Restaurante, textColor: Color, onVerHorarios: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -332,17 +378,27 @@ fun DetalhesInfoRow(restaurante: Restaurante, textColor: Color) {
     ) {
         // Nome do restaurante
         Text(
-            text = restaurante.nome,
+            text = restaurante.nome.replace("`", "'").replace("´", "'"),
             color = textColor,
             fontWeight = FontWeight.Bold,
-            fontSize = 22.sp,
+            fontSize = 24.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        if (!restaurante.descricao.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = restaurante.descricao,
+                color = textColor.copy(alpha = 0.65f),
+                fontSize = 14.sp,
+                lineHeight = 20.sp
+            )
+        }
 
-        // Info chips
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Info chips (FlowRow to prevent clipping on smaller screens)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -386,12 +442,46 @@ fun DetalhesInfoRow(restaurante: Restaurante, textColor: Color) {
                 modifier = Modifier.size(16.dp)
             )
             Text(
-                text = if (restaurante.taxaEntrega <= 0.0) "Entrega Grátis"
+                text = if (restaurante.taxaEntrega <= 0.0) "Grátis"
                        else "R$ ${String.format("%.2f", restaurante.taxaEntrega)}",
                 color = if (restaurante.taxaEntrega <= 0.0) Color(0xFF14B822) else textColor.copy(alpha = 0.7f),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
+        }
+
+        val statusFunc = calcularStatus(restaurante.horarioFuncionamento)
+        if (statusFunc != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onVerHorarios() }
+                    .background(statusFunc.cor.copy(alpha = 0.1f))
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Storefront,
+                    contentDescription = null,
+                    tint = statusFunc.cor,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = statusFunc.texto,
+                    color = statusFunc.cor,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = "Ver horários",
+                    tint = statusFunc.cor.copy(alpha = 0.7f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
 
         // Categorias
@@ -407,6 +497,54 @@ fun DetalhesInfoRow(restaurante: Restaurante, textColor: Color) {
     }
 }
 
+data class StatusInfo(val texto: String, val cor: Color)
+
+private fun calcularStatus(horarios: List<dev.fslab.pedidos.model.HorarioFuncionamento>?): StatusInfo? {
+    if (horarios.isNullOrEmpty()) return null
+
+    val cal = java.util.Calendar.getInstance()
+    val diaNum = cal.get(java.util.Calendar.DAY_OF_WEEK)
+    
+    val diaString = when (diaNum) {
+        java.util.Calendar.MONDAY -> "segunda"
+        java.util.Calendar.TUESDAY -> "terca"
+        java.util.Calendar.WEDNESDAY -> "quarta"
+        java.util.Calendar.THURSDAY -> "quinta"
+        java.util.Calendar.FRIDAY -> "sexta"
+        java.util.Calendar.SATURDAY -> "sabado"
+        java.util.Calendar.SUNDAY -> "domingo"
+        else -> ""
+    }
+
+    val hoje = horarios.find { it.dia == diaString } ?: return null
+
+    if (hoje.fechado) {
+        return StatusInfo("Fechado hoje", Color(0xFFEF4444))
+    }
+
+    return try {
+        val horaAtual = cal.get(java.util.Calendar.HOUR_OF_DAY)
+        val minAtual = cal.get(java.util.Calendar.MINUTE)
+        val minutosAtuais = horaAtual * 60 + minAtual
+
+        val (horaAbre, minAbre) = hoje.abertura.split(":").map { it.toInt() }
+        val (horaFecha, minFecha) = hoje.fechamento.split(":").map { it.toInt() }
+        
+        val minutosAbertura = horaAbre * 60 + minAbre
+        val minutosFechamento = horaFecha * 60 + minFecha
+
+        if (minutosAtuais in minutosAbertura until minutosFechamento) {
+            StatusInfo("Aberto até às ${hoje.fechamento}", Color(0xFF14B822))
+        } else if (minutosAtuais < minutosAbertura) {
+            StatusInfo("Abre às ${hoje.abertura}", Color(0xFFFBBF24))
+        } else {
+            StatusInfo("Fechado", Color(0xFFEF4444))
+        }
+    } catch (e: Exception) {
+        StatusInfo("${hoje.abertura} - ${hoje.fechamento}", Color.Gray)
+    }
+}
+
 // ═══════════════════════════════════════════
 // BARRA DE BUSCA
 // ═══════════════════════════════════════════
@@ -418,9 +556,13 @@ fun DetalhesBuscaBar(
     cardColor: Color,
     textColor: Color
 ) {
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     TextField(
         value = query,
         onValueChange = onQueryChange,
+        singleLine = true,
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { focusManager.clearFocus() }),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)

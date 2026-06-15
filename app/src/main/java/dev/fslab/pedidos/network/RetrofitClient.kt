@@ -22,7 +22,7 @@ object RetrofitClient {
      * Com `adb reverse tcp:5020 tcp:5020` ativo, o dispositivo físico enxerga o host local via loopback.
      * Ajuste APP_PORT quando necessário.
      */
-    const val BASE_URL = "http://127.0.0.1:5020/"
+    const val BASE_URL = "https://rango-api.eduardotartas.dpdns.org"
 
     private val gson = GsonBuilder()
         .setLenient()
@@ -76,5 +76,9 @@ object RetrofitClient {
 
     val pedidoApi: PedidoApi by lazy {
         retrofit.create(PedidoApi::class.java)
+    }
+
+    val avaliacaoApi: AvaliacaoApi by lazy {
+        retrofit.create(AvaliacaoApi::class.java)
     }
 }

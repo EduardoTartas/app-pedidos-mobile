@@ -1,5 +1,8 @@
 package dev.fslab.pedidos.ui.screens
 
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,6 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,6 +47,7 @@ fun PedidosScreen(
     val uiState by viewModel.uiState.collectAsState()
     val colors = LocalPedidosColors.current
     val context = LocalContext.current
+    val pullRefreshState = rememberPullToRefreshState()
 
     val imageLoader = remember {
         ImageLoader.Builder(context)
@@ -51,18 +57,31 @@ fun PedidosScreen(
             .build()
     }
 
+    // Atualiza a lista sempre que a tela for aberta
+    LaunchedEffect(Unit) {
+        viewModel.carregarPedidos()
+    }
+
     Scaffold(
-        containerColor = colors.background,
-        topBar = {
-            TopAppBar(
-                title = { 
-                    Text("Meus Pedidos", fontWeight = FontWeight.Black, fontSize = 22.sp, color = colors.textPrimary)
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.background)
-            )
-        }
+        containerColor = colors.background
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(bottom = bottomPadding)) {
+        val isRefreshing by viewModel.isRefreshing.collectAsState()
+
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { viewModel.refresh() },
+            state = pullRefreshState,
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    isRefreshing = isRefreshing,
+                    state = pullRefreshState,
+                    color = colors.primary,
+                    containerColor = colors.background
+                )
+            },
+            modifier = Modifier.fillMaxSize()
+        ) {
             when (val state = uiState) {
                 is PedidosHistoryUiState.Loading -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = colors.primary)
@@ -74,16 +93,53 @@ fun PedidosScreen(
                     )
                 }
                 is PedidosHistoryUiState.Success -> {
-                    if (state.pedidos.isEmpty()) {
-                        EmptyPedidos(colors)
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = bottomPadding + 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        item {
+                            Spacer(modifier = Modifier.statusBarsPadding())
+                        }
+                        
+                        // Cabeçalho Estilizado (Não mais cru)
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                            ) {
+                                Text(
+                                    text = "Meus Pedidos",
+                                    fontSize = 28.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = colors.textPrimary,
+                                    letterSpacing = (-0.5).sp
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Acompanhe seu histórico e rastreio",
+                                    fontSize = 14.sp,
+                                    color = colors.textSecondary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+
+                        if (state.pedidos.isEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier.fillParentMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    EmptyPedidos(colors)
+                                }
+                            }
+                        } else {
                             items(state.pedidos, key = { it.id }) { pedido ->
-                                PedidoCard(pedido, imageLoader, colors, onNavigateToPedidoDetalhes)
+                                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                    PedidoCard(pedido, imageLoader, colors, onNavigateToPedidoDetalhes)
+                                }
                             }
                         }
                     }
@@ -121,10 +177,12 @@ private fun PedidoCard(
                 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        pedido.restauranteNome,
+                        pedido.restauranteNome.replace("`", "'").replace("´", "'"),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = colors.textPrimary
+                        color = colors.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         "Pedido #${pedido.id.takeLast(6).uppercase()}",
@@ -148,7 +206,63 @@ private fun PedidoCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            
+
+            // Feedback Visual de Avaliação
+            if (pedido.status == "entregue") {
+                Spacer(modifier = Modifier.height(14.dp))
+                if (pedido.avaliacaoId == null) {
+                    // Pendente de avaliação
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFEAB308).copy(alpha = 0.1f))
+                            .padding(vertical = 10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = Color(0xFFEAB308),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Avalie este pedido",
+                            color = Color(0xFFEAB308),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+                } else {
+                    // Já avaliado
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(colors.primary.copy(alpha = 0.1f))
+                            .padding(vertical = 10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = colors.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Pedido Avaliado",
+                            color = colors.primary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(12.dp))
             
             Row(
@@ -164,7 +278,7 @@ private fun PedidoCard(
                 )
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Detalhes", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.primary)
+                    Text("Detalhes", fontSize = 13.sp, color = colors.primary, fontWeight = FontWeight.Bold)
                     Icon(Icons.Default.ChevronRight, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
                 }
             }
@@ -178,33 +292,49 @@ private fun StatusBadge(status: String, colors: dev.fslab.pedidos.ui.theme.Pedid
         "criado" -> Triple("Pendente", Color(0xFFFFB01E).copy(alpha = 0.1f), Color(0xFFFFB01E))
         "em_preparo" -> Triple("Preparando", Color(0xFF3B82F6).copy(alpha = 0.1f), Color(0xFF3B82F6))
         "a_caminho" -> Triple("A caminho", Color(0xFF8B5CF6).copy(alpha = 0.1f), Color(0xFF8B5CF6))
-        "entregue" -> Triple("Entregue", Color(0xFF14B822).copy(alpha = 0.1f), Color(0xFF14B822))
-        "cancelado" -> Triple("Cancelado", Color(0xFFDC2626).copy(alpha = 0.1f), Color(0xFFDC2626))
-        else -> Triple(status.uppercase(), colors.textTertiary.copy(alpha = 0.1f), colors.textTertiary)
+        "entregue" -> Triple("Entregue", colors.primary.copy(alpha = 0.1f), colors.primary)
+        "cancelado" -> Triple("Cancelado", Color(0xFFEF4444).copy(alpha = 0.1f), Color(0xFFEF4444))
+        else -> Triple(status.uppercase(), Color.Gray.copy(alpha = 0.1f), Color.Gray)
     }
 
     Surface(
         color = bgColor,
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.height(24.dp)
+        shape = RoundedCornerShape(8.dp)
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 8.dp)) {
-            Text(label, fontSize = 10.sp, fontWeight = FontWeight.Black, color = textColor)
-        }
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            color = textColor,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
 @Composable
 private fun EmptyPedidos(colors: dev.fslab.pedidos.ui.theme.PedidosColors) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-            Box(modifier = Modifier.size(120.dp).clip(CircleShape).background(colors.surface), contentAlignment = Alignment.Center) {
-                Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null, modifier = Modifier.size(48.dp), tint = colors.textTertiary.copy(alpha = 0.3f))
-            }
-            Spacer(Modifier.height(24.dp))
-            Text("Nenhum pedido ainda", fontWeight = FontWeight.Black, fontSize = 20.sp, color = colors.textPrimary)
-            Spacer(Modifier.height(8.dp))
-            Text("Seus pedidos aparecerão aqui assim que você finalizar sua primeira compra.", textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontSize = 14.sp, color = colors.textSecondary)
-        }
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
+            contentDescription = null,
+            modifier = Modifier.size(80.dp),
+            tint = colors.textPrimary.copy(alpha = 0.1f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            "Você ainda não fez nenhum pedido",
+            color = colors.textPrimary,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp
+        )
+        Text(
+            "Seus pedidos aparecerão aqui",
+            color = colors.textSecondary,
+            fontSize = 14.sp
+        )
     }
 }
