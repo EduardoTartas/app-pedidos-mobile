@@ -22,12 +22,17 @@ class PedidosHistoryViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<PedidosHistoryUiState>(PedidosHistoryUiState.Loading)
     val uiState: StateFlow<PedidosHistoryUiState> = _uiState.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     init {
         carregarPedidos()
     }
 
-    fun carregarPedidos() {
-        _uiState.value = PedidosHistoryUiState.Loading
+    fun carregarPedidos(isRefresh: Boolean = false) {
+        if (isRefresh) _isRefreshing.value = true
+        else _uiState.value = PedidosHistoryUiState.Loading
+
         viewModelScope.launch {
             try {
                 val response = api.listarMeusPedidos(limit = 50)
@@ -35,13 +40,23 @@ class PedidosHistoryViewModel : ViewModel() {
                     val lista = response.body()?.data?.docs ?: emptyList()
                     _uiState.value = PedidosHistoryUiState.Success(lista)
                 } else {
-                    _uiState.value = PedidosHistoryUiState.Error("Erro ao carregar histórico de pedidos.")
+                    if (!isRefresh) {
+                        _uiState.value = PedidosHistoryUiState.Error("Erro ao carregar histórico de pedidos.")
+                    }
                 }
             } catch (e: Exception) {
-                _uiState.value = PedidosHistoryUiState.Error(
-                    e.localizedMessage ?: "Erro de conexão ao buscar pedidos."
-                )
+                if (!isRefresh) {
+                    _uiState.value = PedidosHistoryUiState.Error(
+                        e.localizedMessage ?: "Erro de conexão ao buscar pedidos."
+                    )
+                }
+            } finally {
+                _isRefreshing.value = false
             }
         }
+    }
+
+    fun refresh() {
+        carregarPedidos(isRefresh = true)
     }
 }

@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -373,10 +374,14 @@ fun BarraBusca(
     textColor: Color
 ) {
     val colors = LocalPedidosColors.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
         TextField(
             value = busca,
             onValueChange = aoMudarBusca,
+            singleLine = true,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { focusManager.clearFocus() }),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -552,45 +557,46 @@ fun RecomendadoCard(
     imageLoader: ImageLoader,
     onClick: () -> Unit = {}
 ) {
-    val context = LocalContext.current
+    val subTextColor = textColor.copy(alpha = 0.6f)
+    val starColor = Color(0xFFEAB308)
+    val greenColor = Color(0xFF14B822)
+
     Card(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier.width(280.dp).height(245.dp).clickable { onClick() }
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = Modifier
+            .width(260.dp)
+            .clickable { onClick() }
+            .border(1.dp, textColor.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
     ) {
         Column {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(145.dp)
+                    .height(130.dp)
             ) {
                 AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(restaurante.fotoRestaurante ?: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=400&auto=format&fit=crop")
-                        .crossfade(true)
-                        .build(),
+                    model = restaurante.fotoRestaurante?.takeIf { it.isNotBlank() } ?: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=400&auto=format&fit=crop",
                     imageLoader = imageLoader,
-                    contentDescription = "Imagem do Restaurante",
+                    contentDescription = "Imagem de ${restaurante.nome}",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
+                // Overlay de proteção de contraste para a imagem
                 Box(
                     modifier = Modifier
-                        .padding(12.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color.Black.copy(alpha = 0.65f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "${restaurante.estimativaEntregaMin}-${restaurante.estimativaEntregaMax} min",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f)),
+                                startY = 150f
+                            )
+                        )
+                )
             }
-            Column(modifier = Modifier.padding(16.dp)) {
+            
+            Column(modifier = Modifier.padding(14.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -605,54 +611,54 @@ fun RecomendadoCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
+                    
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .padding(start = 8.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(LocalPedidosColors.current.successBackground.copy(alpha = 0.15f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = Color(0xFFFBBF24),
-                            modifier = Modifier.size(12.dp)
+                            contentDescription = "Avaliação",
+                            tint = starColor,
+                            modifier = Modifier.size(14.dp)
                         )
-                        Spacer(modifier = Modifier.width(2.dp))
                         Text(
                             text = if (restaurante.avaliacaoMedia > 0) String.format("%.1f", restaurante.avaliacaoMedia) else "Novo",
-                            color = textColor,
-                            fontSize = 12.sp,
+                            color = starColor,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
                 
-                val cats = restaurante.categorias?.joinToString(" • ") { it.nome } ?: "Lanches • Bebidas"
+                Spacer(modifier = Modifier.height(6.dp))
                 
+                val cats = restaurante.categorias?.joinToString(" • ") { it.nome } ?: "Lanches"
                 Text(
                     text = cats,
-                    color = textColor.copy(alpha = 0.55f),
-                    fontSize = 12.sp,
+                    color = subTextColor,
+                    fontSize = 13.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.TwoWheeler,
-                        contentDescription = null,
-                        tint = Color(0xFF14B822),
-                        modifier = Modifier.size(14.dp)
+                
+                Spacer(modifier = Modifier.height(6.dp))
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "${restaurante.estimativaEntregaMin}-${restaurante.estimativaEntregaMax} min",
+                        color = subTextColor,
+                        fontSize = 13.sp
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("•", color = subTextColor, fontSize = 12.sp)
                     Text(
                         text = if(restaurante.taxaEntrega <= 0.0) "Entrega Grátis" else "R$ ${String.format("%.2f", restaurante.taxaEntrega)}",
-                        color = if(restaurante.taxaEntrega <= 0.0) Color(0xFF14B822) else textColor.copy(alpha = 0.7f),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
+                        color = if(restaurante.taxaEntrega <= 0.0) greenColor else subTextColor,
+                        fontSize = 13.sp,
+                        fontWeight = if(restaurante.taxaEntrega <= 0.0) FontWeight.Medium else FontWeight.Normal
                     )
                 }
             }
@@ -668,117 +674,108 @@ fun PopularItem(
     imageLoader: ImageLoader,
     onClick: () -> Unit = {}
 ) {
-    val context = LocalContext.current
+    val subTextColor = textColor.copy(alpha = 0.6f)
+    val starColor = Color(0xFFEAB308)
+    val greenColor = Color(0xFF14B822)
+
     Card(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .clickable { onClick() }
-            .border(1.dp, textColor.copy(alpha = 0.05f), RoundedCornerShape(20.dp))
+            .border(1.dp, textColor.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Logo do Restaurante
             Box(
                 modifier = Modifier
-                    .size(85.dp)
-                    .clip(RoundedCornerShape(14.dp))
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(12.dp))
                     .background(textColor.copy(alpha = 0.03f))
+                    .border(1.dp, textColor.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
             ) {
                 AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(restaurante.fotoRestaurante ?: "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=200&auto=format&fit=crop")
-                        .crossfade(true)
-                        .build(),
+                    model = restaurante.fotoRestaurante?.takeIf { it.isNotBlank() } ?: "https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=200&auto=format&fit=crop",
                     imageLoader = imageLoader,
-                    contentDescription = "Imagem do Restaurante",
+                    contentDescription = "Logo de ${restaurante.nome}",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(4.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(Color.Black.copy(alpha = 0.6f))
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = null,
-                            tint = Color(0xFFFBBF24),
-                            modifier = Modifier.size(10.dp)
-                        )
-                        Text(
-                            text = if (restaurante.avaliacaoMedia > 0) String.format("%.1f", restaurante.avaliacaoMedia) else "Novo",
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
             }
+
             Spacer(modifier = Modifier.width(16.dp))
+
+            // Informações principais
             Column(modifier = Modifier.weight(1f)) {
+                // Nome
                 Text(
                     text = restaurante.nome,
                     color = textColor,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
+                    fontSize = 16.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                
                 Spacer(modifier = Modifier.height(4.dp))
                 
-                val cats = restaurante.categorias?.joinToString(" • ") { it.nome } ?: "Culinária"
-
-                Text(
-                    text = cats,
-                    color = textColor.copy(alpha = 0.5f),
-                    fontSize = 13.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(10.dp))
+                // Avaliação e Categoria
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Schedule,
-                            contentDescription = null,
-                            tint = textColor.copy(alpha = 0.4f),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "${restaurante.estimativaEntregaMin}-${restaurante.estimativaEntregaMax} min",
-                            color = textColor.copy(alpha = 0.6f),
-                            fontSize = 12.sp
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Avaliação",
+                        tint = starColor,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                        text = if (restaurante.avaliacaoMedia > 0) String.format("%.1f", restaurante.avaliacaoMedia) else "Novo",
+                        color = starColor,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                    Text("•", color = subTextColor, fontSize = 12.sp)
                     
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.TwoWheeler,
-                            contentDescription = null,
-                            tint = if (restaurante.taxaEntrega <= 0.0) Color(0xFF14B822) else textColor.copy(alpha = 0.4f),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if(restaurante.taxaEntrega <= 0.0) "Grátis" else "R$ ${String.format("%.2f", restaurante.taxaEntrega)}",
-                            color = if (restaurante.taxaEntrega <= 0.0) Color(0xFF14B822) else textColor.copy(alpha = 0.6f),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    val cats = restaurante.categorias?.joinToString(", ") { it.nome } ?: "Culinária"
+                    Text(
+                        text = cats,
+                        color = subTextColor,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Tempo e Taxa de Entrega
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "${restaurante.estimativaEntregaMin}-${restaurante.estimativaEntregaMax} min",
+                        color = subTextColor,
+                        fontSize = 13.sp
+                    )
+                    Text("•", color = subTextColor, fontSize = 12.sp)
+                    Text(
+                        text = if (restaurante.taxaEntrega <= 0.0) "Entrega Grátis"
+                               else "R$ ${String.format("%.2f", restaurante.taxaEntrega)}",
+                        color = if (restaurante.taxaEntrega <= 0.0) greenColor else subTextColor,
+                        fontSize = 13.sp,
+                        fontWeight = if (restaurante.taxaEntrega <= 0.0) FontWeight.Medium else FontWeight.Normal
+                    )
                 }
             }
         }

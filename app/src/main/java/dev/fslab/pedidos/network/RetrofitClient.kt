@@ -77,4 +77,8 @@ object RetrofitClient {
     val pedidoApi: PedidoApi by lazy {
         retrofit.create(PedidoApi::class.java)
     }
+
+    val avaliacaoApi: AvaliacaoApi by lazy {
+        retrofit.create(AvaliacaoApi::class.java)
+    }
 }

@@ -97,6 +97,7 @@ data class Pedido(
     @SerializedName("totais") val totais: TotaisPedido,
     @SerializedName("endereco_entrega") val enderecoEntrega: EnderecoEntregaResponse? = null,
     @SerializedName("forma_pagamento") val formaPagamento: String?,
+    @SerializedName("avaliacao_id") val avaliacaoId: Any? = null,
     @SerializedName("historico_status") val historicoStatus: List<HistoricoStatus> = emptyList(),
     @SerializedName("createdAt") val criadoEm: String?
 ) {
