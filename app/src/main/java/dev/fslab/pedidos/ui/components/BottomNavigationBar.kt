@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -68,7 +69,8 @@ fun BottomNavigationBar(
         tonalElevation = 0.dp,
         windowInsets = WindowInsets(0, 0, 0, 0),
         modifier = Modifier
-            .height(76.dp)
+            .navigationBarsPadding()
+            .height(68.dp)
             .shadow(
                 elevation = 8.dp,
                 shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)

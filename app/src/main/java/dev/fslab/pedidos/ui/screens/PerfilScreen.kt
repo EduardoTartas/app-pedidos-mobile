@@ -64,13 +64,18 @@ fun PerfilScreen(
             .statusBarsPadding()
     ) {
         val compactWidth = maxWidth < 360.dp
-        val compactHeight = maxHeight < 700.dp
+        val compactHeight = maxHeight < 760.dp
         val screenHorizontalPadding = if (compactWidth) 16.dp else 20.dp
-        val headerHeight = if (compactHeight) 210.dp else 224.dp
-        val avatarSize = if (compactHeight) 76.dp else 82.dp
-        val cardHeight = if (compactHeight) 60.dp else 64.dp
-        val headerToCardsSpacing = if (compactHeight) 14.dp else 22.dp
-        val contentBottomPadding = if (compactHeight) 16.dp else 24.dp
+        val headerHeight = if (compactHeight) 188.dp else 214.dp
+        val avatarSize = if (compactHeight) 68.dp else 82.dp
+        val cardHeight = if (compactHeight) 56.dp else 64.dp
+        val headerToCardsSpacing = if (compactHeight) 12.dp else 20.dp
+        val contentBottomPadding = if (compactHeight) 8.dp else 20.dp
+        val displayName = when (val nome = user?.nome?.trim().orEmpty()) {
+            "" -> "Usuario"
+            "Admin Sistema" -> "Admin"
+            else -> nome
+        }
 
         Column(
             modifier = Modifier
@@ -85,7 +90,7 @@ fun PerfilScreen(
                     .heightIn(min = headerHeight)
                     .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
                     .background(colors.surface)
-                    .padding(horizontal = screenHorizontalPadding, vertical = 20.dp),
+                    .padding(horizontal = screenHorizontalPadding, vertical = if (compactHeight) 12.dp else 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -137,11 +142,11 @@ fun PerfilScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(if (compactHeight) 8.dp else 12.dp))
 
                 Text(
-                    text = user?.nome?.ifBlank { "Usuario" } ?: "Usuario",
-                    style = MaterialTheme.typography.headlineLarge,
+                    text = displayName,
+                    style = if (compactHeight) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineLarge,
                     color = colors.textPrimary,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
@@ -194,13 +199,13 @@ fun PerfilScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(if (compactHeight) 14.dp else 20.dp))
+            Spacer(modifier = Modifier.height(if (compactHeight) 10.dp else 18.dp))
 
             Row(
                 modifier = Modifier
                     .clip(RoundedCornerShape(14.dp))
                     .clickable(onClick = onLogout)
-                    .padding(horizontal = 18.dp, vertical = 10.dp),
+                    .padding(horizontal = 18.dp, vertical = if (compactHeight) 8.dp else 10.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
