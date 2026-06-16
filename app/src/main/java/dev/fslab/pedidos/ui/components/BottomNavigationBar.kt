@@ -1,12 +1,7 @@
 package dev.fslab.pedidos.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
@@ -19,15 +14,16 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeChild
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 
 /**
@@ -47,10 +43,11 @@ val bottomNavItems = listOf(
 )
 
 /**
- * Barra de navegação inferior global do app.
+ * Barra de navegação inferior global do app com suporte a efeito Haze (glassmorphism).
  *
  * @param cardColor     Cor de fundo do card (surface).
  * @param textColor     Cor do texto principal.
+ * @param hazeState     Estado do Haze para efeito de desfoque (opcional).
  * @param selectedRoute Rota atualmente selecionada para destacar o item correto.
  * @param onNavigate    Callback chamado ao clicar num item; recebe a rota destino.
  */
@@ -66,51 +63,17 @@ fun BottomNavigationBar(
     NavigationBar(
         containerColor = cardColor.copy(alpha = 0.98f),
         contentColor = textColor,
-        tonalElevation = 0.dp,
-        windowInsets = WindowInsets(0, 0, 0, 0),
+        tonalElevation = 4.dp,
         modifier = Modifier
-            .navigationBarsPadding()
-            .height(68.dp)
-            .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
-            )
-            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
     ) {
         bottomNavItems.forEach { item ->
             val isSelected = selectedRoute == item.route
 
             NavigationBarItem(
-                modifier = Modifier.padding(horizontal = 2.dp),
-                icon = {
-                    Box(
-                        modifier = Modifier
-                            .size(width = 36.dp, height = 32.dp)
-                            .clip(RoundedCornerShape(11.dp))
-                            .background(
-                                if (isSelected) colors.primary.copy(alpha = 0.12f)
-                                else Color.Transparent
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = item.label,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                },
-                label = {
-                    Text(
-                        text = item.label,
-                        fontSize = 10.sp,
-                        lineHeight = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
-                    )
-                },
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                label = { Text(item.label, fontSize = 10.sp) },
                 selected = isSelected,
-                alwaysShowLabel = true,
                 onClick = {
                     if (!isSelected) onNavigate(item.route)
                 },
@@ -118,8 +81,8 @@ fun BottomNavigationBar(
                     selectedIconColor = colors.primary,
                     selectedTextColor = colors.primary,
                     indicatorColor = Color.Transparent,
-                    unselectedIconColor = textColor.copy(alpha = 0.58f),
-                    unselectedTextColor = textColor.copy(alpha = 0.58f)
+                    unselectedIconColor = textColor.copy(alpha = 0.5f),
+                    unselectedTextColor = textColor.copy(alpha = 0.5f)
                 )
             )
         }
