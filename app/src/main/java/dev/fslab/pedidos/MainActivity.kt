@@ -37,6 +37,7 @@ import dev.fslab.pedidos.ui.screens.auth.LoginScreen
 import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
 import dev.fslab.pedidos.ui.screens.CarrinhoScreen
 import dev.fslab.pedidos.ui.screens.HomeScreen
+import dev.fslab.pedidos.ui.screens.PerfilScreen
 import dev.fslab.pedidos.ui.screens.PedidoConfirmacaoScreen
 import dev.fslab.pedidos.ui.screens.RestaurantesScreen
 import dev.fslab.pedidos.ui.screens.RestauranteDetalhesScreen
@@ -83,6 +84,7 @@ fun PedidosApp(activity: ComponentActivity) {
     var isDarkTheme by remember { mutableStateOf(systemDark) }
     val authViewModel: AuthViewModel = viewModel()
     val authState by authViewModel.authState.collectAsState()
+    val currentUser by authViewModel.currentUser.collectAsState()
     val isLoading = authState is AuthState.Loading
     val errorMessage = (authState as? AuthState.Error)?.message
 
@@ -413,6 +415,20 @@ fun PedidosApp(activity: ComponentActivity) {
                         bottomPadding = innerPadding.calculateBottomPadding(),
                         onNavigateDetalhes = { restauranteId ->
                             navController.navigate("restaurante/$restauranteId")
+                        }
+                    )
+                }
+
+                composable("perfil") {
+                    PerfilScreen(
+                        user = currentUser,
+                        bottomPadding = innerPadding.calculateBottomPadding(),
+                        onLogout = {
+                            authViewModel.logout()
+                            navController.navigate("login") {
+                                popUpTo("login") { inclusive = true }
+                                launchSingleTop = true
+                            }
                         }
                     )
                 }
