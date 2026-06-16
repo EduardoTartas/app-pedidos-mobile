@@ -13,11 +13,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -41,8 +45,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 
@@ -109,6 +116,28 @@ fun NotificacoesScreen(
                 item {
                     HighlightOrderNotificationCard(
                         modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    NotificationItemCard(
+                        icon = Icons.Filled.CardGiftcard,
+                        title = "Cupom de R$ 20 disponível",
+                        description = "Aproveite seu cupom de desconto para jantar hoje! Válido para pedidos acima de R$ 60.",
+                        date = "2h atrás",
+                        isUnread = true
+                    )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    NotificationItemCard(
+                        icon = Icons.Filled.CreditCard,
+                        title = "Reembolso processado",
+                        description = "O reembolso referente ao pedido #3245 foi aprovado.",
+                        date = "14 Ago.",
+                        isUnread = false
                     )
                 }
             }
@@ -232,6 +261,94 @@ fun HighlightOrderNotificationCard(
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun NotificationItemCard(
+    icon: ImageVector,
+    title: String,
+    description: String,
+    date: String,
+    isUnread: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val green = Color(0xFF22C55E)
+    val cardColor = Color(0xFF161B2E)
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(green.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = green,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = title,
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = description,
+                    color = Color.White.copy(alpha = 0.68f),
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = date,
+                    color = Color.White.copy(alpha = 0.48f),
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1
+                )
+
+                if (isUnread) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .background(green, CircleShape)
+                    )
+                }
             }
         }
     }
