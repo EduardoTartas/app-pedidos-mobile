@@ -53,6 +53,7 @@ fun PerfilScreen(
     user: User?,
     bottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
     onEditProfile: () -> Unit = {},
+    onNavigateNotificacoes: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     val colors = LocalPedidosColors.current
@@ -189,7 +190,8 @@ fun PerfilScreen(
                     title = "Notificações",
                     icon = Icons.Outlined.Notifications,
                     compactWidth = compactWidth,
-                    minHeight = cardHeight
+                    minHeight = cardHeight,
+                    onClick = onNavigateNotificacoes
                 )
                 PerfilInfoItem(
                     title = "Ajuda",
@@ -232,7 +234,8 @@ private fun PerfilInfoItem(
     title: String,
     icon: ImageVector,
     compactWidth: Boolean,
-    minHeight: Dp
+    minHeight: Dp,
+    onClick: () -> Unit = {}
 ) {
     val colors = LocalPedidosColors.current
 
@@ -247,6 +250,7 @@ private fun PerfilInfoItem(
                 color = colors.inputBorder.copy(alpha = if (colors.isDark) 0.45f else 0.65f),
                 shape = RoundedCornerShape(14.dp)
             )
+            .clickable(onClick = onClick)
             .padding(horizontal = if (compactWidth) 14.dp else 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

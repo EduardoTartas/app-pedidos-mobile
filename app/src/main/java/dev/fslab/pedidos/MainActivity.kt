@@ -37,6 +37,7 @@ import dev.fslab.pedidos.ui.screens.auth.LoginScreen
 import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
 import dev.fslab.pedidos.ui.screens.CarrinhoScreen
 import dev.fslab.pedidos.ui.screens.HomeScreen
+import dev.fslab.pedidos.ui.screens.NotificacoesScreen
 import dev.fslab.pedidos.ui.screens.PerfilScreen
 import dev.fslab.pedidos.ui.screens.PedidoConfirmacaoScreen
 import dev.fslab.pedidos.ui.screens.RestaurantesScreen
@@ -423,6 +424,9 @@ fun PedidosApp(activity: ComponentActivity) {
                     PerfilScreen(
                         user = currentUser,
                         bottomPadding = innerPadding.calculateBottomPadding(),
+                        onNavigateNotificacoes = {
+                            navController.navigate("notificacoes")
+                        },
                         onLogout = {
                             authViewModel.logout()
                             navController.navigate("login") {
@@ -430,6 +434,12 @@ fun PedidosApp(activity: ComponentActivity) {
                                 launchSingleTop = true
                             }
                         }
+                    )
+                }
+
+                composable("notificacoes") {
+                    NotificacoesScreen(
+                        onBack = { navController.popBackStack() }
                     )
                 }
 
