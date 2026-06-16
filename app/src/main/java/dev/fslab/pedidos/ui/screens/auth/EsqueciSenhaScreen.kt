@@ -77,15 +77,16 @@ private enum class RecuperarSenhaStep(val title: String, val subtitle: String) {
 fun EsqueciSenhaScreen(
     modifier: Modifier = Modifier,
     emailInicial: String = "",
+    tokenInicial: String? = null,
     onBackToLogin: () -> Unit = {},
     onRecoverPassword: (email: String, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit = { _, _, _ -> },
     onResetPassword: (token: String, novaSenha: String, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit = { _, _, _, _ -> }
 ) {
     val colors = LocalPedidosColors.current
 
-    var currentStep by remember { mutableStateOf(RecuperarSenhaStep.EMAIL) }
+    var currentStep by remember { mutableStateOf(if (!tokenInicial.isNullOrBlank()) RecuperarSenhaStep.CODIGO else RecuperarSenhaStep.EMAIL) }
     var email by remember { mutableStateOf(emailInicial) }
-    var codigo by remember { mutableStateOf("") }
+    var codigo by remember { mutableStateOf(tokenInicial ?: "") }
     var novaSenha by remember { mutableStateOf("") }
     var confirmarSenha by remember { mutableStateOf("") }
     var mostrarSenha by remember { mutableStateOf(false) }
@@ -188,7 +189,7 @@ fun EsqueciSenhaScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Text(
-                                text = currentStep.subtitle,
+                                text = if (currentStep == RecuperarSenhaStep.CODIGO && !tokenInicial.isNullOrBlank()) "Crie uma nova senha para sua conta." else currentStep.subtitle,
                                 fontSize = 13.sp,
                                 color = colors.textSecondary,
                                 modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
@@ -235,20 +236,22 @@ fun EsqueciSenhaScreen(
                                 }
                                 RecuperarSenhaStep.CODIGO -> {
                                     Column(modifier = Modifier.fillMaxWidth()) {
-                                        Text(text = "Código de Verificação", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colors.textPrimary, modifier = Modifier.padding(bottom = 6.dp))
-                                        OutlinedTextField(
-                                            value = codigo, onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) { codigo = it; mostraErro = false } },
-                                            placeholder = { Text("000000", fontSize = 18.sp, color = colors.mediumGray, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
-                                            textStyle = TextStyle(color = colors.textInput, fontSize = 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, letterSpacing = 8.sp),
-                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                            colors = OutlinedTextFieldDefaults.colors(
-                                                unfocusedBorderColor = colors.inputBorder, focusedBorderColor = colors.primary, cursorColor = colors.primary,
-                                                focusedTextColor = colors.textInput, unfocusedTextColor = colors.textInput,
-                                                unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent
-                                            ),
-                                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                                            shape = RoundedCornerShape(16.dp), singleLine = true, enabled = !isLoading
-                                        )
+                                        if (tokenInicial.isNullOrBlank()) {
+                                            Text(text = "Código de Verificação", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colors.textPrimary, modifier = Modifier.padding(bottom = 6.dp))
+                                            OutlinedTextField(
+                                                value = codigo, onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) { codigo = it; mostraErro = false } },
+                                                placeholder = { Text("000000", fontSize = 18.sp, color = colors.mediumGray, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                                                textStyle = TextStyle(color = colors.textInput, fontSize = 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, letterSpacing = 8.sp),
+                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    unfocusedBorderColor = colors.inputBorder, focusedBorderColor = colors.primary, cursorColor = colors.primary,
+                                                    focusedTextColor = colors.textInput, unfocusedTextColor = colors.textInput,
+                                                    unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent
+                                                ),
+                                                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                                                shape = RoundedCornerShape(16.dp), singleLine = true, enabled = !isLoading
+                                            )
+                                        }
                                         
                                         CustomOutlinedField(
                                             value = novaSenha, label = "Nova Senha", icon = Icons.Default.Lock, placeholder = "Mínimo 8 caracteres",
@@ -298,7 +301,7 @@ fun EsqueciSenhaScreen(
                                         }
                                     }
                                     RecuperarSenhaStep.CODIGO -> {
-                                        if (codigo.length != 6) { mostraErro = true; mensagemErro = "O código deve ter 6 dígitos" }
+                                        if (codigo.isBlank()) { mostraErro = true; mensagemErro = "O token ou código é inválido" }
                                         else if (novaSenha.length < 8) { mostraErro = true; mensagemErro = "A senha deve ter pelo menos 8 caracteres" }
                                         else if (novaSenha != confirmarSenha) { mostraErro = true; mensagemErro = "As senhas não coincidem" }
                                         else {

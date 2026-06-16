@@ -177,6 +177,20 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+
+    fun verifyEmail(token: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val result = NetworkUtils.safeApiCall { 
+                RetrofitClient.authApi.verifyEmail(token) 
+            }
+            when (result) {
+                is NetworkResult.Success -> onSuccess()
+                is NetworkResult.Error -> onError(result.message)
+                else -> {}
+            }
+        }
+    }
+
     fun completeProfile(cpf: String, telefone: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         _authState.value = AuthState.Loading
         viewModelScope.launch {

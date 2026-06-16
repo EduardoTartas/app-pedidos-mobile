@@ -15,6 +15,7 @@ import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Query
+import retrofit2.http.GET
 
 /**
  * AuthApi - Endpoints de autenticação da API app-pedidos
@@ -51,4 +52,8 @@ interface AuthApi {
         @Query("token") token: String,
         @Body request: ResetPasswordRequest
     ): Response<BasicResponse>
+
+    /** GET /auth/verify - Verificar e-mail */
+    @GET("verify")
+    suspend fun verifyEmail(@Query("token") token: String): Response<BasicResponse>
 }

@@ -35,6 +35,14 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="dev.fslab.pedidos" android:host="home" />
             </intent-filter>
+        
+            <!-- Deep Link para Autenticacao (Recuperar Senha e Verificacao) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="rango" android:host="auth" />
+            </intent-filter>
         </activity>
     </application>
 

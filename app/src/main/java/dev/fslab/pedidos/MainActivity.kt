@@ -271,23 +271,59 @@ fun PedidosApp(activity: ComponentActivity) {
                 }
 
                 composable(
-                    route = "esqueci_senha?email={email}",
+                    route = "esqueci_senha?email={email}&token={token}",
                     arguments = listOf(
                         navArgument("email") {
                             type = NavType.StringType
                             defaultValue = ""
+                        },
+                        navArgument("token") {
+                            type = NavType.StringType
+                            defaultValue = ""
+                            nullable = true
                         }
+                    ),
+                    deepLinks = listOf(
+                        androidx.navigation.navDeepLink { uriPattern = "rango://auth/recover?token={token}" }
                     )
                 ) { backStackEntry ->
                     val email = backStackEntry.arguments?.getString("email") ?: ""
+                    val token = backStackEntry.arguments?.getString("token")
                     EsqueciSenhaScreen(
                         emailInicial = email,
+                        tokenInicial = token,
                         onBackToLogin = { navController.popBackStack() },
                         onRecoverPassword = { emailInput, onSuccess, onError ->
                             authViewModel.recoverPassword(emailInput, onSuccess, onError)
                         },
                         onResetPassword = { token, novaSenha, onSuccess, onError ->
                             authViewModel.resetPasswordByCode(token, novaSenha, onSuccess, onError)
+                        }
+                    )
+                }
+
+                composable(
+                    route = "verificacao_email?token={token}",
+                    arguments = listOf(
+                        navArgument("token") {
+                            type = NavType.StringType
+                            defaultValue = ""
+                        }
+                    ),
+                    deepLinks = listOf(
+                        androidx.navigation.navDeepLink { uriPattern = "rango://auth/verify?token={token}" }
+                    )
+                ) { backStackEntry ->
+                    val token = backStackEntry.arguments?.getString("token") ?: ""
+                    dev.fslab.pedidos.ui.screens.auth.VerificacaoEmailScreen(
+                        token = token,
+                        onNavigateToLogin = {
+                            navController.navigate("login") {
+                                popUpTo(0)
+                            }
+                        },
+                        onVerifyEmail = { t, onSuccess, onError ->
+                            authViewModel.verifyEmail(t, onSuccess, onError)
                         }
                     )
                 }
