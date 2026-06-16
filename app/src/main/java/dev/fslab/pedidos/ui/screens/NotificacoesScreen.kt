@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -53,6 +54,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 
+data class NotificationUiModel(
+    val icon: ImageVector,
+    val title: String,
+    val description: String,
+    val date: String,
+    val isUnread: Boolean
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificacoesScreen(
@@ -62,6 +71,24 @@ fun NotificacoesScreen(
     val colors = LocalPedidosColors.current
     val filtros = listOf("Todas", "Pedidos", "Promoções")
     var filtroSelecionado by remember { mutableStateOf(filtros.first()) }
+    val notificacoes = remember {
+        listOf(
+            NotificationUiModel(
+                icon = Icons.Filled.CardGiftcard,
+                title = "Cupom de R$ 20 disponível",
+                description = "Aproveite seu cupom de desconto para jantar hoje! Válido para pedidos acima de R$ 60.",
+                date = "2h atrás",
+                isUnread = true
+            ),
+            NotificationUiModel(
+                icon = Icons.Filled.CreditCard,
+                title = "Reembolso processado",
+                description = "O reembolso referente ao pedido #3245 foi aprovado.",
+                date = "14 Ago.",
+                isUnread = false
+            )
+        )
+    }
     val onFiltroSelecionado: (String) -> Unit = { filtro ->
         filtroSelecionado = filtro
     }
@@ -119,26 +146,20 @@ fun NotificacoesScreen(
                     )
                 }
 
-                item {
-                    Spacer(modifier = Modifier.height(14.dp))
-                    NotificationItemCard(
-                        icon = Icons.Filled.CardGiftcard,
-                        title = "Cupom de R$ 20 disponível",
-                        description = "Aproveite seu cupom de desconto para jantar hoje! Válido para pedidos acima de R$ 60.",
-                        date = "2h atrás",
-                        isUnread = true
-                    )
-                }
-
-                item {
-                    Spacer(modifier = Modifier.height(14.dp))
-                    NotificationItemCard(
-                        icon = Icons.Filled.CreditCard,
-                        title = "Reembolso processado",
-                        description = "O reembolso referente ao pedido #3245 foi aprovado.",
-                        date = "14 Ago.",
-                        isUnread = false
-                    )
+                items(
+                    items = notificacoes,
+                    key = { "${it.title}-${it.date}" }
+                ) { notificacao ->
+                    Column {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        NotificationItemCard(
+                            icon = notificacao.icon,
+                            title = notificacao.title,
+                            description = notificacao.description,
+                            date = notificacao.date,
+                            isUnread = notificacao.isUnread
+                        )
+                    }
                 }
             }
         }
