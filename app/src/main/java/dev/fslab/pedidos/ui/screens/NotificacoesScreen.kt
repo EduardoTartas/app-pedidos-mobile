@@ -3,6 +3,7 @@ package dev.fslab.pedidos.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -11,20 +12,28 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.TwoWheeler
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -97,7 +106,132 @@ fun NotificacoesScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                // Estrutura pronta para receber notificações.
+                item {
+                    HighlightOrderNotificationCard(
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HighlightOrderNotificationCard(
+    modifier: Modifier = Modifier,
+    onTrackClick: () -> Unit = {},
+    onDetailsClick: () -> Unit = {}
+) {
+    val colors = LocalPedidosColors.current
+    val green = Color(0xFF22C55E)
+    val cardColor = Color(0xFF161B2E)
+
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .background(green.copy(alpha = 0.14f), RoundedCornerShape(12.dp)),
+                    contentAlignment = androidx.compose.ui.Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.TwoWheeler,
+                        contentDescription = null,
+                        tint = green,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+
+                Text(
+                    text = "Agora",
+                    color = green,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .background(green.copy(alpha = 0.14f), RoundedCornerShape(50))
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = "Seu pedido saiu para entrega!",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = "O entregador Emerson está a caminho com seu pedido do Burger King.",
+                color = Color.White.copy(alpha = 0.74f),
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LinearProgressIndicator(
+                progress = { 0.68f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp),
+                color = green,
+                trackColor = Color(0xFF64748B)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = onTrackClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = green,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(
+                    text = "Acompanhar",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            TextButton(
+                onClick = onDetailsClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.textButtonColors(
+                    containerColor = Color(0xFF64748B),
+                    contentColor = Color.White
+                )
+            ) {
+                Text(
+                    text = "Detalhes",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
