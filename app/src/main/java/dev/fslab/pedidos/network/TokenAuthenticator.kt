@@ -33,7 +33,13 @@ class TokenAuthenticator : Authenticator {
     }
 
     override fun authenticate(route: Route?, response: Response): Request? {
-        Log.d(TAG, "401 recebido em: ${response.request.url.encodedPath}")
+        val path = response.request.url.encodedPath
+        Log.d(TAG, "401 recebido em: $path")
+
+        if (path in setOf("/login", "/signup", "/google", "/refresh", "/recover", "/password/reset")) {
+            Log.d(TAG, "401 em endpoint publico; refresh ignorado")
+            return null
+        }
 
         if (responseCount(response) > MAX_RETRIES) {
             Log.w(TAG, "Máximo de tentativas de refresh atingido")

@@ -47,19 +47,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private fun checkSavedSession() {
         val context = getApplication<Application>()
         val savedToken = AuthPreferences.getRefreshToken(context)
-        val cachedUserJson = AuthPreferences.getUser(context)
 
         // PASSO 1: Login instantâneo via cache
-        if (!cachedUserJson.isNullOrEmpty() && !savedToken.isNullOrEmpty()) {
-            try {
-                val cachedUser = gson.fromJson(cachedUserJson, User::class.java)
-                _currentUser.value = cachedUser
-                _authState.value = AuthState.Success(cachedUser)
-            } catch (e: Exception) {
-                Log.e(TAG, "Erro cache", e)
-            }
-        }
-
         // PASSO 2: Validação via Handler Global
         if (!savedToken.isNullOrEmpty()) {
             viewModelScope.launch {
@@ -78,10 +67,8 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     is NetworkResult.Error -> {
                         // Se não temos cache, mostramos erro de conexão. Se temos, mantemos logado.
-                        if (_authState.value !is AuthState.Success) {
-                            if (result.code == 401) logout() 
-                            else _authState.value = AuthState.Error(result.message)
-                        }
+                        Log.w(TAG, "Sessao salva invalida: ${result.message}")
+                        logout()
                     }
                     else -> {}
                 }
