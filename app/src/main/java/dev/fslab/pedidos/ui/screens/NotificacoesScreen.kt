@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 
 data class NotificationUiModel(
+    val id: String,
     val icon: ImageVector,
     val title: String,
     val description: String,
@@ -62,33 +63,35 @@ data class NotificationUiModel(
     val isUnread: Boolean
 )
 
+private fun mockNotificationUiModels() = listOf(
+    NotificationUiModel(
+        id = "cupom-jantar-r20",
+        icon = Icons.Filled.CardGiftcard,
+        title = "Cupom de R$ 20 disponível",
+        description = "Aproveite seu cupom de desconto para jantar hoje! Válido para pedidos acima de R$ 60.",
+        date = "2h atrás",
+        isUnread = true
+    ),
+    NotificationUiModel(
+        id = "reembolso-pedido-3245",
+        icon = Icons.Filled.CreditCard,
+        title = "Reembolso processado",
+        description = "O reembolso referente ao pedido #3245 foi aprovado.",
+        date = "14 Ago.",
+        isUnread = false
+    )
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificacoesScreen(
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    notifications: List<NotificationUiModel> = mockNotificationUiModels()
 ) {
     val colors = LocalPedidosColors.current
     val filtros = listOf("Todas", "Pedidos", "Promoções")
     var filtroSelecionado by remember { mutableStateOf(filtros.first()) }
-    val notificacoes = remember {
-        listOf(
-            NotificationUiModel(
-                icon = Icons.Filled.CardGiftcard,
-                title = "Cupom de R$ 20 disponível",
-                description = "Aproveite seu cupom de desconto para jantar hoje! Válido para pedidos acima de R$ 60.",
-                date = "2h atrás",
-                isUnread = true
-            ),
-            NotificationUiModel(
-                icon = Icons.Filled.CreditCard,
-                title = "Reembolso processado",
-                description = "O reembolso referente ao pedido #3245 foi aprovado.",
-                date = "14 Ago.",
-                isUnread = false
-            )
-        )
-    }
     val onFiltroSelecionado: (String) -> Unit = { filtro ->
         filtroSelecionado = filtro
     }
@@ -138,7 +141,8 @@ fun NotificacoesScreen(
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 item {
                     HighlightOrderNotificationCard(
@@ -147,19 +151,16 @@ fun NotificacoesScreen(
                 }
 
                 items(
-                    items = notificacoes,
-                    key = { "${it.title}-${it.date}" }
+                    items = notifications,
+                    key = { it.id }
                 ) { notificacao ->
-                    Column {
-                        Spacer(modifier = Modifier.height(14.dp))
-                        NotificationItemCard(
-                            icon = notificacao.icon,
-                            title = notificacao.title,
-                            description = notificacao.description,
-                            date = notificacao.date,
-                            isUnread = notificacao.isUnread
-                        )
-                    }
+                    NotificationItemCard(
+                        icon = notificacao.icon,
+                        title = notificacao.title,
+                        description = notificacao.description,
+                        date = notificacao.date,
+                        isUnread = notificacao.isUnread
+                    )
                 }
             }
         }
