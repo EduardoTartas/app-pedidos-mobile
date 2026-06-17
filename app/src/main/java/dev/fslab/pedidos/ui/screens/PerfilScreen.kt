@@ -202,7 +202,7 @@ fun PerfilScreen(
                 val suporteExpanded = remember { mutableStateOf(false) }
 
                 PerfilInfoItem(
-                    title = "Ajuda",
+                    title = "Ajuda e termos de uso",
                     icon = Icons.AutoMirrored.Outlined.HelpOutline,
                     compactWidth = compactWidth,
                     minHeight = cardHeight,
@@ -231,7 +231,7 @@ fun PerfilScreen(
                         )
 
                         Text(
-                            text = "Precisa de ajuda? Aqui você encontra opções para falar com a gente, igual ao suporte do iFood.",
+                            text = "Precisa de ajuda? Aqui você encontra nosso e-mail para entrar em contato conosco.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = colors.textSecondary
                         )
