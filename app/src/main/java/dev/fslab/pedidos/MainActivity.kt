@@ -132,6 +132,44 @@ fun PedidosApp(activity: ComponentActivity) {
         }
     }
 
+    // FORÇAR PROCESSAMENTO DE DEEP LINKS QUANDO O APP JÁ ESTÁ ABERTO (singleTask)
+    androidx.compose.runtime.DisposableEffect(activity) {
+        val handleIntent = { intent: Intent ->
+            if (intent.data != null) {
+                // Tenta deixar o Navigation do Compose lidar com o deep link
+                val handled = navController.handleDeepLink(intent)
+                
+                // Fallback manual super robusto caso a biblioteca falhe em casar a rota
+                if (!handled) {
+                    val uriString = intent.data.toString()
+                    if (uriString.contains("auth/recover") || uriString.contains("auth/app-redirect/recover")) {
+                        val token = intent.data?.getQueryParameter("token") ?: ""
+                        navController.navigate("esqueci_senha?email=&token=$token") {
+                            launchSingleTop = true
+                        }
+                    } else if (uriString.contains("auth/verify") || uriString.contains("auth/app-redirect/verify")) {
+                        val token = intent.data?.getQueryParameter("token") ?: ""
+                        navController.navigate("verificacao_email?token=$token") {
+                            launchSingleTop = true
+                        }
+                    }
+                }
+            }
+        }
+
+        val consumer = androidx.core.util.Consumer<Intent> { intent ->
+            handleIntent(intent)
+        }
+        activity.addOnNewIntentListener(consumer)
+        
+        // Também tenta processar a intent atual ao iniciar (caso o NavHost não o faça)
+        handleIntent(activity.intent)
+        
+        onDispose {
+            activity.removeOnNewIntentListener(consumer)
+        }
+    }
+
     PedidosTheme(darkTheme = isDarkTheme) {
         
         // Trava reforçada: Só mostra se a rota atual estiver na lista e não for nula/splash
