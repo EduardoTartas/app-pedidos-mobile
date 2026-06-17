@@ -22,7 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
-import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -52,33 +52,31 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.fslab.pedidos.model.NotificationType
+import dev.fslab.pedidos.model.NotificationUiModel
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
-
-data class NotificationUiModel(
-    val id: String,
-    val icon: ImageVector,
-    val title: String,
-    val description: String,
-    val date: String,
-    val isUnread: Boolean
-)
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 private fun mockNotificationUiModels() = listOf(
     NotificationUiModel(
         id = "cupom-jantar-r20",
-        icon = Icons.Filled.CardGiftcard,
         title = "Cupom de R$ 20 disponível",
         description = "Aproveite seu cupom de desconto para jantar hoje! Válido para pedidos acima de R$ 60.",
-        date = "2h atrás",
-        isUnread = true
+        createdAt = Instant.now().minus(2, ChronoUnit.HOURS).toString(),
+        isRead = false,
+        type = NotificationType.PROMOTION
     ),
     NotificationUiModel(
         id = "reembolso-pedido-3245",
-        icon = Icons.Filled.CreditCard,
         title = "Reembolso processado",
         description = "O reembolso referente ao pedido #3245 foi aprovado.",
-        date = "14 Ago.",
-        isUnread = false
+        createdAt = Instant.now().minus(3, ChronoUnit.DAYS).toString(),
+        isRead = true,
+        type = NotificationType.SYSTEM
     )
 )
 
@@ -155,11 +153,11 @@ fun NotificacoesScreen(
                     key = { it.id }
                 ) { notificacao ->
                     NotificationItemCard(
-                        icon = notificacao.icon,
+                        icon = notificacao.type.icon,
                         title = notificacao.title,
                         description = notificacao.description,
-                        date = notificacao.date,
-                        isUnread = notificacao.isUnread
+                        date = notificacao.createdAtLabel(),
+                        isUnread = !notificacao.isRead
                     )
                 }
             }
@@ -373,6 +371,28 @@ fun NotificationItemCard(
                 }
             }
         }
+    }
+}
+
+private val NotificationType.icon: ImageVector
+    get() = when (this) {
+        NotificationType.ORDER -> Icons.Filled.TwoWheeler
+        NotificationType.PROMOTION -> Icons.Filled.CardGiftcard
+        NotificationType.SYSTEM -> Icons.Filled.Info
+    }
+
+private fun NotificationUiModel.createdAtLabel(): String {
+    val createdInstant = runCatching { Instant.parse(createdAt) }.getOrNull()
+        ?: return createdAt
+    val minutes = ChronoUnit.MINUTES.between(createdInstant, Instant.now()).coerceAtLeast(0)
+
+    return when {
+        minutes < 1 -> "Agora"
+        minutes < 60 -> "${minutes}min"
+        minutes < 24 * 60 -> "${minutes / 60}h atrás"
+        else -> createdInstant
+            .atZone(ZoneId.systemDefault())
+            .format(DateTimeFormatter.ofPattern("dd MMM.", Locale.forLanguageTag("pt-BR")))
     }
 }
 
