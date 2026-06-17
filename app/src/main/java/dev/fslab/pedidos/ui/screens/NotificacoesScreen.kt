@@ -1,6 +1,7 @@
 package dev.fslab.pedidos.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,9 +43,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
@@ -55,44 +54,29 @@ import androidx.compose.ui.unit.dp
 import dev.fslab.pedidos.model.NotificationType
 import dev.fslab.pedidos.model.NotificationUiModel
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
+import dev.fslab.pedidos.ui.viewmodel.NotificationViewModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
-
-private fun mockNotificationUiModels() = listOf(
-    NotificationUiModel(
-        id = "cupom-jantar-r20",
-        title = "Cupom de R$ 20 disponível",
-        description = "Aproveite seu cupom de desconto para jantar hoje! Válido para pedidos acima de R$ 60.",
-        createdAt = Instant.now().minus(2, ChronoUnit.HOURS).toString(),
-        isRead = false,
-        type = NotificationType.PROMOTION
-    ),
-    NotificationUiModel(
-        id = "reembolso-pedido-3245",
-        title = "Reembolso processado",
-        description = "O reembolso referente ao pedido #3245 foi aprovado.",
-        createdAt = Instant.now().minus(3, ChronoUnit.DAYS).toString(),
-        isRead = true,
-        type = NotificationType.SYSTEM
-    )
-)
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificacoesScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    notifications: List<NotificationUiModel> = mockNotificationUiModels()
+    viewModel: NotificationViewModel = viewModel()
 ) {
     val colors = LocalPedidosColors.current
-    val filtros = listOf("Todas", "Pedidos", "Promoções")
-    var filtroSelecionado by remember { mutableStateOf(filtros.first()) }
-    val onFiltroSelecionado: (String) -> Unit = { filtro ->
-        filtroSelecionado = filtro
-    }
+    val uiState by viewModel.uiState.collectAsState()
+    val filtros = listOf(
+        null to "Todas",
+        NotificationType.ORDER to "Pedidos",
+        NotificationType.PROMOTION to "Promoções",
+        NotificationType.SYSTEM to "Sistema"
+    )
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -133,8 +117,8 @@ fun NotificacoesScreen(
         ) {
             NotificacoesFiltros(
                 filtros = filtros,
-                filtroSelecionado = filtroSelecionado,
-                onFiltroSelecionado = onFiltroSelecionado
+                filtroSelecionado = uiState.selectedCategory,
+                onFiltroSelecionado = viewModel::filtrarPorCategoria
             )
 
             LazyColumn(
@@ -149,7 +133,7 @@ fun NotificacoesScreen(
                 }
 
                 items(
-                    items = notifications,
+                    items = uiState.filteredNotifications,
                     key = { it.id }
                 ) { notificacao ->
                     NotificationItemCard(
@@ -157,7 +141,10 @@ fun NotificacoesScreen(
                         title = notificacao.title,
                         description = notificacao.description,
                         date = notificacao.createdAtLabel(),
-                        isUnread = !notificacao.isRead
+                        isUnread = !notificacao.isRead,
+                        onClick = {
+                            viewModel.selecionarNotificacao(notificacao.id)
+                        }
                     )
                 }
             }
@@ -293,13 +280,16 @@ fun NotificationItemCard(
     description: String,
     date: String,
     isUnread: Boolean,
+    onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val green = Color(0xFF22C55E)
     val cardColor = Color(0xFF161B2E)
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -398,9 +388,9 @@ private fun NotificationUiModel.createdAtLabel(): String {
 
 @Composable
 private fun NotificacoesFiltros(
-    filtros: List<String>,
-    filtroSelecionado: String,
-    onFiltroSelecionado: (String) -> Unit
+    filtros: List<Pair<NotificationType?, String>>,
+    filtroSelecionado: NotificationType?,
+    onFiltroSelecionado: (NotificationType?) -> Unit
 ) {
     val selectedColor = Color(0xFF22C55E)
     val unselectedColor = Color(0xFF161B2E)
@@ -416,15 +406,15 @@ private fun NotificacoesFiltros(
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            filtros.forEach { filtro ->
-                val selected = filtro == filtroSelecionado
+            filtros.forEach { (categoria, label) ->
+                val selected = categoria == filtroSelecionado
 
                 FilterChip(
                     selected = selected,
-                    onClick = { onFiltroSelecionado(filtro) },
+                    onClick = { onFiltroSelecionado(categoria) },
                     label = {
                         Text(
-                            text = filtro,
+                            text = label,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold
                         )
