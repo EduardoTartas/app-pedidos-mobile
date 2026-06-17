@@ -97,18 +97,31 @@ fun NotificationType.isOrderRelated(): Boolean = when (this) {
 }
 
 object NotificationMocks {
-    val pedidoEmPreparo = NotificationUiModel(
-        id = "1",
+    private const val MOCK_PREPARING_ORDER_PREFIX = "mock-pedido-em-preparo-"
+
+    fun pedidoEmPreparo(
+        restaurantName: String,
+        pedidoId: String = "1"
+    ) = NotificationUiModel(
+        id = "$MOCK_PREPARING_ORDER_PREFIX$pedidoId",
         title = "Seu pedido está sendo preparado",
-        description = "O restaurante Burger House começou a preparar seu pedido.",
+        description = "O restaurante $restaurantName começou a preparar seu pedido.",
         createdAt = "Agora",
         isRead = false,
         type = NotificationType.PEDIDO_EM_PREPARO,
-        pedidoId = "1",
+        pedidoId = pedidoId,
         statusKey = "em_preparo"
     )
 
-    val interfaceTestNotifications = listOf(
-        pedidoEmPreparo
+    fun interfaceTestNotifications(
+        restaurantName: String = "Burger House",
+        pedidoId: String = "1"
+    ) = listOf(
+        pedidoEmPreparo(
+            restaurantName = restaurantName,
+            pedidoId = pedidoId
+        )
     )
+
+    fun isMockId(id: String): Boolean = id.startsWith(MOCK_PREPARING_ORDER_PREFIX)
 }

@@ -56,7 +56,7 @@ class NotificationViewModel(
                 is NetworkResult.Error -> {
                     if (BuildConfig.DEBUG) {
                         publishState(
-                            notifications = mergeLocalNotifications(NotificationMocks.interfaceTestNotifications),
+                            notifications = mergeLocalNotifications(withDebugInterfaceMocks(emptyList())),
                             selectedCategory = _uiState.value.selectedCategory,
                             selectedNotificationId = _uiState.value.selectedNotification?.id
                         )
@@ -300,8 +300,13 @@ class NotificationViewModel(
     ): List<NotificationUiModel> {
         if (!BuildConfig.DEBUG) return notifications
 
+        val mockContext = resolvePreparingMockContext(localNotifications + notifications)
+        val interfaceTestNotifications = NotificationMocks.interfaceTestNotifications(
+            restaurantName = mockContext.restaurantName,
+            pedidoId = mockContext.pedidoId
+        )
         val existingIds = notifications.map { it.id }.toSet()
-        val missingMocks = NotificationMocks.interfaceTestNotifications
+        val missingMocks = interfaceTestNotifications
             .filterNot { it.id in existingIds }
 
         return missingMocks + notifications
@@ -309,7 +314,72 @@ class NotificationViewModel(
 
     private fun isLocalOrMockNotification(id: String): Boolean {
         return id.startsWith(LOCAL_NOTIFICATION_PREFIX) ||
-            NotificationMocks.interfaceTestNotifications.any { it.id == id }
+            NotificationMocks.isMockId(id)
+    }
+
+    private data class PreparingMockContext(
+        val restaurantName: String,
+        val pedidoId: String
+    )
+
+    private fun resolvePreparingMockContext(
+        notifications: List<NotificationUiModel>
+    ): PreparingMockContext {
+        val confirmedOrderNotification = notifications.firstOrNull { notification ->
+            notification.statusKey == "pedido_confirmado" ||
+                notification.title.contains("confirmado", ignoreCase = true)
+        }
+
+        val restaurantName = confirmedOrderNotification
+            ?.restaurantNameFromConfirmedOrder()
+            ?: notifications.firstNotNullOfOrNull { it.restaurantNameFromAnyOrderMessage() }
+            ?: DEFAULT_MOCK_RESTAURANT_NAME
+
+        val pedidoId = confirmedOrderNotification?.pedidoId
+            ?: confirmedOrderNotification?.id
+                ?.removePrefix(LOCAL_NOTIFICATION_PREFIX)
+                ?.takeIf { it != confirmedOrderNotification.id && it.isNotBlank() }
+            ?: DEFAULT_MOCK_PEDIDO_ID
+
+        return PreparingMockContext(
+            restaurantName = restaurantName,
+            pedidoId = pedidoId
+        )
+    }
+
+    private fun NotificationUiModel.restaurantNameFromConfirmedOrder(): String? {
+        return Regex(
+            pattern = "^(.+?)\\s+confirmou\\s+seu\\s+pedido",
+            option = RegexOption.IGNORE_CASE
+        ).find(description)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.asValidRestaurantName()
+    }
+
+    private fun NotificationUiModel.restaurantNameFromAnyOrderMessage(): String? {
+        val patterns = listOf(
+            Regex("restaurante\\s+(.+?)\\s+(começou|iniciou|confirmou)", RegexOption.IGNORE_CASE),
+            Regex("^(.+?)\\s+confirmou\\s+seu\\s+pedido", RegexOption.IGNORE_CASE),
+            Regex("do\\s+(.+?)\\.", RegexOption.IGNORE_CASE)
+        )
+
+        return patterns.firstNotNullOfOrNull { pattern ->
+            pattern.find(description)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.asValidRestaurantName()
+        }
+    }
+
+    private fun String.asValidRestaurantName(): String? {
+        val value = trim()
+        val normalized = value.lowercase()
+        return value.takeIf {
+            it.isNotBlank() &&
+                normalized != "restaurante" &&
+                normalized != "o restaurante"
+        }
     }
 
     private fun publishState(
@@ -345,5 +415,7 @@ class NotificationViewModel(
 
     companion object {
         private const val LOCAL_NOTIFICATION_PREFIX = "local-pedido-"
+        private const val DEFAULT_MOCK_RESTAURANT_NAME = "Burger House"
+        private const val DEFAULT_MOCK_PEDIDO_ID = "1"
     }
 }
