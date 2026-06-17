@@ -24,12 +24,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -294,7 +294,7 @@ fun HighlightOrderNotificationCard(
                     contentAlignment = androidx.compose.ui.Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.TwoWheeler,
+                        imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
                         contentDescription = null,
                         tint = green,
                         modifier = Modifier.size(26.dp)
@@ -521,7 +521,7 @@ fun NotificationItemCard(
 
 private val NotificationType.icon: ImageVector
     get() = when (this) {
-        NotificationType.ORDER -> Icons.Filled.TwoWheeler
+        NotificationType.ORDER -> Icons.AutoMirrored.Filled.ReceiptLong
         NotificationType.PROMOTION -> Icons.Filled.CardGiftcard
         NotificationType.SYSTEM -> Icons.Filled.Info
     }
