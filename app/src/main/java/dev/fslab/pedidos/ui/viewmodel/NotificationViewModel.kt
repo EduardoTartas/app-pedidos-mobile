@@ -2,6 +2,8 @@ package dev.fslab.pedidos.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.fslab.pedidos.BuildConfig
+import dev.fslab.pedidos.model.NotificationMocks
 import dev.fslab.pedidos.model.NotificationType
 import dev.fslab.pedidos.model.NotificationUiModel
 import dev.fslab.pedidos.model.Pedido
@@ -46,18 +48,26 @@ class NotificationViewModel(
             when (val result = repository.listarNotificacoes()) {
                 is NetworkResult.Success -> {
                     publishState(
-                        notifications = mergeLocalNotifications(result.data),
+                        notifications = mergeLocalNotifications(withDebugInterfaceMocks(result.data)),
                         selectedCategory = _uiState.value.selectedCategory,
                         selectedNotificationId = _uiState.value.selectedNotification?.id
                     )
                 }
                 is NetworkResult.Error -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        isMarkingAsRead = false,
-                        isDeleting = false,
-                        errorMessage = result.message
-                    )
+                    if (BuildConfig.DEBUG) {
+                        publishState(
+                            notifications = mergeLocalNotifications(NotificationMocks.interfaceTestNotifications),
+                            selectedCategory = _uiState.value.selectedCategory,
+                            selectedNotificationId = _uiState.value.selectedNotification?.id
+                        )
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            isMarkingAsRead = false,
+                            isDeleting = false,
+                            errorMessage = result.message
+                        )
+                    }
                 }
                 NetworkResult.Loading -> Unit
             }
@@ -75,7 +85,7 @@ class NotificationViewModel(
     private fun deletarNotificacoes(ids: Set<String>) {
         if (ids.isEmpty()) return
 
-        val localIds = ids.filter { it.startsWith(LOCAL_NOTIFICATION_PREFIX) }.toSet()
+        val localIds = ids.filter { isLocalOrMockNotification(it) }.toSet()
         val remoteIds = ids - localIds
 
         if (localIds.isNotEmpty()) {
@@ -184,7 +194,7 @@ class NotificationViewModel(
 
         if (notification?.isRead == true) return
 
-        if (id.startsWith(LOCAL_NOTIFICATION_PREFIX)) {
+        if (isLocalOrMockNotification(id)) {
             marcarNotificacaoLocalComoLida(id)
             return
         }
@@ -252,8 +262,16 @@ class NotificationViewModel(
         }
 
         val current = _uiState.value
+        val updatedNotifications = mergeLocalNotifications(current.notifications).map { notification ->
+            if (notification.id == id) {
+                notification.copy(isRead = true)
+            } else {
+                notification
+            }
+        }
+
         publishState(
-            notifications = mergeLocalNotifications(current.notifications),
+            notifications = updatedNotifications,
             selectedCategory = current.selectedCategory,
             selectedNotificationId = id
         )
@@ -275,6 +293,23 @@ class NotificationViewModel(
     ): List<NotificationUiModel> {
         val localIds = localNotifications.map { it.id }.toSet()
         return localNotifications + notifications.filterNot { it.id in localIds }
+    }
+
+    private fun withDebugInterfaceMocks(
+        notifications: List<NotificationUiModel>
+    ): List<NotificationUiModel> {
+        if (!BuildConfig.DEBUG) return notifications
+
+        val existingIds = notifications.map { it.id }.toSet()
+        val missingMocks = NotificationMocks.interfaceTestNotifications
+            .filterNot { it.id in existingIds }
+
+        return missingMocks + notifications
+    }
+
+    private fun isLocalOrMockNotification(id: String): Boolean {
+        return id.startsWith(LOCAL_NOTIFICATION_PREFIX) ||
+            NotificationMocks.interfaceTestNotifications.any { it.id == id }
     }
 
     private fun publishState(
