@@ -135,25 +135,38 @@ fun PedidosApp(activity: ComponentActivity) {
     // FORÇAR PROCESSAMENTO DE DEEP LINKS QUANDO O APP JÁ ESTÁ ABERTO (singleTask)
     androidx.compose.runtime.DisposableEffect(activity) {
         val handleIntent = { intent: Intent ->
-            if (intent.data != null) {
-                // Tenta deixar o Navigation do Compose lidar com o deep link
-                val handled = navController.handleDeepLink(intent)
-                
-                // Fallback manual super robusto caso a biblioteca falhe em casar a rota
-                if (!handled) {
-                    val uriString = intent.data.toString()
-                    if (uriString.contains("auth/recover") || uriString.contains("auth/app-redirect/recover")) {
-                        val token = intent.data?.getQueryParameter("token") ?: ""
-                        navController.navigate("esqueci_senha?email=&token=$token") {
-                            launchSingleTop = true
-                        }
-                    } else if (uriString.contains("auth/verify") || uriString.contains("auth/app-redirect/verify")) {
-                        val token = intent.data?.getQueryParameter("token") ?: ""
-                        navController.navigate("verificacao_email?token=$token") {
-                            launchSingleTop = true
+            try {
+                if (intent.data != null) {
+                    // Tenta deixar o Navigation do Compose lidar com o deep link
+                    var handled = false
+                    try {
+                        handled = navController.handleDeepLink(intent)
+                    } catch (e: Exception) {
+                        // Ignora erro do handleDeepLink (pode ocorrer se o gráfico não estiver pronto)
+                    }
+                    
+                    // Fallback manual super robusto caso a biblioteca falhe em casar a rota
+                    if (!handled) {
+                        val uriString = intent.data.toString()
+                        if (uriString.contains("auth/recover") || uriString.contains("auth/app-redirect/recover")) {
+                            val token = intent.data?.getQueryParameter("token") ?: ""
+                            try {
+                                navController.navigate("esqueci_senha?email=&token=$token") {
+                                    launchSingleTop = true
+                                }
+                            } catch (e: Exception) {}
+                        } else if (uriString.contains("auth/verify") || uriString.contains("auth/app-redirect/verify")) {
+                            val token = intent.data?.getQueryParameter("token") ?: ""
+                            try {
+                                navController.navigate("verificacao_email?token=$token") {
+                                    launchSingleTop = true
+                                }
+                            } catch (e: Exception) {}
                         }
                     }
                 }
+            } catch (e: Exception) {
+                // Previne qualquer crash que faça o app fechar com tela branca
             }
         }
 
@@ -161,9 +174,6 @@ fun PedidosApp(activity: ComponentActivity) {
             handleIntent(intent)
         }
         activity.addOnNewIntentListener(consumer)
-        
-        // Também tenta processar a intent atual ao iniciar (caso o NavHost não o faça)
-        handleIntent(activity.intent)
         
         onDispose {
             activity.removeOnNewIntentListener(consumer)
