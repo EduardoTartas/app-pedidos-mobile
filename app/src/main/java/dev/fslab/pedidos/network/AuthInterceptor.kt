@@ -17,6 +17,7 @@ class AuthInterceptor : Interceptor {
     companion object {
         private val PUBLIC_PATHS = listOf(
             "login",
+            "google",
             "refresh",
             "recover",
             "password/reset",

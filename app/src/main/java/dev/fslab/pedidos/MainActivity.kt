@@ -127,8 +127,11 @@ fun PedidosApp(activity: ComponentActivity) {
         onResult = {}
     )
 
-    LaunchedEffect(userId) {
-        if (userId.isNotEmpty()) {
+    LaunchedEffect(authState) {
+        val isAuthenticated = authState is AuthState.Success ||
+            authState is AuthState.NeedsProfileCompletion
+
+        if (isAuthenticated) {
             notificationViewModel.carregarNotificacoes(silent = true)
             if (
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&

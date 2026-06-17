@@ -33,10 +33,6 @@ class NotificationViewModel(
     private val _uiState = MutableStateFlow(NotificationUiState(isLoading = true))
     val uiState: StateFlow<NotificationUiState> = _uiState.asStateFlow()
 
-    init {
-        carregarNotificacoes()
-    }
-
     fun carregarNotificacoes(silent: Boolean = false) {
         _uiState.value = _uiState.value.copy(
             isLoading = !silent,

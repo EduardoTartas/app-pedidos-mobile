@@ -43,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
@@ -73,6 +74,11 @@ fun NotificacoesScreen(
     val colors = LocalPedidosColors.current
     val uiState by viewModel.uiState.collectAsState()
     val errorMessage = uiState.errorMessage
+
+    LaunchedEffect(Unit) {
+        viewModel.carregarNotificacoes()
+    }
+
     val filtros = listOf(
         null to "Todas",
         NotificationType.ORDER to "Pedidos",

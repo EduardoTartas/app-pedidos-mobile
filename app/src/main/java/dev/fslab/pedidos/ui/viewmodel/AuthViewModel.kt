@@ -41,30 +41,45 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val accessToken: StateFlow<String?> = _accessToken.asStateFlow()
 
     init {
+        TokenManager.onSessionExpired = {
+            viewModelScope.launch {
+                logout()
+            }
+        }
+        TokenManager.onTokensRefreshed = { access ->
+            AuthPreferences.saveAccessToken(getApplication(), access)
+            _accessToken.value = access
+        }
         checkSavedSession()
     }
 
     private fun checkSavedSession() {
         val context = getApplication<Application>()
-        val savedToken = AuthPreferences.getRefreshToken(context)
+        val savedAccessToken = AuthPreferences.getAccessToken(context)
+        val savedRefreshToken = AuthPreferences.getRefreshToken(context)
         val cachedUserJson = AuthPreferences.getUser(context)
 
         // PASSO 1: Login instantâneo via cache
-        if (!cachedUserJson.isNullOrEmpty() && !savedToken.isNullOrEmpty()) {
+        if (!cachedUserJson.isNullOrEmpty() && !savedRefreshToken.isNullOrEmpty()) {
             try {
                 val cachedUser = gson.fromJson(cachedUserJson, User::class.java)
                 _currentUser.value = cachedUser
-                _authState.value = AuthState.Success(cachedUser)
+
+                if (!savedAccessToken.isNullOrEmpty()) {
+                    TokenManager.saveTokens(savedAccessToken, savedRefreshToken)
+                    _accessToken.value = savedAccessToken
+                    _authState.value = AuthState.Success(cachedUser)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Erro cache", e)
             }
         }
 
         // PASSO 2: Validação via Handler Global
-        if (!savedToken.isNullOrEmpty()) {
+        if (!savedRefreshToken.isNullOrEmpty()) {
             viewModelScope.launch {
                 val result = NetworkUtils.safeApiCall { 
-                    RetrofitClient.authApi.refresh(RefreshRequest(refreshToken = savedToken)) 
+                    RetrofitClient.authApi.refresh(RefreshRequest(refreshToken = savedRefreshToken)) 
                 }
 
                 when (result) {
@@ -205,6 +220,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun handleAuthenticatedUser(payload: RemoteUser) {
         TokenManager.saveTokens(payload.accessToken, payload.refreshToken)
+        AuthPreferences.saveAccessToken(getApplication(), payload.accessToken)
         AuthPreferences.saveRefreshToken(getApplication(), payload.refreshToken)
         
         val user = payload.toUser()
