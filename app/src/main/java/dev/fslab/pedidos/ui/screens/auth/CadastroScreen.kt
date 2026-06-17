@@ -123,12 +123,12 @@ fun CadastroScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Spacer(modifier = Modifier.height(48.dp))
-
+            // Header no topo da tela
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Header: Botão voltar + Título
@@ -181,9 +181,14 @@ fun CadastroScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(modifier = Modifier.weight(1f).height(4.dp).clip(CircleShape).background(if (currentStep.ordinal >= 2) colors.primary else colors.inputBorder))
                 }
+            }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 // Card Central
                 Card(
                     modifier = Modifier.fillMaxWidth(),

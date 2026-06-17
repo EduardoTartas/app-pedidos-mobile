@@ -119,28 +119,7 @@ fun LoginScreen(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Barra superior com mini mascote e botão de tema
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Mascote Camaleão Pequeno (Sem fundo)
-                Icon(
-                    painter = painterResource(id = R.drawable.iguana_icon),
-                    contentDescription = "Mascote",
-                    modifier = Modifier.size(32.dp),
-                    tint = colors.primary
-                )
 
-                IconButton(onClick = onToggleTheme) {
-                    Icon(
-                        imageVector = if (isDarkTheme) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                        contentDescription = if (isDarkTheme) "Modo claro" else "Modo escuro",
-                        tint = colors.textPrimary
-                    )
-                }
-            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -182,10 +161,14 @@ fun LoginScreen(
             ) {
                 Column(modifier = Modifier.fillMaxWidth().padding(32.dp)) {
                     if (!errorMessage.isNullOrBlank()) {
+                        val isEmailVerificationInfo = errorMessage.contains("verifique seu e-mail", ignoreCase = true)
+                        val bgColor = if (isEmailVerificationInfo) colors.featureBlue.copy(alpha = 0.15f) else colors.errorBackground
+                        val textColor = if (isEmailVerificationInfo) colors.featureBlue else colors.errorText
+
                         Surface(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp),
                             shape = RoundedCornerShape(12.dp),
-                            color = colors.errorBackground
+                            color = bgColor
                         ) {
                             Row(
                                 modifier = Modifier.padding(16.dp),
@@ -194,14 +177,14 @@ fun LoginScreen(
                                 Text(
                                     text = errorMessage,
                                     fontSize = 13.sp,
-                                    color = colors.errorText,
+                                    color = textColor,
                                     modifier = Modifier.weight(1f)
                                 )
                                 Text(
                                     text = "✕",
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = colors.errorText,
+                                    color = textColor,
                                     modifier = Modifier.clickable { onErrorDismiss() }
                                 )
                             }

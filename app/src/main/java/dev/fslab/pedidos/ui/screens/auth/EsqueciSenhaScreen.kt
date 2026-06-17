@@ -49,7 +49,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -123,12 +126,12 @@ fun EsqueciSenhaScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Spacer(modifier = Modifier.height(48.dp))
-
+            // Header no topo da tela
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Header: Botão voltar + Título
@@ -182,9 +185,14 @@ fun EsqueciSenhaScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(modifier = Modifier.weight(1f).height(4.dp).clip(CircleShape).background(if (currentStep.ordinal >= 3) colors.primary else colors.inputBorder))
                 }
+            }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 // Card Central
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -290,14 +298,36 @@ fun EsqueciSenhaScreen(
                                     }
                                 }
                                 RecuperarSenhaStep.SUCESSO -> {
+                                    val checkScale = remember { androidx.compose.animation.core.Animatable(0f) }
+
+                                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                                        kotlinx.coroutines.delay(100)
+                                        checkScale.animateTo(
+                                            targetValue = 1f,
+                                            animationSpec = androidx.compose.animation.core.spring(
+                                                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                                                stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+                                            )
+                                        )
+                                    }
+
                                     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Surface(
-                                            modifier = Modifier.size(64.dp).padding(bottom = 16.dp),
-                                            shape = RoundedCornerShape(32.dp),
-                                            color = colors.successBackground
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(bottom = 16.dp)
+                                                .size(120.dp)
+                                                .scale(checkScale.value),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                                                Text(text = "✓", fontSize = 32.sp, color = colors.successText)
+                                            Box(modifier = Modifier.fillMaxSize().clip(CircleShape).background(Color(0xFF14B822).copy(alpha = 0.15f)))
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(90.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Brush.radialGradient(colors = listOf(Color(0xFF14B822), Color(0xFF0E8A19)))),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
                                             }
                                         }
                                         Text(text = "Senha redefinida!", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary, modifier = Modifier.padding(bottom = 8.dp))
