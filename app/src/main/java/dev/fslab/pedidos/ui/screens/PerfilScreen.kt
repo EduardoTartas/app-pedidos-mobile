@@ -200,6 +200,7 @@ fun PerfilScreen(
                 )
                 val context = LocalContext.current
                 val suporteExpanded = remember { mutableStateOf(false) }
+                val termosExpanded = remember { mutableStateOf(false) }
 
                 PerfilInfoItem(
                     title = "Ajuda e termos de uso",
@@ -268,6 +269,7 @@ fun PerfilScreen(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(colors.surface)
+                                .clickable { termosExpanded.value = !termosExpanded.value }
                                 .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -283,6 +285,33 @@ fun PerfilScreen(
                                 tint = colors.textSecondary.copy(alpha = 0.55f),
                                 modifier = Modifier.size(18.dp)
                             )
+                        }
+
+                        if (termosExpanded.value) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(colors.primary.copy(alpha = 0.05f))
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                LegalTextSection(
+                                    title = "Termos de uso",
+                                    body = "Ao usar o RanGo, você concorda em manter seus dados de cadastro corretos, usar a plataforma de forma responsável e respeitar restaurantes, entregadores e outros usuários. O RanGo conecta clientes a restaurantes parceiros para consulta de cardápios, criação de pedidos, acompanhamento de status, avaliações e notificações.\n\n" +
+                                        "Os preços, disponibilidade de produtos, prazos, taxas e condições de entrega podem variar conforme o restaurante. Depois de confirmar um pedido, alterações ou cancelamentos podem depender do estágio de preparo e das regras aplicáveis ao pedido.\n\n" +
+                                        "Não é permitido usar o app para fraudes, ofensas, tentativas de acesso indevido, pedidos falsos, violação de direitos de terceiros ou qualquer conduta que comprometa a segurança da plataforma. O RanGo pode limitar, suspender ou encerrar contas em caso de uso irregular.\n\n" +
+                                        "Podemos atualizar estes termos para refletir melhorias do serviço, novas funcionalidades ou exigências legais. Quando houver mudanças relevantes, você poderá ser avisado pelo app ou pelos canais de contato cadastrados."
+                                )
+
+                                LegalTextSection(
+                                    title = "Privacidade",
+                                    body = "O RanGo trata seus dados para operar o serviço de delivery com segurança e transparência. Podemos coletar dados de cadastro, contato, endereços, histórico de pedidos, avaliações, informações de acesso, preferências, notificações e dados necessários para suporte.\n\n" +
+                                        "Usamos essas informações para criar e proteger sua conta, processar pedidos, conectar você aos restaurantes, enviar comunicações importantes, melhorar a experiência, prevenir fraudes, cumprir obrigações legais e responder solicitações de ajuda.\n\n" +
+                                        "Seus dados podem ser compartilhados somente quando necessário com restaurantes envolvidos no pedido, prestadores de tecnologia, serviços de pagamento, suporte, armazenamento, análise de segurança ou autoridades competentes, sempre conforme a legislação aplicável.\n\n" +
+                                        "Você pode solicitar acesso, correção, atualização ou exclusão dos seus dados, além de tirar dúvidas sobre privacidade, pelo e-mail admin@delivery.com. Mantemos medidas técnicas e administrativas para proteger as informações contra acesso não autorizado, perda, alteração ou uso indevido."
+                                )
+                            }
                         }
                     }
                 }
@@ -313,6 +342,32 @@ fun PerfilScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun LegalTextSection(
+    title: String,
+    body: String
+) {
+    val colors = LocalPedidosColors.current
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = colors.textPrimary,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Text(
+            text = body,
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.textSecondary,
+            lineHeight = MaterialTheme.typography.bodySmall.lineHeight
+        )
     }
 }
 
