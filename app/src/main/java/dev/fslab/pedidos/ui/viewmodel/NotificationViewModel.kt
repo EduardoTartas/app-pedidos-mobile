@@ -21,6 +21,7 @@ data class NotificationUiState(
     val unreadCount: Int = 0,
     val isLoading: Boolean = false,
     val isMarkingAsRead: Boolean = false,
+    val isDeleting: Boolean = false,
     val errorMessage: String? = null
 )
 
@@ -52,6 +53,41 @@ class NotificationViewModel(
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         isMarkingAsRead = false,
+                        isDeleting = false,
+                        errorMessage = result.message
+                    )
+                }
+                NetworkResult.Loading -> Unit
+            }
+        }
+    }
+
+    fun deletarNotificacao(id: String) {
+        if (id.startsWith(LOCAL_NOTIFICATION_PREFIX)) {
+            removerNotificacaoLocal(id)
+            return
+        }
+
+        val current = _uiState.value
+        _uiState.value = current.copy(
+            isDeleting = true,
+            errorMessage = null
+        )
+
+        viewModelScope.launch {
+            when (val result = repository.deletarNotificacao(id)) {
+                is NetworkResult.Success -> {
+                    val latest = _uiState.value
+                    publishState(
+                        notifications = latest.notifications.filterNot { it.id == id },
+                        selectedCategory = latest.selectedCategory,
+                        selectedNotificationId = latest.selectedNotification?.id?.takeIf { it != id }
+                    )
+                    carregarNotificacoes(silent = true)
+                }
+                is NetworkResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isDeleting = false,
                         errorMessage = result.message
                     )
                 }
@@ -163,6 +199,17 @@ class NotificationViewModel(
         )
     }
 
+    private fun removerNotificacaoLocal(id: String) {
+        localNotifications = localNotifications.filterNot { it.id == id }
+
+        val current = _uiState.value
+        publishState(
+            notifications = current.notifications.filterNot { it.id == id },
+            selectedCategory = current.selectedCategory,
+            selectedNotificationId = current.selectedNotification?.id?.takeIf { it != id }
+        )
+    }
+
     private fun mergeLocalNotifications(
         notifications: List<NotificationUiModel>
     ): List<NotificationUiModel> {
@@ -187,6 +234,7 @@ class NotificationViewModel(
             unreadCount = notifications.count { !it.isRead },
             isLoading = false,
             isMarkingAsRead = false,
+            isDeleting = false,
             errorMessage = null
         )
     }

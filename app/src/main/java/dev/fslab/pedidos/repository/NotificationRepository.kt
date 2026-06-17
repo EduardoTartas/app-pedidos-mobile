@@ -36,4 +36,12 @@ class NotificationRepository(
             NetworkResult.Loading -> NetworkResult.Loading
         }
     }
+
+    suspend fun deletarNotificacao(id: String): NetworkResult<Unit> {
+        return when (val result = NetworkUtils.safeApiCall { api.deletarNotificacao(id) }) {
+            is NetworkResult.Success -> NetworkResult.Success(Unit)
+            is NetworkResult.Error -> result
+            NetworkResult.Loading -> NetworkResult.Loading
+        }
+    }
 }

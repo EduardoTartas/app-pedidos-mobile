@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Button
@@ -190,6 +191,9 @@ fun NotificacoesScreen(
                                 isUnread = !notificacao.isRead,
                                 onClick = {
                                     viewModel.marcarComoLida(notificacao.id)
+                                },
+                                onDeleteClick = {
+                                    viewModel.deletarNotificacao(notificacao.id)
                                 }
                             )
                         }
@@ -329,10 +333,12 @@ fun NotificationItemCard(
     date: String,
     isUnread: Boolean,
     onClick: () -> Unit = {},
+    onDeleteClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val green = Color(0xFF22C55E)
     val cardColor = Color(0xFF161B2E)
+    val deleteColor = Color(0xFFFF6B7A)
 
     Card(
         modifier = modifier
@@ -389,22 +395,40 @@ fun NotificationItemCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            Column(
+                horizontalAlignment = Alignment.End
             ) {
-                Text(
-                    text = date,
-                    color = Color.White.copy(alpha = 0.48f),
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = date,
+                        color = Color.White.copy(alpha = 0.48f),
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1
+                    )
 
-                if (isUnread) {
-                    Box(
-                        modifier = Modifier
-                            .size(7.dp)
-                            .background(green, CircleShape)
+                    if (isUnread) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .background(green, CircleShape)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                IconButton(
+                    onClick = onDeleteClick,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = "Apagar notificação",
+                        tint = deleteColor.copy(alpha = 0.78f),
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
