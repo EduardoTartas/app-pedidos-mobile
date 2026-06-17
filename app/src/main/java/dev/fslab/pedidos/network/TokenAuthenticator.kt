@@ -24,12 +24,6 @@ class TokenAuthenticator : Authenticator {
     companion object {
         private const val TAG = "TokenAuthenticator"
         private const val MAX_RETRIES = 1
-        private val gson = Gson()
-
-        private val plainClient = OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .build()
     }
 
     override fun authenticate(route: Route?, response: Response): Request? {
@@ -62,36 +56,15 @@ class TokenAuthenticator : Authenticator {
             }
 
             return try {
-                val refreshBody = gson.toJson(RefreshRequest(refreshToken = currentRefreshToken))
-                val mediaType = "application/json; charset=utf-8".toMediaType()
+                val refreshedAccessToken = TokenRefreshService.refreshTokens()
 
-                val refreshRequest = Request.Builder()
-                    .url(RetrofitClient.BASE_URL + "refresh")
-                    .post(refreshBody.toRequestBody(mediaType))
-                    .build()
-
-                val refreshResponse = plainClient.newCall(refreshRequest).execute()
-
-                if (refreshResponse.isSuccessful) {
-                    val body = refreshResponse.body?.string()
-                    val parsed = gson.fromJson(body, AuthResponse::class.java)
-                    val refreshedUser = parsed?.getRemoteUser()
-
-                    if (parsed?.isSuccess() == true && refreshedUser != null) {
-                        TokenManager.saveTokens(refreshedUser.accessToken, refreshedUser.refreshToken)
-                        TokenManager.onTokensRefreshed?.invoke(refreshedUser.accessToken)
-
-                        Log.d(TAG, "Refresh bem-sucedido!")
-                        response.request.newBuilder()
-                            .header("Authorization", "Bearer ${refreshedUser.accessToken}")
-                            .build()
-                    } else {
-                        Log.w(TAG, "Refresh falhou: resposta inválida")
-                        TokenManager.onSessionExpired?.invoke()
-                        null
-                    }
+                if (!refreshedAccessToken.isNullOrBlank()) {
+                    Log.d(TAG, "Refresh bem-sucedido!")
+                    response.request.newBuilder()
+                        .header("Authorization", "Bearer $refreshedAccessToken")
+                        .build()
                 } else {
-                    Log.w(TAG, "Refresh HTTP ${refreshResponse.code}")
+                    Log.w(TAG, "Refresh falhou")
                     TokenManager.onSessionExpired?.invoke()
                     null
                 }
@@ -112,5 +85,60 @@ class TokenAuthenticator : Authenticator {
             prior = prior.priorResponse
         }
         return count
+    }
+}
+
+internal object TokenRefreshService {
+    private const val TAG = "TokenRefreshService"
+    private val gson = Gson()
+
+    private val plainClient = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .build()
+
+    @Synchronized
+    fun refreshTokens(): String? {
+        val currentRefreshToken = TokenManager.getRefreshToken()
+        if (currentRefreshToken.isNullOrBlank()) {
+            Log.w(TAG, "Sem refresh token disponível")
+            return null
+        }
+
+        return try {
+            val refreshBody = gson.toJson(RefreshRequest(refreshToken = currentRefreshToken))
+            val mediaType = "application/json; charset=utf-8".toMediaType()
+
+            val refreshRequest = Request.Builder()
+                .url(RetrofitClient.BASE_URL + "refresh")
+                .post(refreshBody.toRequestBody(mediaType))
+                .build()
+
+            plainClient.newCall(refreshRequest).execute().use { refreshResponse ->
+                if (!refreshResponse.isSuccessful) {
+                    Log.w(TAG, "Refresh HTTP ${refreshResponse.code}")
+                    return null
+                }
+
+                val body = refreshResponse.body?.string()
+                val parsed = gson.fromJson(body, AuthResponse::class.java)
+                val refreshedUser = parsed?.getRemoteUser()
+
+                if (parsed?.isSuccess() == true && refreshedUser != null) {
+                    TokenManager.saveTokens(refreshedUser.accessToken, refreshedUser.refreshToken)
+                    TokenManager.onTokensRefreshed?.invoke(
+                        refreshedUser.accessToken,
+                        refreshedUser.refreshToken
+                    )
+                    refreshedUser.accessToken
+                } else {
+                    Log.w(TAG, "Refresh falhou: resposta inválida")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Erro no refresh: ${e.message}")
+            null
+        }
     }
 }

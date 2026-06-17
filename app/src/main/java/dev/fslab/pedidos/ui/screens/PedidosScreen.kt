@@ -289,8 +289,8 @@ private fun PedidoCard(
 @Composable
 private fun StatusBadge(status: String, colors: dev.fslab.pedidos.ui.theme.PedidosColors) {
     val (label, bgColor, textColor) = when (status) {
-        "criado" -> Triple("Pendente", Color(0xFFFFB01E).copy(alpha = 0.1f), Color(0xFFFFB01E))
-        "em_preparo" -> Triple("Preparando", Color(0xFF3B82F6).copy(alpha = 0.1f), Color(0xFF3B82F6))
+        "criado" -> Triple("Enviado", Color(0xFFFFB01E).copy(alpha = 0.1f), Color(0xFFFFB01E))
+        "em_preparo" -> Triple("Em preparo", Color(0xFF3B82F6).copy(alpha = 0.1f), Color(0xFF3B82F6))
         "a_caminho" -> Triple("A caminho", Color(0xFF8B5CF6).copy(alpha = 0.1f), Color(0xFF8B5CF6))
         "entregue" -> Triple("Entregue", colors.primary.copy(alpha = 0.1f), colors.primary)
         "cancelado" -> Triple("Cancelado", Color(0xFFEF4444).copy(alpha = 0.1f), Color(0xFFEF4444))

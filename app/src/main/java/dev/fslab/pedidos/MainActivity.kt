@@ -157,11 +157,11 @@ fun PedidosApp(activity: ComponentActivity) {
     LaunchedEffect(pedidoState) {
         val successState = pedidoState as? PedidoUiState.Success
         if (successState != null && currentRoute != "pedido_confirmacao") {
-            val notification = notificationViewModel.registrarPedidoRealizado(
+            val notification = notificationViewModel.registrarPedidoConfirmado(
                 pedido = successState.pedido,
                 nomeRestaurante = carrinhoViewModel.nomeRestaurante.value
             )
-            OrderNotificationHelper.showOrderCreated(context, notification)
+            OrderNotificationHelper.showOrderConfirmed(context, notification)
             navController.navigate("pedido_confirmacao") {
                 popUpTo("carrinho") { inclusive = true }
                 launchSingleTop = true
@@ -485,6 +485,9 @@ fun PedidosApp(activity: ComponentActivity) {
                 composable("notificacoes") {
                     NotificacoesScreen(
                         onBack = { navController.popBackStack() },
+                        onNavigateToPedidoDetalhes = { pedidoId ->
+                            navController.navigate("pedido_detalhes/$pedidoId")
+                        },
                         viewModel = notificationViewModel
                     )
                 }
