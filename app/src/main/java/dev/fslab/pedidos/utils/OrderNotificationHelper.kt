@@ -29,7 +29,7 @@ object OrderNotificationHelper {
     }
 
     @SuppressLint("MissingPermission")
-    fun showOrderCreated(
+    fun showOrderConfirmed(
         context: Context,
         notification: NotificationUiModel
     ) {

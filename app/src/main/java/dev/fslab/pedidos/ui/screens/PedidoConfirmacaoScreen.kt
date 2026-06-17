@@ -100,9 +100,9 @@ fun PedidoConfirmacaoScreen(
 
             AnimatedVisibility(visible = showContent, enter = fadeIn(tween(500)) + scaleIn(tween(500))) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Pedido realizado!", color = colors.textPrimary, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Pedido confirmado!", color = colors.textPrimary, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Seu pedido foi enviado para\n$nomeRestaurante", color = colors.textPrimary.copy(alpha = 0.6f), fontSize = 15.sp, textAlign = TextAlign.Center, lineHeight = 22.sp)
+                    Text("$nomeRestaurante recebeu seu pedido\ne já iniciou o preparo", color = colors.textPrimary.copy(alpha = 0.6f), fontSize = 15.sp, textAlign = TextAlign.Center, lineHeight = 22.sp)
                 }
             }
 
@@ -119,7 +119,7 @@ fun PedidoConfirmacaoScreen(
                         
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = colors.textPrimary.copy(alpha = 0.07f))
                         
-                        ResumoRow("Status", "Criado ✓", colors, valueColor = Verde)
+                        ResumoRow("Status", "Em preparo ✓", colors, valueColor = Verde)
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = colors.textPrimary.copy(alpha = 0.07f))
 

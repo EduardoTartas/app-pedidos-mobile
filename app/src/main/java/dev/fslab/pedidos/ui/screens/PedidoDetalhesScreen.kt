@@ -598,8 +598,8 @@ private fun ResumoLinha(label: String, value: String, colors: dev.fslab.pedidos.
 @Composable
 private fun StatusBadgeCompact(status: String) {
     val (label, bgColor, textColor) = when (status) {
-        "criado", "pendente" -> Triple("Pendente", Color(0xFFFFB01E).copy(alpha = 0.1f), Color(0xFFFFB01E))
-        "em_preparo" -> Triple("Preparando", Color(0xFF3B82F6).copy(alpha = 0.1f), Color(0xFF3B82F6))
+        "criado", "pendente" -> Triple("Enviado", Color(0xFFFFB01E).copy(alpha = 0.1f), Color(0xFFFFB01E))
+        "em_preparo" -> Triple("Em preparo", Color(0xFF3B82F6).copy(alpha = 0.1f), Color(0xFF3B82F6))
         "a_caminho" -> Triple("No caminho", Color(0xFF8B5CF6).copy(alpha = 0.1f), Color(0xFF8B5CF6))
         "entregue" -> Triple("Entregue", Color(0xFF14B822).copy(alpha = 0.1f), Color(0xFF14B822))
         "cancelado" -> Triple("Cancelado", Color(0xFFDC2626).copy(alpha = 0.1f), Color(0xFFDC2626))
@@ -611,8 +611,8 @@ private fun StatusBadgeCompact(status: String) {
 }
 
 private fun mapearStatusLabel(status: String): String = when (status) {
-    "criado", "pendente" -> "Pedido realizado"
-    "em_preparo" -> "Na cozinha"
+    "criado", "pendente" -> "Pedido enviado"
+    "em_preparo" -> "Pedido confirmado"
     "a_caminho" -> "Saiu para entrega"
     "entregue" -> "Entregue"
     "cancelado" -> "Cancelado"
