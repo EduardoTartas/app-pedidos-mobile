@@ -46,8 +46,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 logout()
             }
         }
-        TokenManager.onTokensRefreshed = { access ->
+        TokenManager.onTokensRefreshed = { access, refresh ->
             AuthPreferences.saveAccessToken(getApplication(), access)
+            AuthPreferences.saveRefreshToken(getApplication(), refresh)
             _accessToken.value = access
         }
         checkSavedSession()
