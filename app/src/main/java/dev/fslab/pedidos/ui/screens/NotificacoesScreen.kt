@@ -571,6 +571,8 @@ private fun NotificationUiModel.isPreparingOrderNotification(): Boolean =
         description.contains("prepar", ignoreCase = true)
 
 private fun NotificationUiModel.preparingRestaurantName(): String {
+    restaurantName?.takeIf { it.isNotBlank() }?.let { return it }
+
     val patterns = listOf(
         Regex("restaurante\\s+(.+?)\\s+(começou|iniciou)", RegexOption.IGNORE_CASE),
         Regex("do\\s+(.+?)\\.", RegexOption.IGNORE_CASE)

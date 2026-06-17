@@ -27,6 +27,7 @@ data class NotificationUiModel(
     val isRead: Boolean,
     val type: NotificationType,
     val pedidoId: String? = null,
+    val restaurantName: String? = null,
     val statusKey: String? = null
 ) {
     val date: String
@@ -60,6 +61,7 @@ data class NotificationApiModel(
         isRead = readAt != null,
         type = apiType.toNotificationType(),
         pedidoId = pedidoId,
+        restaurantName = null,
         statusKey = apiType
     )
 }
@@ -110,6 +112,7 @@ object NotificationMocks {
         isRead = false,
         type = NotificationType.PEDIDO_EM_PREPARO,
         pedidoId = pedidoId,
+        restaurantName = restaurantName,
         statusKey = "em_preparo"
     )
 

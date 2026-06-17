@@ -236,6 +236,7 @@ class NotificationViewModel(
             isRead = false,
             type = NotificationType.ORDER,
             pedidoId = pedido.id,
+            restaurantName = restaurante,
             statusKey = "pedido_confirmado"
         )
 
@@ -331,7 +332,9 @@ class NotificationViewModel(
         }
 
         val restaurantName = confirmedOrderNotification
-            ?.restaurantNameFromConfirmedOrder()
+            ?.restaurantName
+            ?.asValidRestaurantName()
+            ?: confirmedOrderNotification?.restaurantNameFromConfirmedOrder()
             ?: notifications.firstNotNullOfOrNull { it.restaurantNameFromAnyOrderMessage() }
             ?: DEFAULT_MOCK_RESTAURANT_NAME
 
@@ -358,6 +361,8 @@ class NotificationViewModel(
     }
 
     private fun NotificationUiModel.restaurantNameFromAnyOrderMessage(): String? {
+        restaurantName?.asValidRestaurantName()?.let { return it }
+
         val patterns = listOf(
             Regex("restaurante\\s+(.+?)\\s+(começou|iniciou|confirmou)", RegexOption.IGNORE_CASE),
             Regex("^(.+?)\\s+confirmou\\s+seu\\s+pedido", RegexOption.IGNORE_CASE),
