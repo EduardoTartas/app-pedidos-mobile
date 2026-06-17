@@ -38,7 +38,7 @@ private val PreparingTrack = Color(0xFF334155)
 @Composable
 fun OrderPreparingNotificationCard(
     modifier: Modifier = Modifier,
-    restaurantName: String = "Burger King",
+    restaurantName: String = "Burger House",
     estimatedTimeMinutes: Int = 20,
     progress: Float = 0.3f
 ) {

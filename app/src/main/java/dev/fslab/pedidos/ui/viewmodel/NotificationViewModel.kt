@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dev.fslab.pedidos.model.NotificationType
 import dev.fslab.pedidos.model.NotificationUiModel
 import dev.fslab.pedidos.model.Pedido
+import dev.fslab.pedidos.model.isOrderRelated
 import dev.fslab.pedidos.repository.NotificationRepository
 import dev.fslab.pedidos.utils.NetworkResult
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -285,7 +286,12 @@ class NotificationViewModel(
         val notificationIds = notifications.map { it.id }.toSet()
         val validSelectedNotificationIds = selectedNotificationIds.intersect(notificationIds)
         val filteredNotifications = selectedCategory?.let { category ->
-            notifications.filter { it.type == category }
+            notifications.filter { notification ->
+                when (category) {
+                    NotificationType.ORDER -> notification.type.isOrderRelated()
+                    else -> notification.type == category
+                }
+            }
         } ?: notifications
 
         _uiState.value = NotificationUiState(

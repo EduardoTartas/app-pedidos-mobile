@@ -550,6 +550,7 @@ fun NotificationItemCard(
 
 private val NotificationType.icon: ImageVector
     get() = when (this) {
+        NotificationType.PEDIDO_EM_PREPARO -> Icons.AutoMirrored.Filled.ReceiptLong
         NotificationType.ORDER -> Icons.AutoMirrored.Filled.ReceiptLong
         NotificationType.PROMOTION -> Icons.Filled.CardGiftcard
         NotificationType.SYSTEM -> Icons.Filled.Info
@@ -564,7 +565,8 @@ private fun NotificationUiModel.pedidoIdFromNotification(): String? {
 private const val LOCAL_ORDER_NOTIFICATION_PREFIX = "local-pedido-"
 
 private fun NotificationUiModel.isPreparingOrderNotification(): Boolean =
-    statusKey == "em_preparo" ||
+    type == NotificationType.PEDIDO_EM_PREPARO ||
+        statusKey == "em_preparo" ||
         title.contains("preparo", ignoreCase = true) ||
         description.contains("prepar", ignoreCase = true)
 
@@ -576,7 +578,7 @@ private fun NotificationUiModel.preparingRestaurantName(): String {
 
     return patterns.firstNotNullOfOrNull { pattern ->
         pattern.find(description)?.groupValues?.getOrNull(1)?.trim()
-    }?.takeIf { it.isNotBlank() } ?: "Burger King"
+    }?.takeIf { it.isNotBlank() } ?: "Burger House"
 }
 
 private fun NotificationUiModel.createdAtLabel(): String {
