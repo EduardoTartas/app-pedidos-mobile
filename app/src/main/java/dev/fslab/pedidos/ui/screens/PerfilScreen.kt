@@ -236,23 +236,6 @@ fun PerfilScreen(
                             color = colors.textSecondary
                         )
 
-                        // Chat (placeholder)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(colors.primary.copy(alpha = 0.06f))
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Chat com suporte (em breve)",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = colors.textPrimary,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
                         // Email
                         Row(
                             modifier = Modifier
@@ -279,7 +262,7 @@ fun PerfilScreen(
                             )
                         }
 
-                        // FAQ / Central
+                        // Termos de Uso e privacidade
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -289,7 +272,7 @@ fun PerfilScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Central de Ajuda (FAQ)",
+                                text = "Termos de Uso e Privacidade",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = colors.textPrimary,
                                 modifier = Modifier.weight(1f)
