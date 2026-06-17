@@ -49,6 +49,7 @@ import dev.fslab.pedidos.ui.viewmodel.AuthState
 import dev.fslab.pedidos.ui.viewmodel.AuthViewModel
 import dev.fslab.pedidos.ui.viewmodel.CarrinhoViewModel
 import dev.fslab.pedidos.ui.viewmodel.HomeUiState
+import dev.fslab.pedidos.ui.viewmodel.NotificationViewModel
 import dev.fslab.pedidos.ui.viewmodel.PedidoUiState
 import dev.fslab.pedidos.ui.viewmodel.PedidoViewModel
 import dev.fslab.pedidos.ui.viewmodel.PratoPersonalizacaoViewModel
@@ -101,6 +102,10 @@ fun PedidosApp(activity: ComponentActivity) {
     // ViewModel de pedidos com escopo de Activity
     val pedidoViewModel: PedidoViewModel = viewModel()
 
+    // ViewModel de notificações com escopo de Activity, compartilhado entre Home e Notificações
+    val notificationViewModel: NotificationViewModel = viewModel()
+    val notificationState by notificationViewModel.uiState.collectAsState()
+
     // HomeViewModel com escopo de Activity — compartilhado entre home, carrinho e novo_endereco
     // IMPORTANTE: declarar aqui garante a mesma instância em todas as rotas.
     // Se declarado dentro de cada composable, cada rota teria sua própria instância isolada.
@@ -109,6 +114,12 @@ fun PedidosApp(activity: ComponentActivity) {
 
     val user by authViewModel.currentUser.collectAsState()
     val userId = user?.id ?: ""
+
+    LaunchedEffect(userId) {
+        if (userId.isNotEmpty()) {
+            notificationViewModel.carregarNotificacoes(silent = true)
+        }
+    }
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -120,7 +131,12 @@ fun PedidosApp(activity: ComponentActivity) {
     // Monitora o estado de sucesso do pedido e navega para confirmação
     val pedidoState by pedidoViewModel.uiState.collectAsState()
     LaunchedEffect(pedidoState) {
-        if (pedidoState is PedidoUiState.Success && currentRoute != "pedido_confirmacao") {
+        val successState = pedidoState as? PedidoUiState.Success
+        if (successState != null && currentRoute != "pedido_confirmacao") {
+            notificationViewModel.registrarPedidoRealizado(
+                pedido = successState.pedido,
+                nomeRestaurante = carrinhoViewModel.nomeRestaurante.value
+            )
             navController.navigate("pedido_confirmacao") {
                 popUpTo("carrinho") { inclusive = true }
                 launchSingleTop = true
@@ -405,6 +421,10 @@ fun PedidosApp(activity: ComponentActivity) {
                         onRefresh = {
                             homeViewModel.atualizarDados(userId)
                         },
+                        onNavigateNotificacoes = {
+                            navController.navigate("notificacoes")
+                        },
+                        unreadNotificationsCount = notificationState.unreadCount,
                         carrinhoTotalItens = carrinhoTotalItens,
                         carrinhoPrecoTotal = carrinhoPrecoTotal,
                         onVerCarrinho = { navController.navigate("carrinho") }
@@ -439,7 +459,8 @@ fun PedidosApp(activity: ComponentActivity) {
 
                 composable("notificacoes") {
                     NotificacoesScreen(
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        viewModel = notificationViewModel
                     )
                 }
 
