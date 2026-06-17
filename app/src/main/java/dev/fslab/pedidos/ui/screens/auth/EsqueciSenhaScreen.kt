@@ -75,7 +75,8 @@ fun EsqueciSenhaScreen(
     tokenInicial: String? = null,
     onBackToLogin: () -> Unit = {},
     onRecoverPassword: (email: String, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit = { _, _, _ -> },
-    onResetPassword: (token: String, novaSenha: String, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit = { _, _, _, _ -> }
+    onResetPassword: (token: String, novaSenha: String, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit = { _, _, _, _ -> },
+    onValidateToken: (token: String, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit = { _, _, _ -> }
 ) {
     val colors = LocalPedidosColors.current
 
@@ -88,6 +89,26 @@ fun EsqueciSenhaScreen(
     var isLoading by remember { mutableStateOf(false) }
     var mostraErro by remember { mutableStateOf(false) }
     var mensagemErro by remember { mutableStateOf("") }
+    var isTokenValidating by remember { mutableStateOf(false) }
+
+    androidx.compose.runtime.LaunchedEffect(tokenInicial) {
+        if (!tokenInicial.isNullOrBlank()) {
+            isTokenValidating = true
+            onValidateToken(
+                tokenInicial,
+                {
+                    isTokenValidating = false
+                    currentStep = RecuperarSenhaStep.NOVA_SENHA
+                },
+                { error ->
+                    isTokenValidating = false
+                    mostraErro = true
+                    mensagemErro = error
+                    currentStep = RecuperarSenhaStep.EMAIL
+                }
+            )
+        }
+    }
 
     Box(
         modifier = modifier
@@ -247,19 +268,25 @@ fun EsqueciSenhaScreen(
                                 }
                                 RecuperarSenhaStep.NOVA_SENHA -> {
                                     Column(modifier = Modifier.fillMaxWidth()) {
-                                        CustomOutlinedField(
-                                            value = novaSenha, label = "Nova Senha", icon = Icons.Default.Lock, placeholder = "Mínimo 8 caracteres",
-                                            keyboardType = KeyboardType.Password, isPassword = true,
-                                            passwordVisible = mostrarSenha, onVisibilityChange = { mostrarSenha = it },
-                                            onValueChange = { novaSenha = it; mostraErro = false }
-                                        )
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        CustomOutlinedField(
-                                            value = confirmarSenha, label = "Confirmar Nova Senha", icon = Icons.Default.Lock, placeholder = "Digite novamente",
-                                            keyboardType = KeyboardType.Password, isPassword = true,
-                                            passwordVisible = mostrarSenha, onVisibilityChange = { mostrarSenha = it },
-                                            onValueChange = { confirmarSenha = it; mostraErro = false }
-                                        )
+                                        if (isTokenValidating) {
+                                            Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                                                CircularProgressIndicator(color = colors.primary)
+                                            }
+                                        } else {
+                                            CustomOutlinedField(
+                                                value = novaSenha, label = "Nova Senha", icon = Icons.Default.Lock, placeholder = "Mínimo 8 caracteres",
+                                                keyboardType = KeyboardType.Password, isPassword = true,
+                                                passwordVisible = mostrarSenha, onVisibilityChange = { mostrarSenha = it },
+                                                onValueChange = { novaSenha = it; mostraErro = false }
+                                            )
+                                            Spacer(modifier = Modifier.height(16.dp))
+                                            CustomOutlinedField(
+                                                value = confirmarSenha, label = "Confirmar Nova Senha", icon = Icons.Default.Lock, placeholder = "Digite novamente",
+                                                keyboardType = KeyboardType.Password, isPassword = true,
+                                                passwordVisible = mostrarSenha, onVisibilityChange = { mostrarSenha = it },
+                                                onValueChange = { confirmarSenha = it; mostraErro = false }
+                                            )
+                                        }
                                     }
                                 }
                                 RecuperarSenhaStep.SUCESSO -> {
@@ -313,9 +340,9 @@ fun EsqueciSenhaScreen(
                             modifier = Modifier.fillMaxWidth().height(56.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
                             shape = RoundedCornerShape(16.dp),
-                            enabled = !isLoading
+                            enabled = !isLoading && !isTokenValidating
                         ) {
-                            if (isLoading) {
+                            if (isLoading || isTokenValidating) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = colors.textOnPrimary, strokeWidth = 2.dp)
                             } else {
                                 Text(

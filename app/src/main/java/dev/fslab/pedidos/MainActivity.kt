@@ -299,6 +299,9 @@ fun PedidosApp(activity: ComponentActivity) {
                         },
                         onResetPassword = { token, novaSenha, onSuccess, onError ->
                             authViewModel.resetPasswordByCode(token, novaSenha, onSuccess, onError)
+                        },
+                        onValidateToken = { tokenParam, onSuccess, onError ->
+                            authViewModel.validatePasswordResetToken(tokenParam, onSuccess, onError)
                         }
                     )
                 }

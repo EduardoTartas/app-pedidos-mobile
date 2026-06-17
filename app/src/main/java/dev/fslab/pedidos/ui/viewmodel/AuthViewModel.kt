@@ -177,6 +177,19 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun validatePasswordResetToken(token: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val result = NetworkUtils.safeApiCall { 
+                RetrofitClient.authApi.validatePasswordResetToken(token) 
+            }
+            when (result) {
+                is NetworkResult.Success -> onSuccess()
+                is NetworkResult.Error -> onError(result.message)
+                else -> {}
+            }
+        }
+    }
+
 
     fun verifyEmail(token: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
