@@ -120,7 +120,10 @@ class NotificationViewModel(
         }
     }
 
-    fun registrarPedidoRealizado(pedido: Pedido, nomeRestaurante: String) {
+    fun registrarPedidoRealizado(
+        pedido: Pedido,
+        nomeRestaurante: String
+    ): NotificationUiModel {
         val restaurante = nomeRestaurante
             .ifBlank { pedido.restauranteNome }
             .ifBlank { "o restaurante" }
@@ -143,6 +146,8 @@ class NotificationViewModel(
             selectedCategory = current.selectedCategory,
             selectedNotificationId = notification.id
         )
+
+        return notification
     }
 
     private fun marcarNotificacaoLocalComoLida(id: String) {

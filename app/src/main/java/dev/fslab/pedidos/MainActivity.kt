@@ -1,10 +1,15 @@
 package dev.fslab.pedidos
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -23,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -53,6 +59,7 @@ import dev.fslab.pedidos.ui.viewmodel.NotificationViewModel
 import dev.fslab.pedidos.ui.viewmodel.PedidoUiState
 import dev.fslab.pedidos.ui.viewmodel.PedidoViewModel
 import dev.fslab.pedidos.ui.viewmodel.PratoPersonalizacaoViewModel
+import dev.fslab.pedidos.utils.OrderNotificationHelper
 import kotlinx.coroutines.launch
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.graphics.Color
@@ -82,6 +89,7 @@ private val splashRoute = "splash"
 
 @Composable
 fun PedidosApp(activity: ComponentActivity) {
+    val context = LocalContext.current
     val systemDark = isSystemInDarkTheme()
     var isDarkTheme by remember { mutableStateOf(systemDark) }
     val authViewModel: AuthViewModel = viewModel()
@@ -114,10 +122,23 @@ fun PedidosApp(activity: ComponentActivity) {
 
     val user by authViewModel.currentUser.collectAsState()
     val userId = user?.id ?: ""
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = {}
+    )
 
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) {
             notificationViewModel.carregarNotificacoes(silent = true)
+            if (
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
     }
 
@@ -133,10 +154,11 @@ fun PedidosApp(activity: ComponentActivity) {
     LaunchedEffect(pedidoState) {
         val successState = pedidoState as? PedidoUiState.Success
         if (successState != null && currentRoute != "pedido_confirmacao") {
-            notificationViewModel.registrarPedidoRealizado(
+            val notification = notificationViewModel.registrarPedidoRealizado(
                 pedido = successState.pedido,
                 nomeRestaurante = carrinhoViewModel.nomeRestaurante.value
             )
+            OrderNotificationHelper.showOrderCreated(context, notification)
             navController.navigate("pedido_confirmacao") {
                 popUpTo("carrinho") { inclusive = true }
                 launchSingleTop = true
