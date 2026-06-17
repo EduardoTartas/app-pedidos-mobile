@@ -223,7 +223,8 @@ class NotificationViewModel(
             description = "$restaurante confirmou seu pedido #${pedido.id.takeLast(8).uppercase()} e já iniciou o preparo.",
             createdAt = pedido.criadoEm ?: Instant.now().toString(),
             isRead = false,
-            type = NotificationType.ORDER
+            type = NotificationType.ORDER,
+            pedidoId = pedido.id
         )
 
         localNotifications = listOf(notification) +

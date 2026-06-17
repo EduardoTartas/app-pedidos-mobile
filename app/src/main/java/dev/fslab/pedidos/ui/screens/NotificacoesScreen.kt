@@ -74,6 +74,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 fun NotificacoesScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigateToPedidoDetalhes: (String) -> Unit = {},
     viewModel: NotificationViewModel = viewModel()
 ) {
     val colors = LocalPedidosColors.current
@@ -235,11 +236,13 @@ fun NotificacoesScreen(
                             items = uiState.filteredNotifications,
                             key = { it.id }
                         ) { notificacao ->
+                            val pedidoId = notificacao.pedidoIdFromNotification()
                             NotificationItemCard(
                                 icon = notificacao.type.icon,
                                 title = notificacao.title,
                                 description = notificacao.description,
                                 date = notificacao.createdAtLabel(),
+                                actionHint = if (pedidoId != null) "Toque para ver detalhes do pedido" else null,
                                 isUnread = !notificacao.isRead,
                                 isSelectionMode = isSelectionMode,
                                 isSelected = notificacao.id in uiState.selectedNotificationIds,
@@ -248,6 +251,7 @@ fun NotificacoesScreen(
                                         viewModel.alternarSelecaoParaExclusao(notificacao.id)
                                     } else {
                                         viewModel.marcarComoLida(notificacao.id)
+                                        pedidoId?.let(onNavigateToPedidoDetalhes)
                                     }
                                 },
                                 onLongClick = {
@@ -390,6 +394,7 @@ fun NotificationItemCard(
     title: String,
     description: String,
     date: String,
+    actionHint: String? = null,
     isUnread: Boolean,
     isSelectionMode: Boolean,
     isSelected: Boolean,
@@ -460,6 +465,16 @@ fun NotificationItemCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+
+                if (actionHint != null && !isSelectionMode) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = actionHint,
+                        color = green,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -525,6 +540,14 @@ private val NotificationType.icon: ImageVector
         NotificationType.PROMOTION -> Icons.Filled.CardGiftcard
         NotificationType.SYSTEM -> Icons.Filled.Info
     }
+
+private fun NotificationUiModel.pedidoIdFromNotification(): String? {
+    pedidoId?.takeIf { it.isNotBlank() }?.let { return it }
+    return id.removePrefix(LOCAL_ORDER_NOTIFICATION_PREFIX)
+        .takeIf { id.startsWith(LOCAL_ORDER_NOTIFICATION_PREFIX) && it.isNotBlank() }
+}
+
+private const val LOCAL_ORDER_NOTIFICATION_PREFIX = "local-pedido-"
 
 private fun NotificationUiModel.createdAtLabel(): String {
     val createdInstant = runCatching { Instant.parse(createdAt) }.getOrNull()

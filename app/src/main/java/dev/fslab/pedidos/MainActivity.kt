@@ -485,6 +485,9 @@ fun PedidosApp(activity: ComponentActivity) {
                 composable("notificacoes") {
                     NotificacoesScreen(
                         onBack = { navController.popBackStack() },
+                        onNavigateToPedidoDetalhes = { pedidoId ->
+                            navController.navigate("pedido_detalhes/$pedidoId")
+                        },
                         viewModel = notificationViewModel
                     )
                 }
