@@ -30,6 +30,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -71,6 +72,7 @@ fun NotificacoesScreen(
 ) {
     val colors = LocalPedidosColors.current
     val uiState by viewModel.uiState.collectAsState()
+    val errorMessage = uiState.errorMessage
     val filtros = listOf(
         null to "Todas",
         NotificationType.ORDER to "Pedidos",
@@ -85,7 +87,11 @@ fun NotificacoesScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = "Notificações",
+                        text = if (uiState.unreadCount > 0) {
+                            "Notificações (${uiState.unreadCount})"
+                        } else {
+                            "Notificações"
+                        },
                         color = Color.White,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
@@ -121,31 +127,67 @@ fun NotificacoesScreen(
                 onFiltroSelecionado = viewModel::filtrarPorCategoria
             )
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                item {
-                    HighlightOrderNotificationCard(
-                        modifier = Modifier.fillMaxWidth()
+            when {
+                uiState.isLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = Color(0xFF22C55E))
+                    }
+                }
+
+                errorMessage != null && uiState.notifications.isEmpty() -> {
+                    NotificationStateMessage(
+                        title = "Não foi possível carregar",
+                        description = errorMessage,
+                        actionLabel = "Tentar novamente",
+                        onAction = { viewModel.carregarNotificacoes() }
                     )
                 }
 
-                items(
-                    items = uiState.filteredNotifications,
-                    key = { it.id }
-                ) { notificacao ->
-                    NotificationItemCard(
-                        icon = notificacao.type.icon,
-                        title = notificacao.title,
-                        description = notificacao.description,
-                        date = notificacao.createdAtLabel(),
-                        isUnread = !notificacao.isRead,
-                        onClick = {
-                            viewModel.selecionarNotificacao(notificacao.id)
+                uiState.filteredNotifications.isEmpty() -> {
+                    NotificationStateMessage(
+                        title = "Nenhuma notificação",
+                        description = if (uiState.selectedCategory == null) {
+                            "Você ainda não recebeu notificações."
+                        } else {
+                            "Não há notificações nesta categoria."
                         }
                     )
+                }
+
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        errorMessage?.let { message ->
+                            item {
+                                NotificationInlineError(
+                                    message = message,
+                                    onRetry = { viewModel.carregarNotificacoes(silent = true) }
+                                )
+                            }
+                        }
+
+                        items(
+                            items = uiState.filteredNotifications,
+                            key = { it.id }
+                        ) { notificacao ->
+                            NotificationItemCard(
+                                icon = notificacao.type.icon,
+                                title = notificacao.title,
+                                description = notificacao.description,
+                                date = notificacao.createdAtLabel(),
+                                isUnread = !notificacao.isRead,
+                                onClick = {
+                                    viewModel.marcarComoLida(notificacao.id)
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -383,6 +425,81 @@ private fun NotificationUiModel.createdAtLabel(): String {
         else -> createdInstant
             .atZone(ZoneId.systemDefault())
             .format(DateTimeFormatter.ofPattern("dd MMM.", Locale.forLanguageTag("pt-BR")))
+    }
+}
+
+@Composable
+private fun NotificationStateMessage(
+    title: String,
+    description: String,
+    actionLabel: String? = null,
+    onAction: () -> Unit = {}
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 28.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = title,
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = description,
+                color = Color.White.copy(alpha = 0.68f),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            if (actionLabel != null) {
+                TextButton(onClick = onAction) {
+                    Text(
+                        text = actionLabel,
+                        color = Color(0xFF22C55E),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationInlineError(
+    message: String,
+    onRetry: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF3D1A2E)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = message,
+                color = Color(0xFFFF8A9B),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onRetry) {
+                Text(
+                    text = "Tentar",
+                    color = Color(0xFF22C55E),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
     }
 }
 

@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.fslab.pedidos.model.NotificationType
 import dev.fslab.pedidos.model.NotificationUiModel
-import java.time.Instant
-import java.time.temporal.ChronoUnit
+import dev.fslab.pedidos.repository.NotificationRepository
+import dev.fslab.pedidos.utils.NetworkResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,10 +17,14 @@ data class NotificationUiState(
     val selectedCategory: NotificationType? = null,
     val selectedNotification: NotificationUiModel? = null,
     val unreadCount: Int = 0,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val isMarkingAsRead: Boolean = false,
+    val errorMessage: String? = null
 )
 
-class NotificationViewModel : ViewModel() {
+class NotificationViewModel(
+    private val repository: NotificationRepository = NotificationRepository()
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NotificationUiState(isLoading = true))
     val uiState: StateFlow<NotificationUiState> = _uiState.asStateFlow()
@@ -29,16 +33,30 @@ class NotificationViewModel : ViewModel() {
         carregarNotificacoes()
     }
 
-    fun carregarNotificacoes() {
-        _uiState.value = _uiState.value.copy(isLoading = true)
+    fun carregarNotificacoes(silent: Boolean = false) {
+        _uiState.value = _uiState.value.copy(
+            isLoading = !silent,
+            errorMessage = null
+        )
 
         viewModelScope.launch {
-            val notifications = mockNotifications()
-            publishState(
-                notifications = notifications,
-                selectedCategory = _uiState.value.selectedCategory,
-                selectedNotificationId = _uiState.value.selectedNotification?.id
-            )
+            when (val result = repository.listarNotificacoes()) {
+                is NetworkResult.Success -> {
+                    publishState(
+                        notifications = result.data,
+                        selectedCategory = _uiState.value.selectedCategory,
+                        selectedNotificationId = _uiState.value.selectedNotification?.id
+                    )
+                }
+                is NetworkResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isMarkingAsRead = false,
+                        errorMessage = result.message
+                    )
+                }
+                NetworkResult.Loading -> Unit
+            }
         }
     }
 
@@ -64,6 +82,35 @@ class NotificationViewModel : ViewModel() {
         selecionarNotificacao(null)
     }
 
+    fun marcarComoLida(id: String) {
+        val current = _uiState.value
+        val notification = current.notifications.find { it.id == id }
+
+        selecionarNotificacao(id)
+
+        if (notification?.isRead == true) return
+
+        _uiState.value = _uiState.value.copy(
+            isMarkingAsRead = true,
+            errorMessage = null
+        )
+
+        viewModelScope.launch {
+            when (val result = repository.marcarComoLida(id)) {
+                is NetworkResult.Success -> {
+                    carregarNotificacoes(silent = true)
+                }
+                is NetworkResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isMarkingAsRead = false,
+                        errorMessage = result.message
+                    )
+                }
+                NetworkResult.Loading -> Unit
+            }
+        }
+    }
+
     private fun publishState(
         notifications: List<NotificationUiModel>,
         selectedCategory: NotificationType?,
@@ -79,34 +126,9 @@ class NotificationViewModel : ViewModel() {
             selectedCategory = selectedCategory,
             selectedNotification = notifications.find { it.id == selectedNotificationId },
             unreadCount = notifications.count { !it.isRead },
-            isLoading = false
+            isLoading = false,
+            isMarkingAsRead = false,
+            errorMessage = null
         )
     }
-
-    private fun mockNotifications() = listOf(
-        NotificationUiModel(
-            id = "pedido-a-caminho",
-            title = "Seu pedido saiu para entrega!",
-            description = "O entregador Emerson está a caminho com seu pedido.",
-            createdAt = Instant.now().minus(20, ChronoUnit.MINUTES).toString(),
-            isRead = false,
-            type = NotificationType.ORDER
-        ),
-        NotificationUiModel(
-            id = "cupom-jantar-r20",
-            title = "Cupom de R$ 20 disponível",
-            description = "Aproveite seu cupom de desconto para jantar hoje! Válido para pedidos acima de R$ 60.",
-            createdAt = Instant.now().minus(2, ChronoUnit.HOURS).toString(),
-            isRead = false,
-            type = NotificationType.PROMOTION
-        ),
-        NotificationUiModel(
-            id = "reembolso-pedido-3245",
-            title = "Reembolso processado",
-            description = "O reembolso referente ao pedido #3245 foi aprovado.",
-            createdAt = Instant.now().minus(3, ChronoUnit.DAYS).toString(),
-            isRead = true,
-            type = NotificationType.SYSTEM
-        )
-    )
 }
