@@ -38,9 +38,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,12 +50,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -67,8 +61,9 @@ import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 
 private enum class RecuperarSenhaStep(val title: String, val subtitle: String) {
-    EMAIL("Recuperar Senha", "Informe seu e-mail para receber o código."),
-    CODIGO("Redefinir Senha", "Digite o código recebido e a nova senha."),
+    EMAIL("Recuperar Senha", "Informe seu e-mail para receber o link de recuperação."),
+    LINK_ENVIADO("E-mail Enviado", "Verifique sua caixa de entrada para continuar."),
+    NOVA_SENHA("Redefinir Senha", "Crie uma nova senha para sua conta."),
     SUCESSO("Tudo pronto!", "Sua senha foi redefinida com sucesso.")
 }
 
@@ -84,9 +79,9 @@ fun EsqueciSenhaScreen(
 ) {
     val colors = LocalPedidosColors.current
 
-    var currentStep by remember { mutableStateOf(if (!tokenInicial.isNullOrBlank()) RecuperarSenhaStep.CODIGO else RecuperarSenhaStep.EMAIL) }
+    var currentStep by remember { mutableStateOf(if (!tokenInicial.isNullOrBlank()) RecuperarSenhaStep.NOVA_SENHA else RecuperarSenhaStep.EMAIL) }
     var email by remember { mutableStateOf(emailInicial) }
-    var codigo by remember { mutableStateOf(tokenInicial ?: "") }
+    val codigo = tokenInicial ?: ""
     var novaSenha by remember { mutableStateOf("") }
     var confirmarSenha by remember { mutableStateOf("") }
     var mostrarSenha by remember { mutableStateOf(false) }
@@ -128,7 +123,8 @@ fun EsqueciSenhaScreen(
                             .clickable {
                                 when (currentStep) {
                                     RecuperarSenhaStep.EMAIL -> onBackToLogin()
-                                    RecuperarSenhaStep.CODIGO -> { currentStep = RecuperarSenhaStep.EMAIL; mostraErro = false }
+                                    RecuperarSenhaStep.LINK_ENVIADO -> { currentStep = RecuperarSenhaStep.EMAIL; mostraErro = false }
+                                    RecuperarSenhaStep.NOVA_SENHA -> onBackToLogin()
                                     RecuperarSenhaStep.SUCESSO -> onBackToLogin()
                                 }
                             },
@@ -161,9 +157,9 @@ fun EsqueciSenhaScreen(
                 ) {
                     Box(modifier = Modifier.weight(1f).height(4.dp).clip(CircleShape).background(if (currentStep.ordinal >= 0) colors.primary else colors.inputBorder))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Box(modifier = Modifier.weight(1f).height(4.dp).clip(CircleShape).background(if (currentStep.ordinal >= 1) colors.primary else colors.inputBorder))
-                    Spacer(modifier = Modifier.width(8.dp))
                     Box(modifier = Modifier.weight(1f).height(4.dp).clip(CircleShape).background(if (currentStep.ordinal >= 2) colors.primary else colors.inputBorder))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(modifier = Modifier.weight(1f).height(4.dp).clip(CircleShape).background(if (currentStep.ordinal >= 3) colors.primary else colors.inputBorder))
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -180,7 +176,7 @@ fun EsqueciSenhaScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         // Header do Passo
-                        if (currentStep != RecuperarSenhaStep.SUCESSO) {
+                        if (currentStep != RecuperarSenhaStep.SUCESSO && currentStep != RecuperarSenhaStep.LINK_ENVIADO) {
                             Text(
                                 text = currentStep.title,
                                 fontSize = 20.sp,
@@ -189,7 +185,7 @@ fun EsqueciSenhaScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Text(
-                                text = if (currentStep == RecuperarSenhaStep.CODIGO && !tokenInicial.isNullOrBlank()) "Crie uma nova senha para sua conta." else currentStep.subtitle,
+                                text = currentStep.subtitle,
                                 fontSize = 13.sp,
                                 color = colors.textSecondary,
                                 modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
@@ -234,25 +230,23 @@ fun EsqueciSenhaScreen(
                                         )
                                     }
                                 }
-                                RecuperarSenhaStep.CODIGO -> {
-                                    Column(modifier = Modifier.fillMaxWidth()) {
-                                        if (tokenInicial.isNullOrBlank()) {
-                                            Text(text = "Código de Verificação", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colors.textPrimary, modifier = Modifier.padding(bottom = 6.dp))
-                                            OutlinedTextField(
-                                                value = codigo, onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) { codigo = it; mostraErro = false } },
-                                                placeholder = { Text("000000", fontSize = 18.sp, color = colors.mediumGray, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
-                                                textStyle = TextStyle(color = colors.textInput, fontSize = 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, letterSpacing = 8.sp),
-                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                colors = OutlinedTextFieldDefaults.colors(
-                                                    unfocusedBorderColor = colors.inputBorder, focusedBorderColor = colors.primary, cursorColor = colors.primary,
-                                                    focusedTextColor = colors.textInput, unfocusedTextColor = colors.textInput,
-                                                    unfocusedContainerColor = Color.Transparent, focusedContainerColor = Color.Transparent
-                                                ),
-                                                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                                                shape = RoundedCornerShape(16.dp), singleLine = true, enabled = !isLoading
-                                            )
+                                RecuperarSenhaStep.LINK_ENVIADO -> {
+                                    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Surface(
+                                            modifier = Modifier.size(64.dp).padding(bottom = 16.dp),
+                                            shape = RoundedCornerShape(32.dp),
+                                            color = colors.primary.copy(alpha = 0.1f)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                                Icon(imageVector = Icons.Default.Email, contentDescription = null, tint = colors.primary, modifier = Modifier.size(32.dp))
+                                            }
                                         }
-                                        
+                                        Text(text = "Link a caminho!", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary, modifier = Modifier.padding(bottom = 8.dp))
+                                        Text(text = "Enviamos um link de recuperação para:\n$email", fontSize = 13.sp, color = colors.textSecondary, textAlign = TextAlign.Center)
+                                    }
+                                }
+                                RecuperarSenhaStep.NOVA_SENHA -> {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
                                         CustomOutlinedField(
                                             value = novaSenha, label = "Nova Senha", icon = Icons.Default.Lock, placeholder = "Mínimo 8 caracteres",
                                             keyboardType = KeyboardType.Password, isPassword = true,
@@ -297,10 +291,13 @@ fun EsqueciSenhaScreen(
                                         else {
                                             mostraErro = false
                                             isLoading = true
-                                            onRecoverPassword(email.trim(), { isLoading = false; currentStep = RecuperarSenhaStep.CODIGO }, { error -> isLoading = false; mostraErro = true; mensagemErro = error })
+                                            onRecoverPassword(email.trim(), { isLoading = false; currentStep = RecuperarSenhaStep.LINK_ENVIADO }, { error -> isLoading = false; mostraErro = true; mensagemErro = error })
                                         }
                                     }
-                                    RecuperarSenhaStep.CODIGO -> {
+                                    RecuperarSenhaStep.LINK_ENVIADO -> {
+                                        onBackToLogin()
+                                    }
+                                    RecuperarSenhaStep.NOVA_SENHA -> {
                                         if (codigo.isBlank()) { mostraErro = true; mensagemErro = "O token ou código é inválido" }
                                         else if (novaSenha.length < 8) { mostraErro = true; mensagemErro = "A senha deve ter pelo menos 8 caracteres" }
                                         else if (novaSenha != confirmarSenha) { mostraErro = true; mensagemErro = "As senhas não coincidem" }
@@ -323,8 +320,9 @@ fun EsqueciSenhaScreen(
                             } else {
                                 Text(
                                     text = when (currentStep) {
-                                        RecuperarSenhaStep.EMAIL -> "Enviar Código"
-                                        RecuperarSenhaStep.CODIGO -> "Redefinir Senha"
+                                        RecuperarSenhaStep.EMAIL -> "Enviar Link de Recuperação"
+                                        RecuperarSenhaStep.LINK_ENVIADO -> "Voltar ao Login"
+                                        RecuperarSenhaStep.NOVA_SENHA -> "Redefinir Senha"
                                         RecuperarSenhaStep.SUCESSO -> "Fazer Login"
                                     },
                                     fontSize = 16.sp,
@@ -334,23 +332,20 @@ fun EsqueciSenhaScreen(
                             }
                         }
 
-                        if (currentStep == RecuperarSenhaStep.CODIGO) {
+                        if (currentStep == RecuperarSenhaStep.LINK_ENVIADO) {
                             Spacer(modifier = Modifier.height(16.dp))
                             TextButton(onClick = {
                                 currentStep = RecuperarSenhaStep.EMAIL
-                                codigo = ""
-                                novaSenha = ""
-                                confirmarSenha = ""
                                 mostraErro = false
                             }) {
-                                Text(text = "Não recebeu? Voltar", fontSize = 13.sp, color = colors.primary)
+                                Text(text = "Não recebeu? Tentar novamente", fontSize = 13.sp, color = colors.primary)
                             }
                         }
                     }
                 }
 
                 // Link voltar ao login
-                if (currentStep != RecuperarSenhaStep.SUCESSO) {
+                if (currentStep != RecuperarSenhaStep.SUCESSO && currentStep != RecuperarSenhaStep.LINK_ENVIADO) {
                     Row(
                         horizontalArrangement = Arrangement.Center,
                         modifier = Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 16.dp)
@@ -377,8 +372,6 @@ fun EsqueciSenhaScreen(
         }
     }
 }
-
-
 
 @Preview(showBackground = true)
 @Composable
