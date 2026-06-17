@@ -23,7 +23,8 @@ data class NotificationUiModel(
     @SerializedName(value = "isRead", alternate = ["is_read"])
     val isRead: Boolean,
     val type: NotificationType,
-    val pedidoId: String? = null
+    val pedidoId: String? = null,
+    val statusKey: String? = null
 )
 
 data class NotificationApiModel(
@@ -49,7 +50,8 @@ data class NotificationApiModel(
         createdAt = createdAt,
         isRead = readAt != null,
         type = apiType.toNotificationType(),
-        pedidoId = pedidoId
+        pedidoId = pedidoId,
+        statusKey = apiType
     )
 }
 

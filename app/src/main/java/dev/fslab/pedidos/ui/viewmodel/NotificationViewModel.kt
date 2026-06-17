@@ -224,7 +224,8 @@ class NotificationViewModel(
             createdAt = pedido.criadoEm ?: Instant.now().toString(),
             isRead = false,
             type = NotificationType.ORDER,
-            pedidoId = pedido.id
+            pedidoId = pedido.id,
+            statusKey = "pedido_confirmado"
         )
 
         localNotifications = listOf(notification) +
