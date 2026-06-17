@@ -34,6 +34,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -193,12 +198,111 @@ fun PerfilScreen(
                     minHeight = cardHeight,
                     onClick = onNavigateNotificacoes
                 )
+                val context = LocalContext.current
+                val suporteExpanded = remember { mutableStateOf(false) }
+
                 PerfilInfoItem(
                     title = "Ajuda",
                     icon = Icons.AutoMirrored.Outlined.HelpOutline,
                     compactWidth = compactWidth,
-                    minHeight = cardHeight
+                    minHeight = cardHeight,
+                    onClick = { suporteExpanded.value = !suporteExpanded.value }
                 )
+
+                if (suporteExpanded.value) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(colors.surface)
+                            .border(
+                                width = 1.dp,
+                                color = colors.inputBorder.copy(alpha = if (colors.isDark) 0.45f else 0.65f),
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            .padding(horizontal = if (compactWidth) 14.dp else 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = "Suporte",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = colors.textPrimary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Text(
+                            text = "Precisa de ajuda? Aqui você encontra opções para falar com a gente, igual ao suporte do iFood.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.textSecondary
+                        )
+
+                        // Chat (placeholder)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(colors.primary.copy(alpha = 0.06f))
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Chat com suporte (em breve)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colors.textPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        // Email
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable(onClick = {
+                                    try {
+                                        val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                            data = Uri.parse("mailto:admin@delivery.com")
+                                            putExtra(Intent.EXTRA_SUBJECT, "Suporte - App de Pedidos")
+                                        }
+                                        context.startActivity(Intent.createChooser(intent, "Enviar e-mail"))
+                                    } catch (e: Exception) {
+                                    }
+                                })
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Enviar e-mail: admin@delivery.com",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colors.primary,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        // FAQ / Central
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(colors.surface)
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Central de Ajuda (FAQ)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colors.textPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(
+                                imageVector = Icons.Outlined.ChevronRight,
+                                contentDescription = null,
+                                tint = colors.textSecondary.copy(alpha = 0.55f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(if (compactHeight) 10.dp else 18.dp))
