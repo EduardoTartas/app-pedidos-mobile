@@ -1,7 +1,9 @@
 package dev.fslab.pedidos.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +25,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.TwoWheeler
@@ -75,6 +79,8 @@ fun NotificacoesScreen(
     val colors = LocalPedidosColors.current
     val uiState by viewModel.uiState.collectAsState()
     val errorMessage = uiState.errorMessage
+    val selectedCount = uiState.selectedNotificationIds.size
+    val isSelectionMode = selectedCount > 0
 
     LaunchedEffect(Unit) {
         viewModel.carregarNotificacoes()
@@ -94,7 +100,9 @@ fun NotificacoesScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = if (uiState.unreadCount > 0) {
+                        text = if (isSelectionMode) {
+                            "$selectedCount selecionada${if (selectedCount > 1) "s" else ""}"
+                        } else if (uiState.unreadCount > 0) {
                             "Notificações (${uiState.unreadCount})"
                         } else {
                             "Notificações"
@@ -105,12 +113,56 @@ fun NotificacoesScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = {
+                            if (isSelectionMode) {
+                                viewModel.limparSelecaoParaExclusao()
+                            } else {
+                                onBack()
+                            }
+                        }
+                    ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Voltar",
+                            imageVector = if (isSelectionMode) {
+                                Icons.Filled.Close
+                            } else {
+                                Icons.AutoMirrored.Filled.ArrowBack
+                            },
+                            contentDescription = if (isSelectionMode) "Cancelar seleção" else "Voltar",
                             tint = Color.White
                         )
+                    }
+                },
+                actions = {
+                    if (isSelectionMode) {
+                        TextButton(
+                            onClick = viewModel::selecionarTodasFiltradasParaExclusao,
+                            enabled = !uiState.isDeleting
+                        ) {
+                            Text(
+                                text = "Todas",
+                                color = Color(0xFF22C55E),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        if (uiState.isDeleting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .padding(horizontal = 14.dp)
+                                    .size(20.dp),
+                                color = Color(0xFF22C55E),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            IconButton(onClick = viewModel::deletarNotificacoesSelecionadas) {
+                                Icon(
+                                    imageVector = Icons.Filled.Delete,
+                                    contentDescription = "Apagar selecionadas",
+                                    tint = Color(0xFFFF6B7A)
+                                )
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -189,11 +241,17 @@ fun NotificacoesScreen(
                                 description = notificacao.description,
                                 date = notificacao.createdAtLabel(),
                                 isUnread = !notificacao.isRead,
+                                isSelectionMode = isSelectionMode,
+                                isSelected = notificacao.id in uiState.selectedNotificationIds,
                                 onClick = {
-                                    viewModel.marcarComoLida(notificacao.id)
+                                    if (isSelectionMode) {
+                                        viewModel.alternarSelecaoParaExclusao(notificacao.id)
+                                    } else {
+                                        viewModel.marcarComoLida(notificacao.id)
+                                    }
                                 },
-                                onDeleteClick = {
-                                    viewModel.deletarNotificacao(notificacao.id)
+                                onLongClick = {
+                                    viewModel.alternarSelecaoParaExclusao(notificacao.id)
                                 }
                             )
                         }
@@ -325,6 +383,7 @@ fun HighlightOrderNotificationCard(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NotificationItemCard(
     icon: ImageVector,
@@ -332,19 +391,29 @@ fun NotificationItemCard(
     description: String,
     date: String,
     isUnread: Boolean,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
     onClick: () -> Unit = {},
-    onDeleteClick: () -> Unit = {},
+    onLongClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val green = Color(0xFF22C55E)
     val cardColor = Color(0xFF161B2E)
-    val deleteColor = Color(0xFFFF6B7A)
+    val shape = RoundedCornerShape(18.dp)
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
+            .border(
+                width = 1.dp,
+                color = if (isSelected) green else Color.Transparent,
+                shape = shape
+            )
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
+        shape = shape,
         colors = CardDefaults.cardColors(containerColor = cardColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -418,18 +487,32 @@ fun NotificationItemCard(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                if (isSelectionMode) {
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                IconButton(
-                    onClick = onDeleteClick,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Delete,
-                        contentDescription = "Apagar notificação",
-                        tint = deleteColor.copy(alpha = 0.78f),
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(
+                                color = if (isSelected) green else Color.White.copy(alpha = 0.08f),
+                                shape = CircleShape
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (isSelected) green else Color.White.copy(alpha = 0.28f),
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = "Selecionada",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                 }
             }
         }

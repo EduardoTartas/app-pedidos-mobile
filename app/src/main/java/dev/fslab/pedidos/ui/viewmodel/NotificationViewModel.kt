@@ -22,6 +22,7 @@ data class NotificationUiState(
     val isLoading: Boolean = false,
     val isMarkingAsRead: Boolean = false,
     val isDeleting: Boolean = false,
+    val selectedNotificationIds: Set<String> = emptySet(),
     val errorMessage: String? = null
 )
 
@@ -63,9 +64,21 @@ class NotificationViewModel(
     }
 
     fun deletarNotificacao(id: String) {
-        if (id.startsWith(LOCAL_NOTIFICATION_PREFIX)) {
-            removerNotificacaoLocal(id)
-            return
+        deletarNotificacoes(setOf(id))
+    }
+
+    fun deletarNotificacoesSelecionadas() {
+        deletarNotificacoes(_uiState.value.selectedNotificationIds)
+    }
+
+    private fun deletarNotificacoes(ids: Set<String>) {
+        if (ids.isEmpty()) return
+
+        val localIds = ids.filter { it.startsWith(LOCAL_NOTIFICATION_PREFIX) }.toSet()
+        val remoteIds = ids - localIds
+
+        if (localIds.isNotEmpty()) {
+            localNotifications = localNotifications.filterNot { it.id in localIds }
         }
 
         val current = _uiState.value
@@ -75,23 +88,37 @@ class NotificationViewModel(
         )
 
         viewModelScope.launch {
-            when (val result = repository.deletarNotificacao(id)) {
-                is NetworkResult.Success -> {
-                    val latest = _uiState.value
-                    publishState(
-                        notifications = latest.notifications.filterNot { it.id == id },
-                        selectedCategory = latest.selectedCategory,
-                        selectedNotificationId = latest.selectedNotification?.id?.takeIf { it != id }
-                    )
-                    carregarNotificacoes(silent = true)
+            val deletedRemoteIds = mutableSetOf<String>()
+            var deleteError: String? = null
+
+            for (remoteId in remoteIds) {
+                when (val result = repository.deletarNotificacao(remoteId)) {
+                    is NetworkResult.Success -> deletedRemoteIds += remoteId
+                    is NetworkResult.Error -> {
+                        deleteError = result.message
+                        break
+                    }
+                    NetworkResult.Loading -> Unit
                 }
-                is NetworkResult.Error -> {
-                    _uiState.value = _uiState.value.copy(
-                        isDeleting = false,
-                        errorMessage = result.message
-                    )
-                }
-                NetworkResult.Loading -> Unit
+            }
+
+            val deletedIds = localIds + deletedRemoteIds
+            val latest = _uiState.value
+            publishState(
+                notifications = latest.notifications.filterNot { it.id in deletedIds },
+                selectedCategory = latest.selectedCategory,
+                selectedNotificationId = latest.selectedNotification?.id?.takeIf { it !in deletedIds },
+                selectedNotificationIds = latest.selectedNotificationIds - deletedIds
+            )
+
+            if (deleteError != null) {
+                _uiState.value = _uiState.value.copy(
+                    isDeleting = false,
+                    errorMessage = deleteError
+                )
+            } else {
+                limparSelecaoParaExclusao()
+                carregarNotificacoes(silent = true)
             }
         }
     }
@@ -116,6 +143,36 @@ class NotificationViewModel(
 
     fun limparSelecao() {
         selecionarNotificacao(null)
+    }
+
+    fun alternarSelecaoParaExclusao(id: String) {
+        val current = _uiState.value
+        val selectedIds = if (id in current.selectedNotificationIds) {
+            current.selectedNotificationIds - id
+        } else {
+            current.selectedNotificationIds + id
+        }
+
+        _uiState.value = current.copy(selectedNotificationIds = selectedIds)
+    }
+
+    fun selecionarTodasFiltradasParaExclusao() {
+        val current = _uiState.value
+        val visibleIds = current.filteredNotifications.map { it.id }.toSet()
+        if (visibleIds.isEmpty()) return
+
+        val allVisibleSelected = visibleIds.all { it in current.selectedNotificationIds }
+        val selectedIds = if (allVisibleSelected) {
+            current.selectedNotificationIds - visibleIds
+        } else {
+            current.selectedNotificationIds + visibleIds
+        }
+
+        _uiState.value = current.copy(selectedNotificationIds = selectedIds)
+    }
+
+    fun limparSelecaoParaExclusao() {
+        _uiState.value = _uiState.value.copy(selectedNotificationIds = emptySet())
     }
 
     fun marcarComoLida(id: String) {
@@ -220,8 +277,11 @@ class NotificationViewModel(
     private fun publishState(
         notifications: List<NotificationUiModel>,
         selectedCategory: NotificationType?,
-        selectedNotificationId: String?
+        selectedNotificationId: String?,
+        selectedNotificationIds: Set<String> = _uiState.value.selectedNotificationIds
     ) {
+        val notificationIds = notifications.map { it.id }.toSet()
+        val validSelectedNotificationIds = selectedNotificationIds.intersect(notificationIds)
         val filteredNotifications = selectedCategory?.let { category ->
             notifications.filter { it.type == category }
         } ?: notifications
@@ -235,6 +295,7 @@ class NotificationViewModel(
             isLoading = false,
             isMarkingAsRead = false,
             isDeleting = false,
+            selectedNotificationIds = validSelectedNotificationIds,
             errorMessage = null
         )
     }
