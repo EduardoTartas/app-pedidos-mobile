@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -84,6 +85,72 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var senha by remember { mutableStateOf("") }
     var senhaVisivel by remember { mutableStateOf(false) }
+
+    var showTermosDialog by remember { mutableStateOf(false) }
+
+    if (showTermosDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showTermosDialog = false },
+            containerColor = colors.surface,
+            titleContentColor = colors.textPrimary,
+            textContentColor = colors.textSecondary,
+            title = {
+                Text(
+                    text = "Termos e Privacidade",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Termos de uso",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = colors.textPrimary
+                    )
+                    Text(
+                        text = "Ao usar o RanGo, você concorda em manter seus dados de cadastro corretos, usar a plataforma de forma responsável e respeitar restaurantes, entregadores e outros usuários. O RanGo conecta clientes a restaurantes parceiros para consulta de cardápios, criação de pedidos, acompanhamento de status, avaliações e notificações.\n\n" +
+                               "Os preços, disponibilidade de produtos, prazos, taxas e condições de entrega podem variar conforme o restaurante. Depois de confirmar um pedido, alterações ou cancelamentos podem depender do estágio de preparo e das regras aplicáveis ao pedido.\n\n" +
+                               "Não é permitido usar o app para fraudes, ofensas, tentativas de acesso indevido, pedidos falsos, violação de direitos de terceiros ou qualquer conduta que comprometa a segurança da plataforma. O RanGo pode limitar, suspender ou encerrar contas em caso de uso irregular.\n\n" +
+                               "Podemos atualizar estes termos para refletir melhorias do serviço, novas funcionalidades ou exigências legais. Quando houver mudanças relevantes, você poderá ser avisado pelo app ou pelos canais de contato cadastrados.",
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "Privacidade",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = colors.textPrimary
+                    )
+                    Text(
+                        text = "O RanGo trata seus dados para operar o serviço de delivery com segurança e transparência. Podemos coletar dados de cadastro, contato, endereços, histórico de pedidos, avaliações, informações de acesso, preferências, notificações e dados necessários para suporte.\n\n" +
+                               "Usamos essas informações para criar e proteger sua conta, processar pedidos, conectar você aos restaurantes, enviar comunicações importantes, melhorar a experiência, prevenir fraudes, cumprir obrigações legais e responder solicitações de ajuda.\n\n" +
+                               "Seus dados podem ser compartilhados somente quando necessário com restaurantes envolvidos no pedido, prestadores de tecnologia, serviços de pagamento, suporte, armazenamento, análise de segurança ou autoridades competentes, sempre conforme a legislação aplicável.\n\n" +
+                               "Você pode solicitar acesso, correção, atualização ou exclusão dos seus dados, além de tirar dúvidas sobre privacidade, pelo e-mail admin@delivery.com. Mantemos medidas técnicas e administrativas para proteger as informações contra acesso não autorizado, perda, alteração ou uso indevido.",
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showTermosDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.primary)
+                ) {
+                    Text("ENTENDI", color = colors.textOnPrimary, fontWeight = FontWeight.Bold)
+                }
+            },
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
 
     if (isLoading && email.isBlank() && senha.isBlank()) {
         Box(
@@ -226,8 +293,16 @@ fun LoginScreen(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Text(
+                            text = "Termos e Privacidade",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = colors.textTertiary,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.clickable { showTermosDialog = true }.padding(vertical = 4.dp)
+                        )
                         Text(
                             text = "Esqueci a senha",
                             style = MaterialTheme.typography.labelLarge,
