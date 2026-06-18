@@ -98,13 +98,23 @@ class PratoPersonalizacaoViewModel : ViewModel() {
      */
     fun selecionar(grupoId: String, opcaoId: String, max: Int) {
         val current = _uiState.value as? PersonalizacaoUiState.Success ?: return
+        val grupoInfo = current.grupos.find { it.grupo.id == grupoId }?.grupo
+        val isObrigatorio = grupoInfo?.obrigatorio ?: false
+        
         val selecoes = current.selecoes.toMutableMap()
         val selecionadas = selecoes[grupoId]?.toMutableSet() ?: mutableSetOf()
 
         when {
-            // Radio (max 1): substitui a seleção
+            // Radio (max 1)
             max == 1 -> {
-                selecoes[grupoId] = setOf(opcaoId)
+                if (selecionadas.contains(opcaoId)) {
+                    // Permite desmarcar se clicar na mesma opção e o grupo não for obrigatório
+                    if (!isObrigatorio) {
+                        selecoes[grupoId] = emptySet()
+                    }
+                } else {
+                    selecoes[grupoId] = setOf(opcaoId)
+                }
             }
             // Checkbox: toggle
             selecionadas.contains(opcaoId) -> {
