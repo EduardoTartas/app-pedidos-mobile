@@ -113,6 +113,65 @@ class EnderecoViewModel : ViewModel() {
         }
     }
 
+    fun atualizarEndereco(
+        usuarioId: String,
+        enderecoId: String,
+        label: String,
+        cep: String,
+        rua: String,
+        numero: String,
+        bairro: String,
+        complemento: String,
+        cidade: String,
+        estado: String,
+        principal: Boolean,
+        onSuccess: () -> Unit
+    ) {
+        viewModelScope.launch {
+            _uiState.value = EnderecoUiState.Loading
+            try {
+                val request = EnderecoRequest(
+                    label = label,
+                    cep = cep,
+                    rua = rua,
+                    numero = numero,
+                    bairro = bairro,
+                    complemento = complemento,
+                    cidade = cidade,
+                    estado = estado,
+                    principal = principal
+                )
+                val response = RetrofitClient.enderecoApi.atualizar(usuarioId, enderecoId, request)
+                if (response.isSuccessful) {
+                    _uiState.value = EnderecoUiState.Success
+                    onSuccess()
+                } else {
+                    val msg = NetworkUtils.getErrorMessage(response.errorBody(), "Erro ao atualizar endereço.")
+                    _uiState.value = EnderecoUiState.Error(msg)
+                }
+            } catch (e: Exception) {
+                _uiState.value = EnderecoUiState.Error(e.localizedMessage ?: "Erro de conexão.")
+            }
+        }
+    }
+
+    fun deletarEndereco(usuarioId: String, enderecoId: String) {
+        viewModelScope.launch {
+            _uiState.value = EnderecoUiState.Loading
+            try {
+                val response = RetrofitClient.enderecoApi.deletar(usuarioId, enderecoId)
+                if (response.isSuccessful) {
+                    listarEnderecos(usuarioId) // Recarrega a lista
+                } else {
+                    val msg = NetworkUtils.getErrorMessage(response.errorBody(), "Erro ao remover endereço.")
+                    _uiState.value = EnderecoUiState.Error(msg)
+                }
+            } catch (e: Exception) {
+                _uiState.value = EnderecoUiState.Error(e.localizedMessage ?: "Erro de conexão.")
+            }
+        }
+    }
+
     fun resetState() {
         _uiState.value = EnderecoUiState.Idle
     }
