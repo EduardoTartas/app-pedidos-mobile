@@ -1,10 +1,15 @@
 package dev.fslab.pedidos
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -23,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -37,6 +43,7 @@ import dev.fslab.pedidos.ui.screens.auth.LoginScreen
 import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
 import dev.fslab.pedidos.ui.screens.CarrinhoScreen
 import dev.fslab.pedidos.ui.screens.HomeScreen
+import dev.fslab.pedidos.ui.screens.NotificacoesScreen
 import dev.fslab.pedidos.ui.screens.PerfilScreen
 import dev.fslab.pedidos.ui.screens.PedidoConfirmacaoScreen
 import dev.fslab.pedidos.ui.screens.RestaurantesScreen
@@ -48,9 +55,11 @@ import dev.fslab.pedidos.ui.viewmodel.AuthState
 import dev.fslab.pedidos.ui.viewmodel.AuthViewModel
 import dev.fslab.pedidos.ui.viewmodel.CarrinhoViewModel
 import dev.fslab.pedidos.ui.viewmodel.HomeUiState
+import dev.fslab.pedidos.ui.viewmodel.NotificationViewModel
 import dev.fslab.pedidos.ui.viewmodel.PedidoUiState
 import dev.fslab.pedidos.ui.viewmodel.PedidoViewModel
 import dev.fslab.pedidos.ui.viewmodel.PratoPersonalizacaoViewModel
+import dev.fslab.pedidos.utils.OrderNotificationHelper
 import kotlinx.coroutines.launch
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.ui.graphics.Color
@@ -80,6 +89,7 @@ private val splashRoute = "splash"
 
 @Composable
 fun PedidosApp(activity: ComponentActivity) {
+    val context = LocalContext.current
     val systemDark = isSystemInDarkTheme()
     var isDarkTheme by remember { mutableStateOf(systemDark) }
     val authViewModel: AuthViewModel = viewModel()
@@ -100,6 +110,10 @@ fun PedidosApp(activity: ComponentActivity) {
     // ViewModel de pedidos com escopo de Activity
     val pedidoViewModel: PedidoViewModel = viewModel()
 
+    // ViewModel de notificações com escopo de Activity, compartilhado entre Home e Notificações
+    val notificationViewModel: NotificationViewModel = viewModel()
+    val notificationState by notificationViewModel.uiState.collectAsState()
+
     // HomeViewModel com escopo de Activity — compartilhado entre home, carrinho e novo_endereco
     // IMPORTANTE: declarar aqui garante a mesma instância em todas as rotas.
     // Se declarado dentro de cada composable, cada rota teria sua própria instância isolada.
@@ -108,6 +122,28 @@ fun PedidosApp(activity: ComponentActivity) {
 
     val user by authViewModel.currentUser.collectAsState()
     val userId = user?.id ?: ""
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = {}
+    )
+
+    LaunchedEffect(authState) {
+        val isAuthenticated = authState is AuthState.Success ||
+            authState is AuthState.NeedsProfileCompletion
+
+        if (isAuthenticated) {
+            notificationViewModel.carregarNotificacoes(silent = true)
+            if (
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -119,7 +155,13 @@ fun PedidosApp(activity: ComponentActivity) {
     // Monitora o estado de sucesso do pedido e navega para confirmação
     val pedidoState by pedidoViewModel.uiState.collectAsState()
     LaunchedEffect(pedidoState) {
-        if (pedidoState is PedidoUiState.Success && currentRoute != "pedido_confirmacao") {
+        val successState = pedidoState as? PedidoUiState.Success
+        if (successState != null && currentRoute != "pedido_confirmacao") {
+            val notification = notificationViewModel.registrarPedidoRealizado(
+                pedido = successState.pedido,
+                nomeRestaurante = carrinhoViewModel.nomeRestaurante.value
+            )
+            OrderNotificationHelper.showOrderCreated(context, notification)
             navController.navigate("pedido_confirmacao") {
                 popUpTo("carrinho") { inclusive = true }
                 launchSingleTop = true
@@ -404,6 +446,10 @@ fun PedidosApp(activity: ComponentActivity) {
                         onRefresh = {
                             homeViewModel.atualizarDados(userId)
                         },
+                        onNavigateNotificacoes = {
+                            navController.navigate("notificacoes")
+                        },
+                        unreadNotificationsCount = notificationState.unreadCount,
                         carrinhoTotalItens = carrinhoTotalItens,
                         carrinhoPrecoTotal = carrinhoPrecoTotal,
                         onVerCarrinho = { navController.navigate("carrinho") }
@@ -423,6 +469,9 @@ fun PedidosApp(activity: ComponentActivity) {
                     PerfilScreen(
                         user = currentUser,
                         bottomPadding = innerPadding.calculateBottomPadding(),
+                        onNavigateNotificacoes = {
+                            navController.navigate("notificacoes")
+                        },
                         onLogout = {
                             authViewModel.logout()
                             navController.navigate("login") {
@@ -430,6 +479,16 @@ fun PedidosApp(activity: ComponentActivity) {
                                 launchSingleTop = true
                             }
                         }
+                    )
+                }
+
+                composable("notificacoes") {
+                    NotificacoesScreen(
+                        onBack = { navController.popBackStack() },
+                        onNavigateToPedidoDetalhes = { pedidoId ->
+                            navController.navigate("pedido_detalhes/$pedidoId")
+                        },
+                        viewModel = notificationViewModel
                     )
                 }
 

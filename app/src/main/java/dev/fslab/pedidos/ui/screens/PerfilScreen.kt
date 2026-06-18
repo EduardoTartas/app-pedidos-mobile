@@ -34,6 +34,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,6 +58,7 @@ fun PerfilScreen(
     user: User?,
     bottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
     onEditProfile: () -> Unit = {},
+    onNavigateNotificacoes: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     val colors = LocalPedidosColors.current
@@ -189,14 +195,126 @@ fun PerfilScreen(
                     title = "Notificações",
                     icon = Icons.Outlined.Notifications,
                     compactWidth = compactWidth,
-                    minHeight = cardHeight
+                    minHeight = cardHeight,
+                    onClick = onNavigateNotificacoes
                 )
+                val context = LocalContext.current
+                val suporteExpanded = remember { mutableStateOf(false) }
+                val termosExpanded = remember { mutableStateOf(false) }
+
                 PerfilInfoItem(
-                    title = "Ajuda",
+                    title = "Ajuda e termos de uso",
                     icon = Icons.AutoMirrored.Outlined.HelpOutline,
                     compactWidth = compactWidth,
-                    minHeight = cardHeight
+                    minHeight = cardHeight,
+                    onClick = { suporteExpanded.value = !suporteExpanded.value }
                 )
+
+                if (suporteExpanded.value) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(colors.surface)
+                            .border(
+                                width = 1.dp,
+                                color = colors.inputBorder.copy(alpha = if (colors.isDark) 0.45f else 0.65f),
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            .padding(horizontal = if (compactWidth) 14.dp else 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = "Suporte",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = colors.textPrimary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Text(
+                            text = "Precisa de ajuda? Aqui você encontra nosso e-mail para entrar em contato conosco.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.textSecondary
+                        )
+
+                        // Email
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable(onClick = {
+                                    try {
+                                        val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                            data = Uri.parse("mailto:admin@delivery.com")
+                                            putExtra(Intent.EXTRA_SUBJECT, "Suporte - App de Pedidos")
+                                        }
+                                        context.startActivity(Intent.createChooser(intent, "Enviar e-mail"))
+                                    } catch (e: Exception) {
+                                    }
+                                })
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Enviar e-mail: admin@delivery.com",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colors.primary,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        // Termos de Uso e privacidade
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(colors.surface)
+                                .clickable { termosExpanded.value = !termosExpanded.value }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Termos de Uso e Privacidade",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colors.textPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(
+                                imageVector = Icons.Outlined.ChevronRight,
+                                contentDescription = null,
+                                tint = colors.textSecondary.copy(alpha = 0.55f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        if (termosExpanded.value) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(colors.primary.copy(alpha = 0.05f))
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                LegalTextSection(
+                                    title = "Termos de uso",
+                                    body = "Ao usar o RanGo, você concorda em manter seus dados de cadastro corretos, usar a plataforma de forma responsável e respeitar restaurantes, entregadores e outros usuários. O RanGo conecta clientes a restaurantes parceiros para consulta de cardápios, criação de pedidos, acompanhamento de status, avaliações e notificações.\n\n" +
+                                        "Os preços, disponibilidade de produtos, prazos, taxas e condições de entrega podem variar conforme o restaurante. Depois de confirmar um pedido, alterações ou cancelamentos podem depender do estágio de preparo e das regras aplicáveis ao pedido.\n\n" +
+                                        "Não é permitido usar o app para fraudes, ofensas, tentativas de acesso indevido, pedidos falsos, violação de direitos de terceiros ou qualquer conduta que comprometa a segurança da plataforma. O RanGo pode limitar, suspender ou encerrar contas em caso de uso irregular.\n\n" +
+                                        "Podemos atualizar estes termos para refletir melhorias do serviço, novas funcionalidades ou exigências legais. Quando houver mudanças relevantes, você poderá ser avisado pelo app ou pelos canais de contato cadastrados."
+                                )
+
+                                LegalTextSection(
+                                    title = "Privacidade",
+                                    body = "O RanGo trata seus dados para operar o serviço de delivery com segurança e transparência. Podemos coletar dados de cadastro, contato, endereços, histórico de pedidos, avaliações, informações de acesso, preferências, notificações e dados necessários para suporte.\n\n" +
+                                        "Usamos essas informações para criar e proteger sua conta, processar pedidos, conectar você aos restaurantes, enviar comunicações importantes, melhorar a experiência, prevenir fraudes, cumprir obrigações legais e responder solicitações de ajuda.\n\n" +
+                                        "Seus dados podem ser compartilhados somente quando necessário com restaurantes envolvidos no pedido, prestadores de tecnologia, serviços de pagamento, suporte, armazenamento, análise de segurança ou autoridades competentes, sempre conforme a legislação aplicável.\n\n" +
+                                        "Você pode solicitar acesso, correção, atualização ou exclusão dos seus dados, além de tirar dúvidas sobre privacidade, pelo e-mail admin@delivery.com. Mantemos medidas técnicas e administrativas para proteger as informações contra acesso não autorizado, perda, alteração ou uso indevido."
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(if (compactHeight) 10.dp else 18.dp))
@@ -228,11 +346,38 @@ fun PerfilScreen(
 }
 
 @Composable
+private fun LegalTextSection(
+    title: String,
+    body: String
+) {
+    val colors = LocalPedidosColors.current
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = colors.textPrimary,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Text(
+            text = body,
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.textSecondary,
+            lineHeight = MaterialTheme.typography.bodySmall.lineHeight
+        )
+    }
+}
+
+@Composable
 private fun PerfilInfoItem(
     title: String,
     icon: ImageVector,
     compactWidth: Boolean,
-    minHeight: Dp
+    minHeight: Dp,
+    onClick: () -> Unit = {}
 ) {
     val colors = LocalPedidosColors.current
 
@@ -247,6 +392,7 @@ private fun PerfilInfoItem(
                 color = colors.inputBorder.copy(alpha = if (colors.isDark) 0.45f else 0.65f),
                 shape = RoundedCornerShape(14.dp)
             )
+            .clickable(onClick = onClick)
             .padding(horizontal = if (compactWidth) 14.dp else 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

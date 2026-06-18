@@ -58,7 +58,9 @@ fun HomeScreen(
     onNavigateDetalhes: (String) -> Unit = {},
     onNavigateToNovoEndereco: () -> Unit = {},
     onNavigateToRestaurantes: () -> Unit = {},
+    onNavigateNotificacoes: () -> Unit = {},
     onRefresh: () -> Unit = {},
+    unreadNotificationsCount: Int = 0,
     carrinhoTotalItens: Int = 0,
     carrinhoPrecoTotal: Double = 0.0,
     onVerCarrinho: () -> Unit = {},
@@ -193,7 +195,9 @@ fun HomeScreen(
                                 label = state.labelEndereco,
                                 cidade = state.cidadeUsuario, 
                                 estado = state.estadoUsuario,
-                                onClick = { showEnderecoSheet = true }
+                                onClick = { showEnderecoSheet = true },
+                                onNotificationsClick = onNavigateNotificacoes,
+                                unreadNotificationsCount = unreadNotificationsCount
                             )
                         }
                         item(key = "search_bar") {
@@ -287,7 +291,9 @@ fun HomeHeader(
     label: String = "",
     cidade: String = "Sua localização", 
     estado: String = "",
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onNotificationsClick: () -> Unit = {},
+    unreadNotificationsCount: Int = 0
 ) {
     Row(
         modifier = Modifier
@@ -344,7 +350,7 @@ fun HomeHeader(
                 .size(40.dp)
                 .clip(CircleShape)
                 .background(cardColor)
-                .clickable { },
+                .clickable { onNotificationsClick() },
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -352,14 +358,16 @@ fun HomeHeader(
                 contentDescription = "Notificações",
                 tint = LocalPedidosColors.current.primary
             )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(LocalPedidosColors.current.error)
-            )
+            if (unreadNotificationsCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(LocalPedidosColors.current.error)
+                )
+            }
         }
     }
 }

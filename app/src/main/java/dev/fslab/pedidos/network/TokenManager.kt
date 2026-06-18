@@ -22,7 +22,7 @@ object TokenManager {
     var onSessionExpired: (() -> Unit)? = null
 
     /** Callback disparado quando tokens são renovados silenciosamente */
-    var onTokensRefreshed: ((String) -> Unit)? = null
+    var onTokensRefreshed: ((accessToken: String, refreshToken: String) -> Unit)? = null
 
     @Synchronized
     fun saveTokens(access: String, refresh: String) {
