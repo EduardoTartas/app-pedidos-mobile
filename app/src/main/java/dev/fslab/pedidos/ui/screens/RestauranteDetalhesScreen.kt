@@ -69,6 +69,7 @@ fun RestauranteDetalhesScreen(
 
     val lazyListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val pullRefreshState = androidx.compose.material3.pulltorefresh.rememberPullToRefreshState()
 
     var showHorariosDialog by remember { mutableStateOf(false) }
 
@@ -79,23 +80,68 @@ fun RestauranteDetalhesScreen(
             containerColor = bgColor,
             titleContentColor = textColor,
             textContentColor = textColor.copy(alpha = 0.8f),
-            title = { Text("Horário de Funcionamento", fontWeight = FontWeight.Bold, fontSize = 18.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+            title = { 
+                Text(
+                    text = "Horário de Funcionamento", 
+                    fontWeight = FontWeight.Bold, 
+                    fontSize = 18.sp, 
+                    textAlign = TextAlign.Center, 
+                    modifier = Modifier.fillMaxWidth()
+                ) 
+            },
             text = {
-                Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(), 
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     val dias = listOf("segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo")
                     val labels = listOf("Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo")
                     
+                    val cal = java.util.Calendar.getInstance()
+                    val hojeIdx = when (cal.get(java.util.Calendar.DAY_OF_WEEK)) {
+                        java.util.Calendar.MONDAY -> 0
+                        java.util.Calendar.TUESDAY -> 1
+                        java.util.Calendar.WEDNESDAY -> 2
+                        java.util.Calendar.THURSDAY -> 3
+                        java.util.Calendar.FRIDAY -> 4
+                        java.util.Calendar.SATURDAY -> 5
+                        java.util.Calendar.SUNDAY -> 6
+                        else -> -1
+                    }
+                    
                     dias.forEachIndexed { index, dia ->
                         val hr = horarios?.find { it.dia == dia }
+                        val isHoje = index == hojeIdx
+                        
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isHoje) Color(0xFF14B822).copy(alpha = 0.1f) else Color.Transparent)
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(labels[index], fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                            Text(
+                                text = labels[index] + if (isHoje) " (Hoje)" else "", 
+                                fontWeight = if (isHoje) FontWeight.Bold else FontWeight.Medium, 
+                                fontSize = 14.sp,
+                                color = if (isHoje) Color(0xFF14B822) else textColor.copy(alpha = 0.8f)
+                            )
                             if (hr != null && !hr.fechado) {
-                                Text("${hr.abertura} às ${hr.fechamento}", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF14B822))
+                                Text(
+                                    text = "${hr.abertura} às ${hr.fechamento}", 
+                                    fontWeight = if (isHoje) FontWeight.Bold else FontWeight.Medium, 
+                                    fontSize = 14.sp, 
+                                    color = if (isHoje) Color(0xFF14B822) else textColor.copy(alpha = 0.8f)
+                                )
                             } else {
-                                Text("Fechado", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFEF4444))
+                                Text(
+                                    text = "Fechado", 
+                                    fontWeight = if (isHoje) FontWeight.Bold else FontWeight.Medium, 
+                                    fontSize = 14.sp, 
+                                    color = if (isHoje) Color(0xFFEF4444) else textColor.copy(alpha = 0.5f)
+                                )
                             }
                         }
                     }
@@ -104,12 +150,14 @@ fun RestauranteDetalhesScreen(
             confirmButton = {
                 Button(
                     onClick = { showHorariosDialog = false },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF14B822))
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF14B822)),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("FECHAR", color = Color.White, fontWeight = FontWeight.Bold)
                 }
-            }
+            },
+            shape = RoundedCornerShape(24.dp)
         )
     }
 
@@ -145,11 +193,26 @@ fun RestauranteDetalhesScreen(
                     }
                 }
                 is DetalhesUiState.Success -> {
-                    LazyColumn(
-                        state = lazyListState,
+                    androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                        isRefreshing = state.atualizando,
+                        onRefresh = { viewModel.refreshDados(restauranteId) },
+                        state = pullRefreshState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(top = 0.dp, bottom = bottomPadding + 16.dp)
+                        indicator = {
+                            androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator(
+                                modifier = Modifier.align(Alignment.TopCenter),
+                                isRefreshing = state.atualizando,
+                                state = pullRefreshState,
+                                containerColor = bgColor,
+                                color = Color(0xFF14B822)
+                            )
+                        }
                     ) {
+                        LazyColumn(
+                            state = lazyListState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = 0.dp, bottom = bottomPadding + 16.dp)
+                        ) {
                         // ═══ HEADER: Foto de capa ═══
                         item {
                             DetalhesHeader(
@@ -264,6 +327,7 @@ fun RestauranteDetalhesScreen(
                             }
                         }
                     }
+                    } // closes PullToRefreshBox
                 }
             }
 

@@ -13,7 +13,10 @@ import kotlinx.coroutines.launch
 
 sealed class PedidoDetalhesUiState {
     object Loading : PedidoDetalhesUiState()
-    data class Success(val pedido: Pedido) : PedidoDetalhesUiState()
+    data class Success(
+        val pedido: Pedido,
+        val atualizando: Boolean = false
+    ) : PedidoDetalhesUiState()
     data class Error(val message: String) : PedidoDetalhesUiState()
 }
 
@@ -55,6 +58,33 @@ class PedidoDetalhesViewModel : ViewModel() {
                 _uiState.value = PedidoDetalhesUiState.Error(
                     e.localizedMessage ?: "Erro de conexão ao buscar pedido."
                 )
+            }
+        }
+    }
+
+    fun refreshPedido(pedidoId: String) {
+        val current = _uiState.value as? PedidoDetalhesUiState.Success
+        if (current != null) {
+            _uiState.value = current.copy(atualizando = true)
+        }
+
+        viewModelScope.launch {
+            try {
+                val response = api.obterPedido(pedidoId)
+                if (response.isSuccessful) {
+                    val pedido = response.body()?.data
+                    if (pedido != null) {
+                        _uiState.value = PedidoDetalhesUiState.Success(pedido, atualizando = false)
+                    } else if (current != null) {
+                        _uiState.value = current.copy(atualizando = false)
+                    }
+                } else if (current != null) {
+                    _uiState.value = current.copy(atualizando = false)
+                }
+            } catch (e: Exception) {
+                if (current != null) {
+                    _uiState.value = current.copy(atualizando = false)
+                }
             }
         }
     }

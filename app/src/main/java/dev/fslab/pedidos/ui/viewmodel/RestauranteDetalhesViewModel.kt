@@ -25,7 +25,8 @@ sealed class DetalhesUiState {
         val secoes: List<String>,
         val secaoSelecionada: String? = null, // null = "Todas"
         val textoBusca: String = "",
-        val buscaVisivel: Boolean = false
+        val buscaVisivel: Boolean = false,
+        val atualizando: Boolean = false
     ) : DetalhesUiState()
     data class Error(val message: String) : DetalhesUiState()
 }
@@ -77,6 +78,61 @@ class RestauranteDetalhesViewModel : ViewModel() {
                 _uiState.value = DetalhesUiState.Error(
                     e.localizedMessage ?: "Erro de conexão ao carregar restaurante."
                 )
+            }
+        }
+    }
+
+    fun refreshDados(restauranteId: String) {
+        val current = _uiState.value as? DetalhesUiState.Success
+        if (current != null) {
+            _uiState.value = current.copy(atualizando = true)
+        } else {
+            _uiState.value = DetalhesUiState.Loading
+        }
+
+        viewModelScope.launch {
+            try {
+                val restauranteDeferred = async { RetrofitClient.restauranteApi.buscarRestaurante(restauranteId) }
+                val cardapioDeferred = async { RetrofitClient.cardapioApi.buscarCardapio(restauranteId) }
+
+                val restauranteResponse = restauranteDeferred.await()
+                val cardapioResponse = cardapioDeferred.await()
+
+                if (!restauranteResponse.isSuccessful || restauranteResponse.body()?.data == null) {
+                    if (current == null) _uiState.value = DetalhesUiState.Error("Erro ao atualizar detalhes.")
+                    else _uiState.value = current.copy(atualizando = false)
+                    return@launch
+                }
+
+                val restaurante = restauranteResponse.body()!!.data!!
+                val cardapio = if (cardapioResponse.isSuccessful) cardapioResponse.body()?.data ?: emptyMap() else emptyMap()
+                val secoes = restaurante.secoesCardapio?.takeIf { it.isNotEmpty() } ?: cardapio.keys.toList()
+
+                val nextState = current?.copy(
+                    restaurante = restaurante,
+                    cardapioCompleto = cardapio,
+                    secoes = secoes,
+                    atualizando = false
+                ) ?: DetalhesUiState.Success(
+                    restaurante = restaurante,
+                    cardapioCompleto = cardapio,
+                    cardapioFiltrado = cardapio,
+                    secoes = secoes
+                )
+                
+                // Reapply filters if it was already Success
+                if (current != null) {
+                    _uiState.value = aplicarFiltros(nextState as DetalhesUiState.Success)
+                } else {
+                    _uiState.value = nextState
+                }
+
+            } catch (e: Exception) {
+                if (current != null) {
+                    _uiState.value = current.copy(atualizando = false)
+                } else {
+                    _uiState.value = DetalhesUiState.Error(e.localizedMessage ?: "Erro ao atualizar")
+                }
             }
         }
     }

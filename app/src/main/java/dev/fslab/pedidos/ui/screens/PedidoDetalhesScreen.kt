@@ -33,6 +33,10 @@ import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 import dev.fslab.pedidos.ui.viewmodel.PedidoDetalhesUiState
 import dev.fslab.pedidos.ui.viewmodel.PedidoDetalhesViewModel
 
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+
 private val Verde = Color(0xFF14B822)
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,6 +49,7 @@ fun PedidoDetalhesScreen(
     val uiState by viewModel.uiState.collectAsState()
     val colors = LocalPedidosColors.current
     val context = LocalContext.current
+    val pullRefreshState = rememberPullToRefreshState()
 
     LaunchedEffect(pedidoId) {
         viewModel.carregarPedido(pedidoId)
@@ -267,11 +272,26 @@ fun PedidoDetalhesScreen(
                 is PedidoDetalhesUiState.Success -> {
                     val pedido = state.pedido
                     
-                    LazyColumn(
+                    PullToRefreshBox(
+                        isRefreshing = state.atualizando,
+                        onRefresh = { viewModel.refreshPedido(pedidoId) },
+                        state = pullRefreshState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 32.dp)
+                        indicator = {
+                            PullToRefreshDefaults.Indicator(
+                                modifier = Modifier.align(Alignment.TopCenter),
+                                isRefreshing = state.atualizando,
+                                state = pullRefreshState,
+                                containerColor = colors.background,
+                                color = Verde
+                            )
+                        }
                     ) {
-                        // ─── CABEÇALHO (RESTAURANTE + STATUS) ───
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 32.dp)
+                        ) {
+                            // ─── CABEÇALHO (RESTAURANTE + STATUS) ───
                         item {
                             PedidoHeader(pedido, imageLoader, colors)
                         }
@@ -403,6 +423,7 @@ fun PedidoDetalhesScreen(
                             }
                         }
                     }
+                    } // closes PullToRefreshBox
                 }
             }
         }
