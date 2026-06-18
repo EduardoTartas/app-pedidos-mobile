@@ -148,7 +148,7 @@ fun CadastroScreen(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(colors.primary.copy(alpha = 0.1f))
+                            .background(Color.Black.copy(alpha = 0.5f))
                             .clickable {
                                 when (currentStep) {
                                     CadastroStep.DADOS_PESSOAIS -> onBackToLogin()
@@ -161,8 +161,8 @@ fun CadastroScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Voltar",
-                            tint = colors.textPrimary,
-                            modifier = Modifier.size(20.dp)
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
