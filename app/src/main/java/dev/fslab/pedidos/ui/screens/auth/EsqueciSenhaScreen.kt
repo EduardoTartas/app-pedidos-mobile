@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -52,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -94,6 +97,9 @@ fun EsqueciSenhaScreen(
     var mensagemErro by remember { mutableStateOf("") }
     var isTokenValidating by remember { mutableStateOf(false) }
 
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+
     androidx.compose.runtime.LaunchedEffect(tokenInicial) {
         if (!tokenInicial.isNullOrBlank()) {
             isTokenValidating = true
@@ -123,7 +129,8 @@ fun EsqueciSenhaScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .heightIn(min = screenHeight - 64.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             // Header no topo da tela
@@ -281,13 +288,29 @@ fun EsqueciSenhaScreen(
                                                 CircularProgressIndicator(color = colors.primary)
                                             }
                                         } else {
+                                            val hasMinLen = novaSenha.length >= 8
+                                            val hasUpper = novaSenha.any { it.isUpperCase() }
+                                            val hasLower = novaSenha.any { it.isLowerCase() }
+                                            val hasNumber = novaSenha.any { it.isDigit() }
+                                            val hasSpecial = novaSenha.any { !it.isLetterOrDigit() }
+
                                             CustomOutlinedField(
                                                 value = novaSenha, label = "Nova Senha", icon = Icons.Default.Lock, placeholder = "Mínimo 8 caracteres",
                                                 keyboardType = KeyboardType.Password, isPassword = true,
                                                 passwordVisible = mostrarSenha, onVisibilityChange = { mostrarSenha = it },
                                                 onValueChange = { novaSenha = it; mostraErro = false }
                                             )
-                                            Spacer(modifier = Modifier.height(16.dp))
+                                            
+                                            Box(modifier = Modifier.padding(bottom = 8.dp)) {
+                                                PasswordStrengthIndicator(
+                                                    hasMinLen = hasMinLen,
+                                                    hasUpper = hasUpper,
+                                                    hasLower = hasLower,
+                                                    hasNumber = hasNumber,
+                                                    hasSpecial = hasSpecial
+                                                )
+                                            }
+
                                             CustomOutlinedField(
                                                 value = confirmarSenha, label = "Confirmar Nova Senha", icon = Icons.Default.Lock, placeholder = "Digite novamente",
                                                 keyboardType = KeyboardType.Password, isPassword = true,
@@ -355,8 +378,14 @@ fun EsqueciSenhaScreen(
                                         onBackToLogin()
                                     }
                                     RecuperarSenhaStep.NOVA_SENHA -> {
+                                        val hasMinLen = novaSenha.length >= 8
+                                        val hasUpper = novaSenha.any { it.isUpperCase() }
+                                        val hasLower = novaSenha.any { it.isLowerCase() }
+                                        val hasNumber = novaSenha.any { it.isDigit() }
+                                        val hasSpecial = novaSenha.any { !it.isLetterOrDigit() }
+
                                         if (codigo.isBlank()) { mostraErro = true; mensagemErro = "O token ou código é inválido" }
-                                        else if (novaSenha.length < 8) { mostraErro = true; mensagemErro = "A senha deve ter pelo menos 8 caracteres" }
+                                        else if (!hasMinLen || !hasUpper || !hasLower || !hasNumber || !hasSpecial) { mostraErro = true; mensagemErro = "A senha não cumpre os requisitos exigidos" }
                                         else if (novaSenha != confirmarSenha) { mostraErro = true; mensagemErro = "As senhas não coincidem" }
                                         else {
                                             mostraErro = false

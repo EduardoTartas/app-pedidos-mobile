@@ -1,18 +1,28 @@
 package dev.fslab.pedidos.ui.screens.auth
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
+import kotlinx.coroutines.delay
 
 @Composable
 fun VerificacaoEmailScreen(
@@ -67,16 +77,38 @@ fun VerificacaoEmailScreen(
                         fontWeight = FontWeight.Medium
                     )
                 } else if (success) {
-                    Surface(
-                        modifier = Modifier.size(80.dp),
-                        shape = CircleShape,
-                        color = colors.successBackground
+                    val checkScale = remember { Animatable(0f) }
+
+                    LaunchedEffect(Unit) {
+                        delay(100)
+                        checkScale.animateTo(
+                            targetValue = 1f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            )
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .padding(bottom = 16.dp)
+                            .size(120.dp)
+                            .scale(checkScale.value),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text("✓", fontSize = 40.sp, color = colors.successText, fontWeight = FontWeight.Black)
+                        Box(modifier = Modifier.fillMaxSize().clip(CircleShape).background(Color(0xFF14B822).copy(alpha = 0.15f)))
+                        Box(
+                            modifier = Modifier
+                                .size(90.dp)
+                                .clip(CircleShape)
+                                .background(Brush.radialGradient(colors = listOf(Color(0xFF14B822), Color(0xFF0E8A19)))),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
                         }
                     }
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "E-mail Verificado!",
                         fontSize = 24.sp,

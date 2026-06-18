@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -59,10 +60,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -110,6 +114,9 @@ fun CadastroScreen(
     var confirmarSenhaError by remember { mutableStateOf<String?>(null) }
     var termosError by remember { mutableStateOf<String?>(null) }
 
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -120,7 +127,8 @@ fun CadastroScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .heightIn(min = screenHeight - 64.dp), // descontando um pouco para as barras do sistema não causarem scroll desnecessário
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             // Header no topo da tela
@@ -276,15 +284,17 @@ fun CadastroScreen(
                                 CadastroStep.CONTATO -> {
                                     Column(modifier = Modifier.fillMaxWidth()) {
                                         CustomOutlinedField(
-                                            value = cpf, label = "CPF", icon = Icons.Default.Badge, placeholder = "00000000000",
+                                            value = cpf, label = "CPF", icon = Icons.Default.Badge, placeholder = "000.000.000-00",
                                             keyboardType = KeyboardType.Number,
+                                            visualTransformation = MaskVisualTransformation("###.###.###-##"),
                                             isError = cpfError != null, errorMessage = cpfError,
                                             onValueChange = { cpf = it.filter { c -> c.isDigit() }.take(11); cpfError = null; onErrorDismiss() }
                                         )
                                         Spacer(modifier = Modifier.height(16.dp))
                                         CustomOutlinedField(
-                                            value = telefone, label = "Telefone", icon = Icons.Default.Phone, placeholder = "11999999999",
+                                            value = telefone, label = "Telefone", icon = Icons.Default.Phone, placeholder = "(11) 99999-9999",
                                             keyboardType = KeyboardType.Phone,
+                                            visualTransformation = MaskVisualTransformation("(##) #####-####"),
                                             isError = telefoneError != null, errorMessage = telefoneError,
                                             onValueChange = { telefone = it.filter { c -> c.isDigit() }.take(11); telefoneError = null; onErrorDismiss() }
                                         )
@@ -295,6 +305,7 @@ fun CadastroScreen(
                                     val hasUpper = senha.any { it.isUpperCase() }
                                     val hasLower = senha.any { it.isLowerCase() }
                                     val hasNumber = senha.any { it.isDigit() }
+                                    val hasSpecial = senha.any { !it.isLetterOrDigit() }
 
                                     Column(modifier = Modifier.fillMaxWidth()) {
                                         CustomOutlinedField(
@@ -305,13 +316,13 @@ fun CadastroScreen(
                                             onValueChange = { senha = it; senhaError = null; onErrorDismiss() }
                                         )
                                         
-                                        // Topicos de validação ao vivo (Checklist de Senha)
-                                        Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 4.dp)) {
-                                            PasswordRuleItem("Mínimo 8 caracteres", hasMinLen)
-                                            PasswordRuleItem("Uma letra maiúscula", hasUpper)
-                                            PasswordRuleItem("Uma letra minúscula", hasLower)
-                                            PasswordRuleItem("Um número", hasNumber)
-                                        }
+                                        PasswordStrengthIndicator(
+                                            hasMinLen = hasMinLen,
+                                            hasUpper = hasUpper,
+                                            hasLower = hasLower,
+                                            hasNumber = hasNumber,
+                                            hasSpecial = hasSpecial
+                                        )
 
                                         Spacer(modifier = Modifier.height(16.dp))
                                         
@@ -371,8 +382,9 @@ fun CadastroScreen(
                                         val hasUpper = senha.any { it.isUpperCase() }
                                         val hasLower = senha.any { it.isLowerCase() }
                                         val hasNumber = senha.any { it.isDigit() }
+                                        val hasSpecial = senha.any { !it.isLetterOrDigit() }
                                         
-                                        if (!hasMinLen || !hasUpper || !hasLower || !hasNumber) {
+                                        if (!hasMinLen || !hasUpper || !hasLower || !hasNumber || !hasSpecial) {
                                             senhaError = "A senha não cumpre os requisitos acima"
                                             valid = false
                                         }
@@ -438,17 +450,55 @@ fun CadastroScreen(
 }
 
 @Composable
-fun PasswordRuleItem(text: String, isMet: Boolean) {
+fun PasswordStrengthIndicator(
+    hasMinLen: Boolean,
+    hasUpper: Boolean,
+    hasLower: Boolean,
+    hasNumber: Boolean,
+    hasSpecial: Boolean
+) {
     val colors = LocalPedidosColors.current
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-        Icon(
-            imageVector = if (isMet) Icons.Default.Check else Icons.Default.Close,
-            contentDescription = null,
-            tint = if (isMet) Color(0xFF4CAF50) else colors.mediumGray,
-            modifier = Modifier.size(16.dp)
+    val rulesMet = listOf(hasMinLen, hasUpper, hasLower, hasNumber, hasSpecial).count { it }
+
+    val missingRules = mutableListOf<String>()
+    if (!hasMinLen) missingRules.add("8+ caracteres")
+    if (!hasUpper) missingRules.add("maiúscula")
+    if (!hasLower) missingRules.add("minúscula")
+    if (!hasNumber) missingRules.add("número")
+    if (!hasSpecial) missingRules.add("símbolo")
+
+    val barColor = when (rulesMet) {
+        0, 1, 2 -> Color(0xFFF44336)
+        3, 4 -> Color(0xFFFF9800)
+        5 -> Color(0xFF4CAF50)
+        else -> colors.inputBorder
+    }
+
+    val textMessage = when (rulesMet) {
+        0 -> "Use 8+ caracteres, maiúscula, minúscula, número e símbolo."
+        5 -> "Senha forte e válida!"
+        else -> "Falta: ${missingRules.joinToString(", ")}"
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (i in 1..5) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(if (i <= rulesMet) barColor else colors.inputBorder)
+                )
+            }
+        }
+        Text(
+            text = textMessage,
+            color = if (rulesMet == 5) Color(0xFF4CAF50) else colors.textSecondary,
+            fontSize = 12.sp,
+            fontWeight = if (rulesMet == 5) FontWeight.Bold else FontWeight.Normal,
+            modifier = Modifier.padding(top = 6.dp, start = 2.dp)
         )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = text, color = if (isMet) Color(0xFF4CAF50) else colors.mediumGray, fontSize = 12.sp, fontWeight = if (isMet) FontWeight.Bold else FontWeight.Normal)
     }
 }
 
@@ -461,6 +511,7 @@ fun CustomOutlinedField(
     keyboardType: KeyboardType = KeyboardType.Text,
     isPassword: Boolean = false,
     passwordVisible: Boolean = false,
+    visualTransformation: VisualTransformation? = null,
     isError: Boolean = false,
     errorMessage: String? = null,
     onVisibilityChange: (Boolean) -> Unit = {},
@@ -484,7 +535,7 @@ fun CustomOutlinedField(
                     }
                 }
             } else null,
-            visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,
+            visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else visualTransformation ?: VisualTransformation.None,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             singleLine = true,
             isError = isError,
@@ -515,5 +566,54 @@ fun CustomOutlinedField(
 fun CadastroScreenPreview() {
     PedidosTheme {
         CadastroScreen()
+    }
+}
+
+class MaskVisualTransformation(private val mask: String) : VisualTransformation {
+    override fun filter(text: androidx.compose.ui.text.AnnotatedString): TransformedText {
+        val maskPounds = mask.count { it == '#' }
+        val trimmed = if (text.text.length > maskPounds) text.text.take(maskPounds) else text.text
+        var out = ""
+        var maskIndex = 0
+        val originalToTransformed = mutableListOf<Int>()
+        val transformedToOriginal = mutableListOf<Int>()
+
+        for (i in trimmed.indices) {
+            originalToTransformed.add(out.length)
+            while (maskIndex < mask.length && mask[maskIndex] != '#') {
+                out += mask[maskIndex]
+                transformedToOriginal.add(i)
+                maskIndex++
+            }
+            out += trimmed[i]
+            transformedToOriginal.add(i)
+            maskIndex++
+        }
+
+        originalToTransformed.add(out.length)
+        if (trimmed.isNotEmpty()) {
+            while (maskIndex < mask.length && mask[maskIndex] != '#') {
+                out += mask[maskIndex]
+                transformedToOriginal.add(trimmed.length)
+                maskIndex++
+            }
+        }
+        transformedToOriginal.add(trimmed.length)
+
+        val offsetMapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int {
+                return if (offset < 0) 0 
+                else if (offset >= originalToTransformed.size) originalToTransformed.last() 
+                else originalToTransformed[offset]
+            }
+
+            override fun transformedToOriginal(offset: Int): Int {
+                return if (offset < 0) 0 
+                else if (offset >= transformedToOriginal.size) transformedToOriginal.last() 
+                else transformedToOriginal[offset]
+            }
+        }
+
+        return TransformedText(androidx.compose.ui.text.AnnotatedString(out), offsetMapping)
     }
 }
