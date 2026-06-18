@@ -91,7 +91,7 @@ class MainActivity : ComponentActivity() {
 }
 
 private const val GOOGLE_WEB_CLIENT_ID =
-    "1053347409082-qb4s3d724bp69hs78kdt38s35brinr7n.apps.googleusercontent.com"
+    "1053347409082-qq6bv9uadvvn3789h5d3n566d2nc6i5t.apps.googleusercontent.com"
 
 private val mainScreenRoutes = bottomNavItems.map { it.route }.toSet()
 private val splashRoute = "splash"
