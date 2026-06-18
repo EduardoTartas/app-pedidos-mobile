@@ -3,7 +3,6 @@ package dev.fslab.pedidos.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,10 +18,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.ImageLoader
@@ -64,6 +61,7 @@ fun PedidoDetalhesScreen(
     }
 
     var showCancelDialog by remember { mutableStateOf(false) }
+    var showConfirmEntregaDialog by remember { mutableStateOf(false) }
     var showAvaliacaoDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var nota by remember { mutableIntStateOf(5) }
@@ -170,6 +168,52 @@ fun PedidoDetalhesScreen(
                             text = "CANCELAR AGORA", 
                             fontWeight = FontWeight.Bold, 
                             fontSize = 10.sp,
+                            maxLines = 1
+                        )
+                    }
+                }
+            },
+            dismissButton = null,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    if (showConfirmEntregaDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmEntregaDialog = false },
+            containerColor = colors.surface,
+            titleContentColor = colors.textPrimary,
+            textContentColor = colors.textSecondary,
+            icon = { Icon(Icons.Default.Check, contentDescription = null, tint = Verde, modifier = Modifier.size(40.dp)) },
+            title = { Text("Confirmar Entrega?", fontWeight = FontWeight.Black, fontSize = 18.sp) },
+            text = { Text("Você já recebeu este pedido em mãos? Ao confirmar, o pedido será finalizado.", textAlign = TextAlign.Center) },
+            confirmButton = {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp, start = 12.dp, end = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TextButton(
+                        onClick = { showConfirmEntregaDialog = false },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Text("AINDA NÃO", color = colors.textTertiary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                    Button(
+                        onClick = { 
+                            (uiState as? PedidoDetalhesUiState.Success)?.pedido?.let { viewModel.confirmarEntrega(it.id) }
+                            showConfirmEntregaDialog = false 
+                        },
+                        modifier = Modifier.weight(1.6f).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Verde),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Text(
+                            text = "JÁ RECEBI", 
+                            fontWeight = FontWeight.Bold, 
+                            fontSize = 11.sp,
                             maxLines = 1
                         )
                     }
@@ -296,17 +340,9 @@ fun PedidoDetalhesScreen(
                             PedidoHeader(pedido, imageLoader, colors)
                         }
 
-                        // ─── ITENS ───
+                        // ─── RESUMO DO PEDIDO ───
                         item {
-                            SectionHeader("ITENS DO PEDIDO")
-                        }
-                        items(pedido.itens) { item ->
-                            ItemLinha(item, colors)
-                        }
-
-                        // ─── RESUMO DE VALORES ───
-                        item {
-                            TotaisCard(pedido.totais, colors)
+                            PedidoResumoCard(pedido, colors)
                         }
 
                         // ─── PAGAMENTO ───
@@ -365,6 +401,43 @@ fun PedidoDetalhesScreen(
                                 }
                                 Text(
                                     "Você só pode cancelar enquanto o restaurante não inicia o preparo.",
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 8.dp),
+                                    textAlign = TextAlign.Center,
+                                    fontSize = 10.sp,
+                                    color = colors.textTertiary
+                                )
+                            }
+                        }
+
+                        // ─── BOTÃO CONFIRMAR ENTREGA (SE SAIU PARA ENTREGA) ───
+                        if (pedido.status == "a_caminho") {
+                            item {
+                                val isCancelling by viewModel.isCancelling.collectAsState() // Reaproveitando estado de loading de ações da viewModel
+                                
+                                Spacer(Modifier.height(24.dp))
+                                Button(
+                                    onClick = { showConfirmEntregaDialog = true },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp)
+                                        .height(50.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Verde,
+                                        contentColor = Color.White
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    enabled = !isCancelling
+                                ) {
+                                    if (isCancelling) {
+                                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+                                    } else {
+                                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("CONFIRMAR ENTREGA", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    }
+                                }
+                                Text(
+                                    "O entregador já chegou? Confirme o recebimento para liberar a avaliação.",
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 8.dp),
                                     textAlign = TextAlign.Center,
                                     fontSize = 10.sp,
@@ -457,85 +530,163 @@ private fun PedidoHeader(pedido: Pedido, imageLoader: ImageLoader, colors: dev.f
 }
 
 @Composable
-private fun ItemLinha(item: dev.fslab.pedidos.model.ItemPedidoCriado, colors: dev.fslab.pedidos.ui.theme.PedidosColors) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(
-                text = "${item.quantidade}x ${item.pratoNome}",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = colors.textPrimary,
-                modifier = Modifier.weight(1f)
+private fun PedidoResumoCard(pedido: Pedido, colors: dev.fslab.pedidos.ui.theme.PedidosColors) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.textPrimary.copy(alpha = 0.06f))
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Resumo do pedido",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = colors.textPrimary
+                    )
+                    Text(
+                        text = "Você pediu",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.textSecondary
+                    )
+                }
+
+                Surface(
+                    color = Verde.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(999.dp)
+                ) {
+                    Text(
+                        text = "#${pedido.id.takeLast(6).uppercase()}",
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Verde
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            if (pedido.itens.isEmpty()) {
+                Text(
+                    text = "Os itens deste pedido não vieram na resposta da API.",
+                    fontSize = 13.sp,
+                    color = colors.textSecondary,
+                    lineHeight = 18.sp
+                )
+            } else {
+                pedido.itens.forEachIndexed { index, item ->
+                    PedidoResumoItem(item, colors)
+                    if (index < pedido.itens.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 14.dp),
+                            color = colors.textPrimary.copy(alpha = 0.06f)
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 16.dp),
+                color = colors.textPrimary.copy(alpha = 0.08f)
             )
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                ResumoLinha("Subtotal", formatarMoeda(pedido.totais.subtotal), colors)
+                ResumoLinha(
+                    "Entrega",
+                    if (pedido.totais.taxaEntrega <= 0) "Grátis" else formatarMoeda(pedido.totais.taxaEntrega),
+                    colors,
+                    isGreen = pedido.totais.taxaEntrega <= 0
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Total", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = colors.textPrimary)
+                    Text(formatarMoeda(pedido.totais.total), fontSize = 20.sp, fontWeight = FontWeight.Black, color = colors.primary)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PedidoResumoItem(item: dev.fslab.pedidos.model.ItemPedidoCriado, colors: dev.fslab.pedidos.ui.theme.PedidosColors) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            Row(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "${item.quantidade}x",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Verde
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = item.pratoNome,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textPrimary,
+                    lineHeight = 20.sp
+                )
+            }
+
             Text(
-                text = "R$ ${String.format("%.2f", item.precoUnitario * item.quantidade).replace(".", ",")}",
-                fontSize = 15.sp,
+                text = formatarMoeda(item.precoUnitario * item.quantidade),
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = colors.textPrimary
             )
         }
 
-        if (!item.observacao.isNullOrBlank()) {
-            Surface(
-                color = Color(0xFFFFB01E).copy(alpha = 0.08f),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.padding(top = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.Notes, contentDescription = null, tint = Color(0xFFFFB01E), modifier = Modifier.size(12.dp))
-                    Text(
-                        text = "Obs: ${item.observacao}",
-                        fontSize = 11.sp,
-                        color = Color(0xFFB47B00),
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-        }
-        
-        // Adicionais
         item.adicionais.forEach { adicional ->
             Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 24.dp, top = 2.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = 32.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
                     text = "+ ${adicional.quantidade}x ${adicional.opcaoNome}",
                     fontSize = 12.sp,
-                    color = colors.textSecondary
+                    color = colors.textSecondary,
+                    modifier = Modifier.weight(1f)
                 )
                 if (adicional.precoUnitario > 0) {
                     Text(
-                        text = "R$ ${String.format("%.2f", adicional.precoUnitario * adicional.quantidade).replace(".", ",")}",
+                        text = formatarMoeda(adicional.precoUnitario * adicional.quantidade),
                         fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
                         color = colors.textSecondary
                     )
                 }
             }
         }
-    }
-    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), thickness = 0.5.dp, color = colors.textPrimary.copy(alpha = 0.05f))
-}
 
-@Composable
-private fun TotaisCard(totais: dev.fslab.pedidos.model.TotaisPedido, colors: dev.fslab.pedidos.ui.theme.PedidosColors) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = colors.surface.copy(alpha = 0.5f)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, colors.textPrimary.copy(alpha = 0.05f))
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            ResumoLinha("Subtotal", "R$ ${String.format("%.2f", totais.subtotal)}", colors)
-            ResumoLinha("Taxa de entrega", if (totais.taxaEntrega <= 0) "Grátis" else "R$ ${String.format("%.2f", totais.taxaEntrega)}", colors, isGreen = totais.taxaEntrega <= 0)
-            HorizontalDivider(color = colors.textPrimary.copy(alpha = 0.05f), modifier = Modifier.padding(vertical = 4.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Total", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
-                Text("R$ ${String.format("%.2f", totais.total)}", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = colors.primary)
+        if (!item.observacao.isNullOrBlank()) {
+            Surface(
+                color = Color(0xFFFFB01E).copy(alpha = 0.1f),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.padding(start = 32.dp, top = 2.dp)
+            ) {
+                Text(
+                    text = "Obs: ${item.observacao}",
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFB47B00)
+                )
             }
         }
     }
@@ -554,7 +705,7 @@ private fun PagamentoInfo(forma: String?, colors: dev.fslab.pedidos.ui.theme.Ped
             Icon(Icons.Default.Payment, contentDescription = null, tint = Verde, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(12.dp))
-        Text(forma ?: "Não informado", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+        Text(formatarFormaPagamento(forma), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
     }
 }
 
@@ -614,6 +765,18 @@ private fun ResumoLinha(label: String, value: String, colors: dev.fslab.pedidos.
         Text(label, fontSize = 14.sp, color = colors.textSecondary)
         Text(value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (isGreen) Verde else colors.textPrimary)
     }
+}
+
+private fun formatarMoeda(valor: Double): String =
+    "R$ ${String.format("%.2f", valor).replace(".", ",")}"
+
+private fun formatarFormaPagamento(forma: String?): String = when (forma) {
+    "cartao_credito" -> "Cartão de crédito"
+    "cartao_debito" -> "Cartão de débito"
+    "pix" -> "Pix"
+    "dinheiro" -> "Dinheiro"
+    null, "" -> "Não informado"
+    else -> forma
 }
 
 @Composable

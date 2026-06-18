@@ -17,6 +17,7 @@ class AuthInterceptor : Interceptor {
     companion object {
         private val PUBLIC_PATHS = listOf(
             "login",
+            "google",
             "refresh",
             "recover",
             "password/reset",
@@ -47,8 +48,24 @@ class AuthInterceptor : Interceptor {
             } else {
                 request
             }
-            
-            return chain.proceed(finalRequest)
+
+            val response = chain.proceed(finalRequest)
+
+            if (response.code != 498 || token.isNullOrBlank()) {
+                return response
+            }
+
+            val refreshedAccessToken = TokenRefreshService.refreshTokens()
+            if (refreshedAccessToken.isNullOrBlank()) {
+                TokenManager.onSessionExpired?.invoke()
+                return response
+            }
+
+            response.close()
+            val retryRequest = request.newBuilder()
+                .header("Authorization", "Bearer $refreshedAccessToken")
+                .build()
+            return chain.proceed(retryRequest)
 
         } catch (e: Exception) {
             // Em vez de dar throw (que crasha o app), retornamos uma resposta sintética de erro
