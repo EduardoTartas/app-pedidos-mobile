@@ -27,6 +27,7 @@ import dev.fslab.pedidos.ui.viewmodel.EnderecoViewModel
 @Composable
 fun NovoEnderecoScreen(
     usuarioId: String,
+    enderecoId: String? = null,
     onBack: () -> Unit,
     onSuccess: () -> Unit,
     viewModel: EnderecoViewModel = viewModel()
@@ -34,15 +35,20 @@ fun NovoEnderecoScreen(
     val uiState by viewModel.uiState.collectAsState()
     val colors = LocalPedidosColors.current
 
-    var label by remember { mutableStateOf("") }
-    var cep by remember { mutableStateOf("") }
-    var rua by remember { mutableStateOf("") }
-    var numero by remember { mutableStateOf("") }
-    var bairro by remember { mutableStateOf("") }
-    var complemento by remember { mutableStateOf("") }
-    var cidade by remember { mutableStateOf("") }
-    var estado by remember { mutableStateOf("") }
-    var principal by remember { mutableStateOf(false) }
+    val isEditMode = enderecoId != null
+    val enderecoAtual = remember(enderecoId, viewModel.enderecos.value) {
+        viewModel.enderecos.value.find { it.id == enderecoId }
+    }
+
+    var label by remember(enderecoAtual) { mutableStateOf(enderecoAtual?.label ?: "") }
+    var cep by remember(enderecoAtual) { mutableStateOf(enderecoAtual?.cep ?: "") }
+    var rua by remember(enderecoAtual) { mutableStateOf(enderecoAtual?.rua ?: "") }
+    var numero by remember(enderecoAtual) { mutableStateOf(enderecoAtual?.numero ?: "") }
+    var bairro by remember(enderecoAtual) { mutableStateOf(enderecoAtual?.bairro ?: "") }
+    var complemento by remember(enderecoAtual) { mutableStateOf(enderecoAtual?.complemento ?: "") }
+    var cidade by remember(enderecoAtual) { mutableStateOf(enderecoAtual?.cidade ?: "") }
+    var estado by remember(enderecoAtual) { mutableStateOf(enderecoAtual?.estado ?: "") }
+    var principal by remember(enderecoAtual) { mutableStateOf(enderecoAtual?.principal ?: false) }
 
     val isFormValid = cep.replace("-", "").length == 8 && rua.isNotBlank() && numero.isNotBlank() && 
                      bairro.isNotBlank() && cidade.isNotBlank() && estado.isNotBlank()
@@ -64,7 +70,7 @@ fun NovoEnderecoScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        "Novo Endereço", 
+                        if (isEditMode) "Editar Endereço" else "Novo Endereço", 
                         color = Color.White,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
@@ -199,19 +205,36 @@ fun NovoEnderecoScreen(
 
                 Button(
                     onClick = {
-                        viewModel.criarEndereco(
-                            usuarioId = usuarioId,
-                            label = label,
-                            cep = cep,
-                            rua = rua,
-                            numero = numero,
-                            bairro = bairro,
-                            complemento = complemento,
-                            cidade = cidade,
-                            estado = estado,
-                            principal = principal,
-                            onSuccess = onSuccess
-                        )
+                        if (enderecoId != null) {
+                            viewModel.atualizarEndereco(
+                                usuarioId = usuarioId,
+                                enderecoId = enderecoId,
+                                label = label,
+                                cep = cep,
+                                rua = rua,
+                                numero = numero,
+                                bairro = bairro,
+                                complemento = complemento,
+                                cidade = cidade,
+                                estado = estado,
+                                principal = principal,
+                                onSuccess = onSuccess
+                            )
+                        } else {
+                            viewModel.criarEndereco(
+                                usuarioId = usuarioId,
+                                label = label,
+                                cep = cep,
+                                rua = rua,
+                                numero = numero,
+                                bairro = bairro,
+                                complemento = complemento,
+                                cidade = cidade,
+                                estado = estado,
+                                principal = principal,
+                                onSuccess = onSuccess
+                            )
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()

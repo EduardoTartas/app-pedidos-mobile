@@ -142,7 +142,7 @@ fun NotificacoesScreen(
                         ) {
                             Text(
                                 text = "Todas",
-                                color = Color(0xFF22C55E),
+                                color = colors.primary,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -152,7 +152,7 @@ fun NotificacoesScreen(
                                 modifier = Modifier
                                     .padding(horizontal = 14.dp)
                                     .size(20.dp),
-                                color = Color(0xFF22C55E),
+                                color = colors.primary,
                                 strokeWidth = 2.dp
                             )
                         } else {
@@ -193,7 +193,7 @@ fun NotificacoesScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = Color(0xFF22C55E))
+                        CircularProgressIndicator(color = colors.primary)
                     }
                 }
 
@@ -273,7 +273,7 @@ fun HighlightOrderNotificationCard(
     onDetailsClick: () -> Unit = {}
 ) {
     val colors = LocalPedidosColors.current
-    val green = Color(0xFF22C55E)
+    val green = colors.primary
     val cardColor = Color(0xFF161B2E)
 
     Card(
@@ -402,7 +402,8 @@ fun NotificationItemCard(
     onLongClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val green = Color(0xFF22C55E)
+    val colors = LocalPedidosColors.current
+    val green = colors.primary
     val cardColor = Color(0xFF161B2E)
     val shape = RoundedCornerShape(18.dp)
 
@@ -596,7 +597,7 @@ private fun NotificationStateMessage(
                 TextButton(onClick = onAction) {
                     Text(
                         text = actionLabel,
-                        color = Color(0xFF22C55E),
+                        color = LocalPedidosColors.current.primary,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -631,7 +632,7 @@ private fun NotificationInlineError(
             TextButton(onClick = onRetry) {
                 Text(
                     text = "Tentar",
-                    color = Color(0xFF22C55E),
+                    color = LocalPedidosColors.current.primary,
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -645,7 +646,8 @@ private fun NotificacoesFiltros(
     filtroSelecionado: NotificationType?,
     onFiltroSelecionado: (NotificationType?) -> Unit
 ) {
-    val selectedColor = Color(0xFF22C55E)
+    val colors = LocalPedidosColors.current
+    val selectedColor = colors.primary
     val unselectedColor = Color(0xFF161B2E)
 
     Column(

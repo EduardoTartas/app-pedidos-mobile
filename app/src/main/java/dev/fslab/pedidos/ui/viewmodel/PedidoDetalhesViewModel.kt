@@ -76,6 +76,23 @@ class PedidoDetalhesViewModel : ViewModel() {
         }
     }
 
+    fun confirmarEntrega(pedidoId: String, onSucesso: () -> Unit = {}) {
+        _isCancelling.value = true // Reuse loading state or create a new one, _isCancelling is generic enough for action loading
+        viewModelScope.launch {
+            try {
+                val response = api.atualizarStatus(pedidoId, PedidoStatusRequest("entregue"))
+                if (response.isSuccessful) {
+                    carregarPedido(pedidoId)
+                    onSucesso()
+                }
+            } catch (e: Exception) {
+                // Erro silencioso ou log
+            } finally {
+                _isCancelling.value = false
+            }
+        }
+    }
+
     fun avaliarPedido(pedidoId: String, nota: Int, descricao: String) {
         _isAvaliando.value = true
         viewModelScope.launch {
