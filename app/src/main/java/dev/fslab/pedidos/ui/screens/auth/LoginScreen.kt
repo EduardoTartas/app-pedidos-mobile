@@ -134,7 +134,7 @@ fun LoginScreen(
                         text = "O RanGo trata seus dados para operar o serviço de delivery com segurança e transparência. Podemos coletar dados de cadastro, contato, endereços, histórico de pedidos, avaliações, informações de acesso, preferências, notificações e dados necessários para suporte.\n\n" +
                                "Usamos essas informações para criar e proteger sua conta, processar pedidos, conectar você aos restaurantes, enviar comunicações importantes, melhorar a experiência, prevenir fraudes, cumprir obrigações legais e responder solicitações de ajuda.\n\n" +
                                "Seus dados podem ser compartilhados somente quando necessário com restaurantes envolvidos no pedido, prestadores de tecnologia, serviços de pagamento, suporte, armazenamento, análise de segurança ou autoridades competentes, sempre conforme a legislação aplicável.\n\n" +
-                               "Você pode solicitar acesso, correção, atualização ou exclusão dos seus dados, além de tirar dúvidas sobre privacidade, pelo e-mail admin@delivery.com. Mantemos medidas técnicas e administrativas para proteger as informações contra acesso não autorizado, perda, alteração ou uso indevido.",
+                               "Você pode solicitar acesso, correção, atualização ou exclusão dos seus dados, além de tirar dúvidas sobre privacidade, pelo e-mail contatorango2026@gmail.com. Mantemos medidas técnicas e administrativas para proteger as informações contra acesso não autorizado, perda, alteração ou uso indevido.",
                         fontSize = 13.sp,
                         lineHeight = 18.sp
                     )
