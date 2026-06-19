@@ -6,10 +6,14 @@ import dev.fslab.pedidos.model.AvaliarPedidoRequest
 import dev.fslab.pedidos.model.Pedido
 import dev.fslab.pedidos.model.PedidoStatusRequest
 import dev.fslab.pedidos.network.RetrofitClient
+import io.socket.client.IO
+import io.socket.client.Socket
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 sealed class PedidoDetalhesUiState {
     object Loading : PedidoDetalhesUiState()
@@ -37,6 +41,46 @@ class PedidoDetalhesViewModel : ViewModel() {
     private val _avaliacaoSucesso = MutableStateFlow(false)
     val avaliacaoSucesso: StateFlow<Boolean> = _avaliacaoSucesso.asStateFlow()
 
+    private var mSocket: Socket? = null
+
+    fun conectarSocket(pedidoId: String) {
+        if (pedidoId.isBlank()) return
+        
+        try {
+            // Nota: Em um ambiente de produção, esta URL deve vir do RetrofitClient ou de uma variavel de ambiente
+            mSocket = IO.socket(RetrofitClient.BASE_URL)
+            
+            mSocket?.connect()
+
+            mSocket?.on(Socket.EVENT_CONNECT) {
+                mSocket?.emit("joinOrderRoom", pedidoId)
+            }
+
+            mSocket?.on("orderStatusUpdated") { args ->
+                if (args.isNotEmpty()) {
+                    try {
+                        val data = args[0] as JSONObject
+                        val novoStatus = data.getString("status")
+                        
+                        _uiState.update { currentState ->
+                            if (currentState is PedidoDetalhesUiState.Success) {
+                                currentState.copy(
+                                    pedido = currentState.pedido.copy(status = novoStatus)
+                                )
+                            } else {
+                                currentState
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     fun carregarPedido(pedidoId: String) {
         if (pedidoId.isBlank()) return
         
@@ -48,6 +92,7 @@ class PedidoDetalhesViewModel : ViewModel() {
                     val pedido = response.body()?.data
                     if (pedido != null) {
                         _uiState.value = PedidoDetalhesUiState.Success(pedido)
+                        conectarSocket(pedidoId) // Inicia a conexão socket ao carregar o pedido com sucesso
                     } else {
                         _uiState.value = PedidoDetalhesUiState.Error("Pedido não encontrado.")
                     }
@@ -107,7 +152,7 @@ class PedidoDetalhesViewModel : ViewModel() {
     }
 
     fun confirmarEntrega(pedidoId: String, onSucesso: () -> Unit = {}) {
-        _isCancelling.value = true // Reuse loading state or create a new one, _isCancelling is generic enough for action loading
+        _isCancelling.value = true
         viewModelScope.launch {
             try {
                 val response = api.atualizarStatus(pedidoId, PedidoStatusRequest("entregue"))
@@ -136,7 +181,7 @@ class PedidoDetalhesViewModel : ViewModel() {
                 )
                 if (response.isSuccessful) {
                     _avaliacaoSucesso.value = true
-                    carregarPedido(pedidoId) // Recarrega para ver se algo mudou (ex: se o endpoint devolve a nota no pedido)
+                    carregarPedido(pedidoId)
                 } else {
                     // Tratar erro
                 }
@@ -150,5 +195,11 @@ class PedidoDetalhesViewModel : ViewModel() {
     
     fun resetAvaliacao() {
         _avaliacaoSucesso.value = false
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        mSocket?.disconnect()
+        mSocket?.off("orderStatusUpdated")
     }
 }
