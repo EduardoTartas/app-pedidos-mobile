@@ -362,9 +362,11 @@ class NotificationViewModel(
         restaurantName?.asValidRestaurantName()?.let { return it }
 
         val patterns = listOf(
-            Regex("restaurante\\s+(.+?)\\s+(começou|iniciou|confirmou)", RegexOption.IGNORE_CASE),
+            Regex("restaurante\\s+(.+?)\\s+(começou|iniciou|confirmou|recebeu)", RegexOption.IGNORE_CASE),
             Regex("^(.+?)\\s+confirmou\\s+seu\\s+pedido", RegexOption.IGNORE_CASE),
-            Regex("do\\s+(.+?)\\.", RegexOption.IGNORE_CASE)
+            Regex("pedido\\s+(?:do|da|de)\\s+(.+?)\\s+(?:saiu|foi|está|chegou|chegará)", RegexOption.IGNORE_CASE),
+            Regex("do\\s+(.+?)\\.", RegexOption.IGNORE_CASE),
+            Regex("da\\s+(.+?)\\.", RegexOption.IGNORE_CASE)
         )
 
         return patterns.firstNotNullOfOrNull { pattern ->

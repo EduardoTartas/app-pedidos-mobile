@@ -686,7 +686,7 @@ private fun DemoDeliveryMap(
         initialValue = 0.08f,
         targetValue = 0.92f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 14000, easing = LinearEasing),
+            animation = tween(durationMillis = 24000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "delivery-progress"
@@ -1117,12 +1117,18 @@ private fun NotificationUiModel.orderRestaurantName(defaultName: String): String
     restaurantName?.takeIf { it.isNotBlank() }?.let { return it }
 
     val patterns = listOf(
-        Regex("restaurante\\s+(.+?)\\s+(começou|iniciou)", RegexOption.IGNORE_CASE),
-        Regex("do\\s+(.+?)\\.", RegexOption.IGNORE_CASE)
+        Regex("restaurante\\s+(.+?)\\s+(começou|iniciou|recebeu|confirmou)", RegexOption.IGNORE_CASE),
+        Regex("pedido\\s+(?:do|da|de)\\s+(.+?)\\s+(?:saiu|foi|está|chegou|chegará)", RegexOption.IGNORE_CASE),
+        Regex("do\\s+(.+?)\\.", RegexOption.IGNORE_CASE),
+        Regex("da\\s+(.+?)\\.", RegexOption.IGNORE_CASE)
     )
 
-    return patterns.firstNotNullOfOrNull { pattern ->
-        pattern.find(description)?.groupValues?.getOrNull(1)?.trim()
+    val textToSearch = listOf(description, title)
+
+    return textToSearch.firstNotNullOfOrNull { text ->
+        patterns.firstNotNullOfOrNull { pattern ->
+            pattern.find(text)?.groupValues?.getOrNull(1)?.trim()
+        }
     }?.takeIf { it.isNotBlank() } ?: defaultName
 }
 
