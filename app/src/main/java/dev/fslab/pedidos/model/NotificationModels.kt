@@ -6,6 +6,9 @@ enum class NotificationType {
     @SerializedName(value = "PEDIDO_EM_PREPARO", alternate = ["em_preparo"])
     PEDIDO_EM_PREPARO,
 
+    @SerializedName(value = "PEDIDO_A_CAMINHO", alternate = ["a_caminho"])
+    PEDIDO_A_CAMINHO,
+
     @SerializedName("ORDER")
     ORDER,
 
@@ -80,8 +83,10 @@ private fun String.toNotificationType(): NotificationType = when (this) {
     "em_preparo",
     "PEDIDO_EM_PREPARO" -> NotificationType.PEDIDO_EM_PREPARO
 
-    "pedido_confirmado",
     "a_caminho",
+    "PEDIDO_A_CAMINHO" -> NotificationType.PEDIDO_A_CAMINHO
+
+    "pedido_confirmado",
     "entregue",
     "cancelado" -> NotificationType.ORDER
 
@@ -93,13 +98,15 @@ private fun String.toNotificationType(): NotificationType = when (this) {
 
 fun NotificationType.isOrderRelated(): Boolean = when (this) {
     NotificationType.ORDER,
-    NotificationType.PEDIDO_EM_PREPARO -> true
+    NotificationType.PEDIDO_EM_PREPARO,
+    NotificationType.PEDIDO_A_CAMINHO -> true
     NotificationType.PROMOTION,
     NotificationType.SYSTEM -> false
 }
 
 object NotificationMocks {
     private const val MOCK_PREPARING_ORDER_PREFIX = "mock-pedido-em-preparo-"
+    private const val MOCK_ON_THE_WAY_ORDER_ID = "2"
 
     fun pedidoEmPreparo(
         restaurantName: String,
@@ -116,15 +123,32 @@ object NotificationMocks {
         statusKey = "em_preparo"
     )
 
+    fun pedidoACaminho(
+        courierName: String = "Emerson",
+        restaurantName: String = "Burger King",
+        pedidoId: String = MOCK_ON_THE_WAY_ORDER_ID
+    ) = NotificationUiModel(
+        id = MOCK_ON_THE_WAY_ORDER_ID,
+        title = "Pedido a caminho!",
+        description = "O entregador $courierName está a caminho com seu pedido do $restaurantName.",
+        createdAt = "Agora",
+        isRead = false,
+        type = NotificationType.PEDIDO_A_CAMINHO,
+        pedidoId = pedidoId,
+        restaurantName = restaurantName,
+        statusKey = "a_caminho"
+    )
+
     fun interfaceTestNotifications(
-        restaurantName: String = "Burger House",
-        pedidoId: String = "1"
+        restaurantName: String = "Burger King",
+        pedidoId: String = MOCK_ON_THE_WAY_ORDER_ID
     ) = listOf(
-        pedidoEmPreparo(
+        pedidoACaminho(
             restaurantName = restaurantName,
             pedidoId = pedidoId
         )
     )
 
-    fun isMockId(id: String): Boolean = id.startsWith(MOCK_PREPARING_ORDER_PREFIX)
+    fun isMockId(id: String): Boolean =
+        id == MOCK_ON_THE_WAY_ORDER_ID || id.startsWith(MOCK_PREPARING_ORDER_PREFIX)
 }

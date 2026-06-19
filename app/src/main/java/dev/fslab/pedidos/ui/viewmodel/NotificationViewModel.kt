@@ -299,11 +299,7 @@ class NotificationViewModel(
     ): List<NotificationUiModel> {
         if (!BuildConfig.DEBUG) return notifications
 
-        val mockContext = resolvePreparingMockContext(localNotifications + notifications)
-        val interfaceTestNotifications = NotificationMocks.interfaceTestNotifications(
-            restaurantName = mockContext.restaurantName,
-            pedidoId = mockContext.pedidoId
-        )
+        val interfaceTestNotifications = NotificationMocks.interfaceTestNotifications()
         val existingIds = notifications.map { it.id }.toSet()
         val missingMocks = interfaceTestNotifications
             .filterNot { it.id in existingIds }

@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -60,6 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.fslab.pedidos.model.NotificationType
 import dev.fslab.pedidos.model.NotificationUiModel
+import dev.fslab.pedidos.ui.components.OrderOnTheWayNotificationCard
 import dev.fslab.pedidos.ui.components.OrderPreparingNotificationCard
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 import dev.fslab.pedidos.ui.viewmodel.NotificationViewModel
@@ -250,7 +252,18 @@ fun NotificacoesScreen(
                                 viewModel.alternarSelecaoParaExclusao(notificacao.id)
                             }
 
-                            if (notificacao.isPreparingOrderNotification() && !isSelectionMode) {
+                            if (notificacao.isOnTheWayOrderNotification() && !isSelectionMode) {
+                                OrderOnTheWayNotificationCard(
+                                    courierName = notificacao.onTheWayCourierName(),
+                                    restaurantName = notificacao.orderRestaurantName(defaultName = "Burger King"),
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = onNotificationClick,
+                                        onLongClick = onNotificationLongClick
+                                    ),
+                                    onTrackClick = onNotificationClick,
+                                    onDetailsClick = onNotificationClick
+                                )
+                            } else if (notificacao.isPreparingOrderNotification() && !isSelectionMode) {
                                 OrderPreparingNotificationCard(
                                     restaurantName = notificacao.preparingRestaurantName(),
                                     modifier = Modifier.combinedClickable(
@@ -551,6 +564,7 @@ fun NotificationItemCard(
 
 private val NotificationType.icon: ImageVector
     get() = when (this) {
+        NotificationType.PEDIDO_A_CAMINHO -> Icons.Filled.TwoWheeler
         NotificationType.PEDIDO_EM_PREPARO -> Icons.AutoMirrored.Filled.ReceiptLong
         NotificationType.ORDER -> Icons.AutoMirrored.Filled.ReceiptLong
         NotificationType.PROMOTION -> Icons.Filled.CardGiftcard
@@ -571,7 +585,17 @@ private fun NotificationUiModel.isPreparingOrderNotification(): Boolean =
         title.contains("preparo", ignoreCase = true) ||
         description.contains("prepar", ignoreCase = true)
 
+private fun NotificationUiModel.isOnTheWayOrderNotification(): Boolean =
+    type == NotificationType.PEDIDO_A_CAMINHO ||
+        statusKey == "a_caminho" ||
+        title.contains("a caminho", ignoreCase = true) ||
+        description.contains("a caminho", ignoreCase = true)
+
 private fun NotificationUiModel.preparingRestaurantName(): String {
+    return orderRestaurantName(defaultName = "Burger House")
+}
+
+private fun NotificationUiModel.orderRestaurantName(defaultName: String): String {
     restaurantName?.takeIf { it.isNotBlank() }?.let { return it }
 
     val patterns = listOf(
@@ -581,7 +605,19 @@ private fun NotificationUiModel.preparingRestaurantName(): String {
 
     return patterns.firstNotNullOfOrNull { pattern ->
         pattern.find(description)?.groupValues?.getOrNull(1)?.trim()
-    }?.takeIf { it.isNotBlank() } ?: "Burger House"
+    }?.takeIf { it.isNotBlank() } ?: defaultName
+}
+
+private fun NotificationUiModel.onTheWayCourierName(): String {
+    return Regex(
+        pattern = "entregador\\s+(.+?)\\s+está\\s+a\\s+caminho",
+        option = RegexOption.IGNORE_CASE
+    ).find(description)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+        ?: "Emerson"
 }
 
 private fun NotificationUiModel.createdAtLabel(): String {
