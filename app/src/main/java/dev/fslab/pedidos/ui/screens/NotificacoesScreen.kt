@@ -39,7 +39,9 @@ import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -303,7 +305,7 @@ fun NotificacoesScreen(
                             if (notificacao.isOnTheWayOrderNotification() && !isSelectionMode) {
                                 OrderOnTheWayNotificationCard(
                                     courierName = notificacao.onTheWayCourierName(),
-                                    restaurantName = notificacao.orderRestaurantName(defaultName = "Burger King"),
+                                    restaurantName = notificacao.orderRestaurantName(defaultName = "Restaurante parceiro"),
                                     modifier = Modifier.combinedClickable(
                                         onClick = onNotificationClick,
                                         onLongClick = onNotificationLongClick
@@ -480,7 +482,7 @@ private fun OnTheWayTrackingSheet(
 ) {
     val colors = LocalPedidosColors.current
     val green = colors.primary
-    val restaurantName = notification.orderRestaurantName(defaultName = "Burger King")
+    val restaurantName = notification.orderRestaurantName(defaultName = "Restaurante parceiro")
     val courierName = notification.onTheWayCourierName()
 
     Column(
@@ -507,7 +509,7 @@ private fun OnTheWayTrackingSheet(
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        DemoDeliveryMap()
+        DemoDeliveryMap(restaurantName = restaurantName)
 
         Spacer(modifier = Modifier.height(18.dp))
 
@@ -569,7 +571,7 @@ private fun OnTheWayDetailsSheet(
 ) {
     val colors = LocalPedidosColors.current
     val green = colors.primary
-    val restaurantName = notification.orderRestaurantName(defaultName = "Burger King")
+    val restaurantName = notification.orderRestaurantName(defaultName = "Restaurante parceiro")
     val courierName = notification.onTheWayCourierName()
 
     Column(
@@ -632,7 +634,7 @@ private fun OnTheWayDetailsSheet(
                 )
 
                 Text(
-                    text = "Itens",
+                    text = "Itens demonstrativos",
                     color = Color.White,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
@@ -640,9 +642,9 @@ private fun OnTheWayDetailsSheet(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                OrderItemRow(quantity = "1x", name = "Combo Whopper", price = "R$ 31,90")
-                OrderItemRow(quantity = "1x", name = "Batata média", price = "R$ 8,00")
-                OrderItemRow(quantity = "1x", name = "Refrigerante", price = "R$ 3,00")
+                OrderItemRow(quantity = "1x", name = "Prato principal", price = "R$ 31,90")
+                OrderItemRow(quantity = "1x", name = "Acompanhamento", price = "R$ 8,00")
+                OrderItemRow(quantity = "1x", name = "Bebida", price = "R$ 3,00")
 
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 14.dp),
@@ -674,6 +676,7 @@ private fun OnTheWayDetailsSheet(
 
 @Composable
 private fun DemoDeliveryMap(
+    restaurantName: String,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalPedidosColors.current
@@ -683,8 +686,8 @@ private fun DemoDeliveryMap(
         initialValue = 0.08f,
         targetValue = 0.92f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3200, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
+            animation = tween(durationMillis = 14000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
         ),
         label = "delivery-progress"
     )
@@ -750,6 +753,18 @@ private fun DemoDeliveryMap(
             drawCircle(color = green.copy(alpha = 0.2f), radius = 14.dp.toPx(), center = routeEnd)
         }
 
+        MapLocationMarker(
+            icon = Icons.Filled.Restaurant,
+            label = restaurantName,
+            modifier = Modifier.align(Alignment.BottomStart)
+        )
+
+        MapLocationMarker(
+            icon = Icons.Filled.Home,
+            label = "Você",
+            modifier = Modifier.align(Alignment.TopEnd)
+        )
+
         Box(
             modifier = Modifier
                 .offset(
@@ -767,16 +782,35 @@ private fun DemoDeliveryMap(
                 modifier = Modifier.size(24.dp)
             )
         }
+    }
+}
 
+@Composable
+private fun MapLocationMarker(
+    icon: ImageVector,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .background(Color(0xFF020617).copy(alpha = 0.86f), RoundedCornerShape(999.dp))
+            .padding(horizontal = 9.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = LocalPedidosColors.current.primary,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
         Text(
-            text = "Você",
+            text = label,
             color = Color.White,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(999.dp))
-                .padding(horizontal = 10.dp, vertical = 5.dp)
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
