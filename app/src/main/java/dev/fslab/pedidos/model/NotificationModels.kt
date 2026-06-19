@@ -134,7 +134,7 @@ object NotificationMocks {
         createdAt = "Agora",
         isRead = false,
         type = NotificationType.PEDIDO_A_CAMINHO,
-        pedidoId = pedidoId,
+        pedidoId = null,
         restaurantName = restaurantName,
         statusKey = "a_caminho"
     )
