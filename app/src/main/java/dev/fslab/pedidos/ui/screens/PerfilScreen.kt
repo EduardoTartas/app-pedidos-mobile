@@ -58,6 +58,7 @@ fun PerfilScreen(
     user: User?,
     bottomPadding: androidx.compose.ui.unit.Dp = 0.dp,
     onEditProfile: () -> Unit = {},
+    onNavigateMeusEnderecos: () -> Unit = {},
     onNavigateNotificacoes: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
@@ -189,7 +190,8 @@ fun PerfilScreen(
                     title = "Meus endereços",
                     icon = Icons.Outlined.LocationOn,
                     compactWidth = compactWidth,
-                    minHeight = cardHeight
+                    minHeight = cardHeight,
+                    onClick = onNavigateMeusEnderecos
                 )
                 PerfilInfoItem(
                     title = "Notificações",
@@ -245,7 +247,7 @@ fun PerfilScreen(
                                 .clickable(onClick = {
                                     try {
                                         val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                            data = Uri.parse("mailto:admin@delivery.com")
+                                            data = Uri.parse("mailto:contatorango2026@gmail.com")
                                             putExtra(Intent.EXTRA_SUBJECT, "Suporte - App de Pedidos")
                                         }
                                         context.startActivity(Intent.createChooser(intent, "Enviar e-mail"))
@@ -256,7 +258,7 @@ fun PerfilScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Enviar e-mail: admin@delivery.com",
+                                text = "Enviar e-mail: contatorango2026@gmail.com",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = colors.primary,
                                 modifier = Modifier.weight(1f)

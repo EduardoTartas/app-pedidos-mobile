@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -92,12 +92,7 @@ fun PedidoConfirmacaoScreen(
                         .scale(checkScale.value),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(48.dp)
-                    )
+                    Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
                 }
             }
 
@@ -105,9 +100,9 @@ fun PedidoConfirmacaoScreen(
 
             AnimatedVisibility(visible = showContent, enter = fadeIn(tween(500)) + scaleIn(tween(500))) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Pedido confirmado!", color = colors.textPrimary, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Pedido realizado!", color = colors.textPrimary, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("$nomeRestaurante recebeu seu pedido\ne já iniciou o preparo", color = colors.textPrimary.copy(alpha = 0.6f), fontSize = 15.sp, textAlign = TextAlign.Center, lineHeight = 22.sp)
+                    Text("Seu pedido foi enviado para\n$nomeRestaurante", color = colors.textPrimary.copy(alpha = 0.6f), fontSize = 15.sp, textAlign = TextAlign.Center, lineHeight = 22.sp)
                 }
             }
 
@@ -124,7 +119,7 @@ fun PedidoConfirmacaoScreen(
                         
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = colors.textPrimary.copy(alpha = 0.07f))
                         
-                        ResumoRow("Status", "Em preparo ✓", colors, valueColor = Verde)
+                        ResumoRow("Status", "Criado ✓", colors, valueColor = Verde)
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = colors.textPrimary.copy(alpha = 0.07f))
 

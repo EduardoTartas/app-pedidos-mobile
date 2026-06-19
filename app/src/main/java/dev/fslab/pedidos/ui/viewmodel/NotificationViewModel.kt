@@ -220,18 +220,16 @@ class NotificationViewModel(
         }
     }
 
-    fun registrarPedidoConfirmado(
+    fun registrarPedidoRealizado(
         pedido: Pedido,
         nomeRestaurante: String
     ): NotificationUiModel {
-        val restaurante = nomeRestaurante
-            .ifBlank { pedido.restauranteNome }
-            .ifBlank { "o restaurante" }
+        val restaurante = nomeRestaurante.ifBlank { "O restaurante" }
 
         val notification = NotificationUiModel(
             id = "$LOCAL_NOTIFICATION_PREFIX${pedido.id}",
-            title = "Pedido confirmado!",
-            description = "$restaurante confirmou seu pedido #${pedido.id.takeLast(8).uppercase()} e já iniciou o preparo.",
+            title = "Pedido realizado!",
+            description = "Pedido #${pedido.id.takeLast(8).uppercase()} enviado para $restaurante.",
             createdAt = pedido.criadoEm ?: Instant.now().toString(),
             isRead = false,
             type = NotificationType.ORDER,

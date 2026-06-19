@@ -43,6 +43,8 @@ import dev.fslab.pedidos.ui.screens.auth.LoginScreen
 import dev.fslab.pedidos.ui.screens.auth.CadastroScreen
 import dev.fslab.pedidos.ui.screens.CarrinhoScreen
 import dev.fslab.pedidos.ui.screens.HomeScreen
+import dev.fslab.pedidos.ui.screens.MeusEnderecosScreen
+import dev.fslab.pedidos.ui.screens.NovoEnderecoScreen
 import dev.fslab.pedidos.ui.screens.NotificacoesScreen
 import dev.fslab.pedidos.ui.screens.PerfilScreen
 import dev.fslab.pedidos.ui.screens.PedidoConfirmacaoScreen
@@ -120,6 +122,8 @@ fun PedidosApp(activity: ComponentActivity) {
     val homeViewModel: dev.fslab.pedidos.ui.viewmodel.HomeViewModel = viewModel()
     val homeState by homeViewModel.uiState.collectAsState()
 
+    val enderecoViewModel: dev.fslab.pedidos.ui.viewmodel.EnderecoViewModel = viewModel()
+
     val user by authViewModel.currentUser.collectAsState()
     val userId = user?.id ?: ""
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -157,11 +161,11 @@ fun PedidosApp(activity: ComponentActivity) {
     LaunchedEffect(pedidoState) {
         val successState = pedidoState as? PedidoUiState.Success
         if (successState != null && currentRoute != "pedido_confirmacao") {
-            val notification = notificationViewModel.registrarPedidoConfirmado(
+            val notification = notificationViewModel.registrarPedidoRealizado(
                 pedido = successState.pedido,
                 nomeRestaurante = carrinhoViewModel.nomeRestaurante.value
             )
-            OrderNotificationHelper.showOrderConfirmed(context, notification)
+            OrderNotificationHelper.showOrderCreated(context, notification)
             navController.navigate("pedido_confirmacao") {
                 popUpTo("carrinho") { inclusive = true }
                 launchSingleTop = true
@@ -469,6 +473,9 @@ fun PedidosApp(activity: ComponentActivity) {
                     PerfilScreen(
                         user = currentUser,
                         bottomPadding = innerPadding.calculateBottomPadding(),
+                        onNavigateMeusEnderecos = {
+                            navController.navigate("meus_enderecos")
+                        },
                         onNavigateNotificacoes = {
                             navController.navigate("notificacoes")
                         },
@@ -614,6 +621,27 @@ fun PedidosApp(activity: ComponentActivity) {
                             navController.popBackStack()
                         },
                         viewModel = personalizacaoViewModel
+                    )
+                }
+
+                composable("meus_enderecos") {
+                    MeusEnderecosScreen(
+                        usuarioId = currentUser?.id ?: "",
+                        viewModel = enderecoViewModel,
+                        onBack = { navController.popBackStack() },
+                        onAddEndereco = { navController.navigate("novo_endereco") },
+                        onEditEndereco = { enderecoId -> navController.navigate("editar_endereco/$enderecoId") }
+                    )
+                }
+
+                composable("editar_endereco/{enderecoId}") { backStackEntry ->
+                    val enderecoId = backStackEntry.arguments?.getString("enderecoId")
+                    NovoEnderecoScreen(
+                        usuarioId = currentUser?.id ?: "",
+                        enderecoId = enderecoId,
+                        onBack = { navController.popBackStack() },
+                        onSuccess = { navController.popBackStack() },
+                        viewModel = enderecoViewModel
                     )
                 }
 

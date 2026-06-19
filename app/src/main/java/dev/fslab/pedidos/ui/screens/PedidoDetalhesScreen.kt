@@ -56,6 +56,7 @@ fun PedidoDetalhesScreen(
     }
 
     var showCancelDialog by remember { mutableStateOf(false) }
+    var showConfirmEntregaDialog by remember { mutableStateOf(false) }
     var showAvaliacaoDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var nota by remember { mutableIntStateOf(5) }
@@ -162,6 +163,52 @@ fun PedidoDetalhesScreen(
                             text = "CANCELAR AGORA", 
                             fontWeight = FontWeight.Bold, 
                             fontSize = 10.sp,
+                            maxLines = 1
+                        )
+                    }
+                }
+            },
+            dismissButton = null,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    if (showConfirmEntregaDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmEntregaDialog = false },
+            containerColor = colors.surface,
+            titleContentColor = colors.textPrimary,
+            textContentColor = colors.textSecondary,
+            icon = { Icon(Icons.Default.Check, contentDescription = null, tint = Verde, modifier = Modifier.size(40.dp)) },
+            title = { Text("Confirmar Entrega?", fontWeight = FontWeight.Black, fontSize = 18.sp) },
+            text = { Text("Você já recebeu este pedido em mãos? Ao confirmar, o pedido será finalizado.", textAlign = TextAlign.Center) },
+            confirmButton = {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp, start = 12.dp, end = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TextButton(
+                        onClick = { showConfirmEntregaDialog = false },
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Text("AINDA NÃO", color = colors.textTertiary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                    Button(
+                        onClick = { 
+                            (uiState as? PedidoDetalhesUiState.Success)?.pedido?.let { viewModel.confirmarEntrega(it.id) }
+                            showConfirmEntregaDialog = false 
+                        },
+                        modifier = Modifier.weight(1.6f).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Verde),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Text(
+                            text = "JÁ RECEBI", 
+                            fontWeight = FontWeight.Bold, 
+                            fontSize = 11.sp,
                             maxLines = 1
                         )
                     }
@@ -334,6 +381,43 @@ fun PedidoDetalhesScreen(
                                 }
                                 Text(
                                     "Você só pode cancelar enquanto o restaurante não inicia o preparo.",
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 8.dp),
+                                    textAlign = TextAlign.Center,
+                                    fontSize = 10.sp,
+                                    color = colors.textTertiary
+                                )
+                            }
+                        }
+
+                        // ─── BOTÃO CONFIRMAR ENTREGA (SE SAIU PARA ENTREGA) ───
+                        if (pedido.status == "a_caminho") {
+                            item {
+                                val isCancelling by viewModel.isCancelling.collectAsState() // Reaproveitando estado de loading de ações da viewModel
+                                
+                                Spacer(Modifier.height(24.dp))
+                                Button(
+                                    onClick = { showConfirmEntregaDialog = true },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp)
+                                        .height(50.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Verde,
+                                        contentColor = Color.White
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    enabled = !isCancelling
+                                ) {
+                                    if (isCancelling) {
+                                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+                                    } else {
+                                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("CONFIRMAR ENTREGA", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    }
+                                }
+                                Text(
+                                    "O entregador já chegou? Confirme o recebimento para liberar a avaliação.",
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 8.dp),
                                     textAlign = TextAlign.Center,
                                     fontSize = 10.sp,
@@ -677,8 +761,8 @@ private fun formatarFormaPagamento(forma: String?): String = when (forma) {
 @Composable
 private fun StatusBadgeCompact(status: String) {
     val (label, bgColor, textColor) = when (status) {
-        "criado", "pendente" -> Triple("Enviado", Color(0xFFFFB01E).copy(alpha = 0.1f), Color(0xFFFFB01E))
-        "em_preparo" -> Triple("Em preparo", Color(0xFF3B82F6).copy(alpha = 0.1f), Color(0xFF3B82F6))
+        "criado", "pendente" -> Triple("Pendente", Color(0xFFFFB01E).copy(alpha = 0.1f), Color(0xFFFFB01E))
+        "em_preparo" -> Triple("Preparando", Color(0xFF3B82F6).copy(alpha = 0.1f), Color(0xFF3B82F6))
         "a_caminho" -> Triple("No caminho", Color(0xFF8B5CF6).copy(alpha = 0.1f), Color(0xFF8B5CF6))
         "entregue" -> Triple("Entregue", Color(0xFF14B822).copy(alpha = 0.1f), Color(0xFF14B822))
         "cancelado" -> Triple("Cancelado", Color(0xFFDC2626).copy(alpha = 0.1f), Color(0xFFDC2626))
@@ -690,8 +774,8 @@ private fun StatusBadgeCompact(status: String) {
 }
 
 private fun mapearStatusLabel(status: String): String = when (status) {
-    "criado", "pendente" -> "Pedido enviado"
-    "em_preparo" -> "Pedido confirmado"
+    "criado", "pendente" -> "Pedido realizado"
+    "em_preparo" -> "Na cozinha"
     "a_caminho" -> "Saiu para entrega"
     "entregue" -> "Entregue"
     "cancelado" -> "Cancelado"
