@@ -305,7 +305,7 @@ fun NotificacoesScreen(
                             if (notificacao.isOnTheWayOrderNotification() && !isSelectionMode) {
                                 OrderOnTheWayNotificationCard(
                                     courierName = notificacao.onTheWayCourierName(),
-                                    restaurantName = notificacao.orderRestaurantName(defaultName = "Restaurante parceiro"),
+                                    restaurantName = notificacao.orderRestaurantName(defaultName = "Restaurante"),
                                     modifier = Modifier.combinedClickable(
                                         onClick = onNotificationClick,
                                         onLongClick = onNotificationLongClick
@@ -482,7 +482,7 @@ private fun OnTheWayTrackingSheet(
 ) {
     val colors = LocalPedidosColors.current
     val green = colors.primary
-    val restaurantName = notification.orderRestaurantName(defaultName = "Restaurante parceiro")
+    val restaurantName = notification.orderRestaurantName(defaultName = "Restaurante")
     val courierName = notification.onTheWayCourierName()
 
     Column(
@@ -571,7 +571,7 @@ private fun OnTheWayDetailsSheet(
 ) {
     val colors = LocalPedidosColors.current
     val green = colors.primary
-    val restaurantName = notification.orderRestaurantName(defaultName = "Restaurante parceiro")
+    val restaurantName = notification.orderRestaurantName(defaultName = "Restaurante")
     val courierName = notification.onTheWayCourierName()
 
     Column(

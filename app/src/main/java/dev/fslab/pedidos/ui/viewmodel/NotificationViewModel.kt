@@ -420,7 +420,7 @@ class NotificationViewModel(
 
     companion object {
         private const val LOCAL_NOTIFICATION_PREFIX = "local-pedido-"
-        private const val DEFAULT_MOCK_RESTAURANT_NAME = "Restaurante parceiro"
+        private const val DEFAULT_MOCK_RESTAURANT_NAME = "Restaurante"
         private const val DEFAULT_MOCK_PEDIDO_ID = "1"
     }
 }

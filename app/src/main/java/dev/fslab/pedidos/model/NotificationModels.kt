@@ -125,7 +125,7 @@ object NotificationMocks {
 
     fun pedidoACaminho(
         courierName: String = "Emerson",
-        restaurantName: String = "Restaurante parceiro",
+        restaurantName: String = "Restaurante",
         pedidoId: String = MOCK_ON_THE_WAY_ORDER_ID
     ) = NotificationUiModel(
         id = MOCK_ON_THE_WAY_ORDER_ID,
@@ -140,7 +140,7 @@ object NotificationMocks {
     )
 
     fun interfaceTestNotifications(
-        restaurantName: String = "Restaurante parceiro",
+        restaurantName: String = "Restaurante",
         pedidoId: String = MOCK_ON_THE_WAY_ORDER_ID
     ) = listOf(
         pedidoACaminho(
