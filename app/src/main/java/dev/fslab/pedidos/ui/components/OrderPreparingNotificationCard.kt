@@ -100,7 +100,7 @@ fun OrderPreparingNotificationCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "O restaurante $restaurantName começou a preparar seu pedido.",
+                text = "O local $restaurantName começou a preparar seu pedido.",
                 color = Color.White.copy(alpha = 0.72f),
                 style = MaterialTheme.typography.bodyMedium
             )

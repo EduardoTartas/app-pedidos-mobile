@@ -114,9 +114,9 @@ object NotificationMocks {
     ) = NotificationUiModel(
         id = "$MOCK_PREPARING_ORDER_PREFIX$pedidoId",
         title = "Seu pedido está sendo preparado",
-        description = "O restaurante $restaurantName começou a preparar seu pedido.",
+        description = "O local $restaurantName começou a preparar seu pedido.",
         createdAt = "Agora",
-        isRead = false,
+        isRead = false,,
         type = NotificationType.PEDIDO_EM_PREPARO,
         pedidoId = pedidoId,
         restaurantName = restaurantName,
@@ -125,12 +125,12 @@ object NotificationMocks {
 
     fun pedidoACaminho(
         courierName: String = "Emerson",
-        restaurantName: String = "Restaurante",
+        restaurantName: String = "Lugar",
         pedidoId: String = MOCK_ON_THE_WAY_ORDER_ID
     ) = NotificationUiModel(
         id = MOCK_ON_THE_WAY_ORDER_ID,
         title = "Pedido a caminho!",
-        description = "O entregador $courierName está a caminho com seu pedido do $restaurantName.",
+        description = "O entregador $courierName está a caminho com seu pedido para $restaurantName.",
         createdAt = "Agora",
         isRead = false,
         type = NotificationType.PEDIDO_A_CAMINHO,
@@ -140,7 +140,7 @@ object NotificationMocks {
     )
 
     fun interfaceTestNotifications(
-        restaurantName: String = "Restaurante",
+        restaurantName: String = "Lugar",
         pedidoId: String = MOCK_ON_THE_WAY_ORDER_ID
     ) = listOf(
         pedidoACaminho(

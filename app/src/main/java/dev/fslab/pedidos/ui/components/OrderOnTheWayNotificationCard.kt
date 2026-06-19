@@ -107,7 +107,7 @@ fun OrderOnTheWayNotificationCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "O entregador $courierName está a caminho com seu pedido do $restaurantName.",
+                text = "O entregador $courierName está a caminho com seu pedido para $restaurantName.",
                 color = Color.White.copy(alpha = 0.72f),
                 style = MaterialTheme.typography.bodyMedium
             )

@@ -224,17 +224,20 @@ class NotificationViewModel(
         pedido: Pedido,
         nomeRestaurante: String
     ): NotificationUiModel {
-        val restaurante = nomeRestaurante.ifBlank { "O restaurante" }
+        val placeName = nomeRestaurante.takeIf { it.isNotBlank() && it.lowercase() != "restaurante" }
+            ?: pedido.restauranteNome.takeIf { it.isNotBlank() && it.lowercase() != "restaurante" }
+            ?: "Lugar"
+        val destinationName = placeName.ifBlank { "local" }
 
         val notification = NotificationUiModel(
             id = "$LOCAL_NOTIFICATION_PREFIX${pedido.id}",
             title = "Pedido realizado!",
-            description = "Pedido #${pedido.id.takeLast(8).uppercase()} enviado para $restaurante.",
+            description = "Pedido #${pedido.id.takeLast(8).uppercase()} enviado para $destinationName.",
             createdAt = pedido.criadoEm ?: Instant.now().toString(),
             isRead = false,
             type = NotificationType.ORDER,
             pedidoId = pedido.id,
-            restaurantName = restaurante,
+            restaurantName = placeName,
             statusKey = "pedido_confirmado"
         )
 
@@ -420,7 +423,7 @@ class NotificationViewModel(
 
     companion object {
         private const val LOCAL_NOTIFICATION_PREFIX = "local-pedido-"
-        private const val DEFAULT_MOCK_RESTAURANT_NAME = "Restaurante"
+        private const val DEFAULT_MOCK_RESTAURANT_NAME = "Lugar"
         private const val DEFAULT_MOCK_PEDIDO_ID = "1"
     }
 }

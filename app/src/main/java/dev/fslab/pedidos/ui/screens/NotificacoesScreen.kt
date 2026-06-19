@@ -305,7 +305,7 @@ fun NotificacoesScreen(
                             if (notificacao.isOnTheWayOrderNotification() && !isSelectionMode) {
                                 OrderOnTheWayNotificationCard(
                                     courierName = notificacao.onTheWayCourierName(),
-                                    restaurantName = notificacao.orderRestaurantName(defaultName = "Restaurante"),
+                                    restaurantName = notificacao.orderRestaurantName(defaultName = "Lugar"),
                                     modifier = Modifier.combinedClickable(
                                         onClick = onNotificationClick,
                                         onLongClick = onNotificationLongClick
@@ -417,7 +417,7 @@ fun HighlightOrderNotificationCard(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "O entregador Emerson está a caminho com seu pedido do Burger King.",
+                text = "O entregador Emerson está a caminho com seu pedido para o Burger King.",
                 color = Color.White.copy(alpha = 0.74f),
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -482,7 +482,7 @@ private fun OnTheWayTrackingSheet(
 ) {
     val colors = LocalPedidosColors.current
     val green = colors.primary
-    val restaurantName = notification.orderRestaurantName(defaultName = "Restaurante")
+    val restaurantName = notification.orderRestaurantName(defaultName = "Lugar")
     val courierName = notification.onTheWayCourierName()
 
     Column(
@@ -502,7 +502,7 @@ private fun OnTheWayTrackingSheet(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Seu pedido do $restaurantName saiu para entrega.",
+            text = "Seu pedido para $restaurantName saiu para entrega.",
             color = Color.White.copy(alpha = 0.7f),
             style = MaterialTheme.typography.bodyMedium
         )
@@ -525,7 +525,7 @@ private fun OnTheWayTrackingSheet(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 DeliveryInfoRow(label = "Entregador", value = courierName)
-                DeliveryInfoRow(label = "Restaurante", value = restaurantName)
+                DeliveryInfoRow(label = "Local", value = restaurantName)
                 DeliveryInfoRow(label = "Chegada estimada", value = "10 minutos")
             }
         }
@@ -543,7 +543,7 @@ private fun OnTheWayTrackingSheet(
 
         DeliveryTimelineStep(
             title = "Pedido confirmado",
-            description = "O restaurante recebeu seu pedido.",
+            description = "O local recebeu seu pedido.",
             isDone = true
         )
         DeliveryTimelineStep(
@@ -571,7 +571,7 @@ private fun OnTheWayDetailsSheet(
 ) {
     val colors = LocalPedidosColors.current
     val green = colors.primary
-    val restaurantName = notification.orderRestaurantName(defaultName = "Restaurante")
+    val restaurantName = notification.orderRestaurantName(defaultName = "Lugar")
     val courierName = notification.onTheWayCourierName()
 
     Column(
@@ -624,7 +624,7 @@ private fun OnTheWayDetailsSheet(
                     .padding(16.dp)
             ) {
                 DeliveryInfoRow(label = "Pedido", value = "#0002")
-                DeliveryInfoRow(label = "Restaurante", value = restaurantName)
+                DeliveryInfoRow(label = "Local", value = restaurantName)
                 DeliveryInfoRow(label = "Entregador", value = courierName)
                 DeliveryInfoRow(label = "Previsão", value = "10 minutos")
 
