@@ -15,6 +15,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.google.gson.Gson
+import com.google.android.gms.tasks.Tasks
+import com.google.firebase.messaging.FirebaseMessaging
+import dev.fslab.pedidos.network.NPaaSRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import android.content.Context
 
 sealed class AuthState {
     object Idle : AuthState()
@@ -260,14 +266,44 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             AuthPreferences.saveUser(getApplication(), gson.toJson(user))
         } catch (e: Exception) { }
 
+        registrarDispositivoAposLogin()
+
         _authState.value = if (!payload.profileComplete) AuthState.NeedsProfileCompletion(user) else AuthState.Success(user)
     }
 
+    private fun registrarDispositivoAposLogin() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val tokenFcm = Tasks.await(FirebaseMessaging.getInstance().token)
+                val versaoApp = try {
+                    val pInfo = getApplication<Application>().packageManager.getPackageInfo(getApplication<Application>().packageName, 0)
+                    pInfo.versionName ?: "desconhecida"
+                } catch (e: Exception) {
+                    "desconhecida"
+                }
+                NPaaSRepository.registrarDispositivo(tokenFcm, versaoApp)
+            } catch (e: Exception) {
+                Log.w(TAG, "Falha ao registrar dispositivo apos login: ${e.message}")
+            }
+        }
+    }
+
     fun logout() {
-        TokenManager.clearTokens()
-        AuthPreferences.clear(getApplication())
-        _currentUser.value = null
-        _authState.value = AuthState.Idle
+        viewModelScope.launch(Dispatchers.IO) {
+            val tokenFcm = getApplication<Application>().getSharedPreferences("fcm_prefs", Context.MODE_PRIVATE)
+                .getString("fcm_token", null)
+            
+            if (tokenFcm != null) {
+                NPaaSRepository.desativarToken(tokenFcm)
+            }
+            
+            withContext(Dispatchers.Main) {
+                TokenManager.clearTokens()
+                AuthPreferences.clear(getApplication())
+                _currentUser.value = null
+                _authState.value = AuthState.Idle
+            }
+        }
     }
 
     fun clearError() {
