@@ -60,6 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.fslab.pedidos.model.NotificationType
 import dev.fslab.pedidos.model.NotificationUiModel
+import dev.fslab.pedidos.ui.components.OrderPreparingNotificationCard
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 import dev.fslab.pedidos.ui.viewmodel.NotificationViewModel
 import java.time.Instant
@@ -69,7 +70,7 @@ import java.time.temporal.ChronoUnit
 import java.util.Locale
 import androidx.lifecycle.viewmodel.compose.viewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun NotificacoesScreen(
     onBack: () -> Unit,
@@ -237,27 +238,40 @@ fun NotificacoesScreen(
                             key = { it.id }
                         ) { notificacao ->
                             val pedidoId = notificacao.pedidoIdFromNotification()
-                            NotificationItemCard(
-                                icon = notificacao.type.icon,
-                                title = notificacao.title,
-                                description = notificacao.description,
-                                date = notificacao.createdAtLabel(),
-                                actionHint = if (pedidoId != null) "Toque para ver detalhes do pedido" else null,
-                                isUnread = !notificacao.isRead,
-                                isSelectionMode = isSelectionMode,
-                                isSelected = notificacao.id in uiState.selectedNotificationIds,
-                                onClick = {
-                                    if (isSelectionMode) {
-                                        viewModel.alternarSelecaoParaExclusao(notificacao.id)
-                                    } else {
-                                        viewModel.marcarComoLida(notificacao.id)
-                                        pedidoId?.let(onNavigateToPedidoDetalhes)
-                                    }
-                                },
-                                onLongClick = {
+                            val onNotificationClick: () -> Unit = {
+                                if (isSelectionMode) {
                                     viewModel.alternarSelecaoParaExclusao(notificacao.id)
+                                } else {
+                                    viewModel.marcarComoLida(notificacao.id)
+                                    pedidoId?.let(onNavigateToPedidoDetalhes)
                                 }
-                            )
+                            }
+                            val onNotificationLongClick: () -> Unit = {
+                                viewModel.alternarSelecaoParaExclusao(notificacao.id)
+                            }
+
+                            if (notificacao.isPreparingOrderNotification() && !isSelectionMode) {
+                                OrderPreparingNotificationCard(
+                                    restaurantName = notificacao.preparingRestaurantName(),
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = onNotificationClick,
+                                        onLongClick = onNotificationLongClick
+                                    )
+                                )
+                            } else {
+                                NotificationItemCard(
+                                    icon = notificacao.type.icon,
+                                    title = notificacao.title,
+                                    description = notificacao.description,
+                                    date = notificacao.createdAtLabel(),
+                                    actionHint = if (pedidoId != null) "Toque para ver detalhes do pedido" else null,
+                                    isUnread = !notificacao.isRead,
+                                    isSelectionMode = isSelectionMode,
+                                    isSelected = notificacao.id in uiState.selectedNotificationIds,
+                                    onClick = onNotificationClick,
+                                    onLongClick = onNotificationLongClick
+                                )
+                            }
                         }
                     }
                 }
@@ -537,6 +551,7 @@ fun NotificationItemCard(
 
 private val NotificationType.icon: ImageVector
     get() = when (this) {
+        NotificationType.PEDIDO_EM_PREPARO -> Icons.AutoMirrored.Filled.ReceiptLong
         NotificationType.ORDER -> Icons.AutoMirrored.Filled.ReceiptLong
         NotificationType.PROMOTION -> Icons.Filled.CardGiftcard
         NotificationType.SYSTEM -> Icons.Filled.Info
@@ -549,6 +564,25 @@ private fun NotificationUiModel.pedidoIdFromNotification(): String? {
 }
 
 private const val LOCAL_ORDER_NOTIFICATION_PREFIX = "local-pedido-"
+
+private fun NotificationUiModel.isPreparingOrderNotification(): Boolean =
+    type == NotificationType.PEDIDO_EM_PREPARO ||
+        statusKey == "em_preparo" ||
+        title.contains("preparo", ignoreCase = true) ||
+        description.contains("prepar", ignoreCase = true)
+
+private fun NotificationUiModel.preparingRestaurantName(): String {
+    restaurantName?.takeIf { it.isNotBlank() }?.let { return it }
+
+    val patterns = listOf(
+        Regex("restaurante\\s+(.+?)\\s+(começou|iniciou)", RegexOption.IGNORE_CASE),
+        Regex("do\\s+(.+?)\\.", RegexOption.IGNORE_CASE)
+    )
+
+    return patterns.firstNotNullOfOrNull { pattern ->
+        pattern.find(description)?.groupValues?.getOrNull(1)?.trim()
+    }?.takeIf { it.isNotBlank() } ?: "Burger House"
+}
 
 private fun NotificationUiModel.createdAtLabel(): String {
     val createdInstant = runCatching { Instant.parse(createdAt) }.getOrNull()
