@@ -514,7 +514,7 @@ fun DetalhesInfoRow(restaurante: Restaurante, textColor: Color, onVerHorarios: (
             )
         }
 
-        val statusFunc = calcularStatus(restaurante.horarioFuncionamento)
+        val statusFunc = calcularStatus(restaurante.status, restaurante.horarioFuncionamento)
         if (statusFunc != null) {
             Spacer(modifier = Modifier.height(8.dp))
             Row(
@@ -563,8 +563,16 @@ fun DetalhesInfoRow(restaurante: Restaurante, textColor: Color, onVerHorarios: (
 
 data class StatusInfo(val texto: String, val cor: Color)
 
-private fun calcularStatus(horarios: List<dev.fslab.pedidos.model.HorarioFuncionamento>?): StatusInfo? {
-    if (horarios.isNullOrEmpty()) return null
+private fun calcularStatus(statusApi: String, horarios: List<dev.fslab.pedidos.model.HorarioFuncionamento>?): StatusInfo? {
+    // Se o backend diz que esta fechado, mostra fechado
+    if (statusApi == "fechado") {
+        return StatusInfo("Fechado", Color(0xFFEF4444))
+    }
+    
+    // Se não há horários, mas a API diz que está aberto
+    if (horarios.isNullOrEmpty()) {
+        return if (statusApi == "aberto") StatusInfo("Aberto", Color(0xFF14B822)) else null
+    }
 
     val cal = java.util.Calendar.getInstance()
     val diaNum = cal.get(java.util.Calendar.DAY_OF_WEEK)
@@ -583,6 +591,9 @@ private fun calcularStatus(horarios: List<dev.fslab.pedidos.model.HorarioFuncion
     val hoje = horarios.find { it.dia == diaString } ?: return null
 
     if (hoje.fechado) {
+        if (statusApi == "aberto") {
+            return StatusInfo("Aberto", Color(0xFF14B822))
+        }
         return StatusInfo("Fechado hoje", Color(0xFFEF4444))
     }
 
@@ -599,6 +610,9 @@ private fun calcularStatus(horarios: List<dev.fslab.pedidos.model.HorarioFuncion
 
         if (minutosAtuais in minutosAbertura until minutosFechamento) {
             StatusInfo("Aberto até às ${hoje.fechamento}", Color(0xFF14B822))
+        } else if (statusApi == "aberto") {
+            // O horario diz que devia estar fechado, mas o status da API ta aberto (dono abriu manualmente)
+            StatusInfo("Aberto", Color(0xFF14B822))
         } else if (minutosAtuais < minutosAbertura) {
             StatusInfo("Abre às ${hoje.abertura}", Color(0xFFFBBF24))
         } else {
