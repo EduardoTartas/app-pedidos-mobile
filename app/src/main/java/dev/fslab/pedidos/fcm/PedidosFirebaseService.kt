@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dev.fslab.pedidos.MainActivity
+import dev.fslab.pedidos.R
 import dev.fslab.pedidos.network.NPaaSRepository
 import dev.fslab.pedidos.network.TokenManager
 import kotlinx.coroutines.CoroutineScope
@@ -21,8 +22,8 @@ class PedidosFirebaseService : FirebaseMessagingService() {
 
     companion object {
         private const val TAG = "FCMService"
-        const val CHANNEL_ID = "pedidos_notificacoes"
-        const val CHANNEL_NAME = "App de Pedidos"
+        const val CHANNEL_ID = "pedidos_status"
+        const val CHANNEL_NAME = "Pedidos"
     }
 
     override fun onNewToken(token: String) {
@@ -70,11 +71,13 @@ class PedidosFirebaseService : FirebaseMessagingService() {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         val notif = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info) // Fallback icon
+            .setSmallIcon(R.drawable.ic_notification_order)
             .setContentTitle(titulo)
             .setContentText(corpo)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            .setColor(0xFF22C55E.toInt())
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
 
         notificationManager.notify(System.currentTimeMillis().toInt(), notif)
