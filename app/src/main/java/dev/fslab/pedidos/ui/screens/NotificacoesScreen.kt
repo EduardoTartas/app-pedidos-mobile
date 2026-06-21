@@ -36,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -81,6 +82,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.fslab.pedidos.model.NotificationType
 import dev.fslab.pedidos.model.NotificationUiModel
+import dev.fslab.pedidos.ui.components.OrderCanceledNotificationCard
 import dev.fslab.pedidos.ui.components.OrderOnTheWayNotificationCard
 import dev.fslab.pedidos.ui.components.OrderPreparingNotificationCard
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
@@ -301,7 +303,16 @@ fun NotificacoesScreen(
                                 viewModel.alternarSelecaoParaExclusao(notificacao.id)
                             }
 
-                            if (notificacao.isOnTheWayOrderNotification() && !isSelectionMode) {
+                            if (notificacao.isCanceledOrderNotification() && !isSelectionMode) {
+                                OrderCanceledNotificationCard(
+                                    restaurantName = notificacao.orderRestaurantName(),
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = onNotificationClick,
+                                        onLongClick = onNotificationLongClick
+                                    ),
+                                    onDetailsClick = onNotificationClick
+                                )
+                            } else if (notificacao.isOnTheWayOrderNotification() && !isSelectionMode) {
                                 OrderOnTheWayNotificationCard(
                                     courierName = notificacao.onTheWayCourierName(),
                                     restaurantName = notificacao.orderRestaurantName(),
@@ -1086,6 +1097,7 @@ private val NotificationType.icon: ImageVector
     get() = when (this) {
         NotificationType.PEDIDO_A_CAMINHO -> Icons.Filled.TwoWheeler
         NotificationType.PEDIDO_EM_PREPARO -> Icons.AutoMirrored.Filled.ReceiptLong
+        NotificationType.PEDIDO_CANCELADO -> Icons.Filled.Cancel
         NotificationType.ORDER -> Icons.AutoMirrored.Filled.ReceiptLong
         NotificationType.PROMOTION -> Icons.Filled.CardGiftcard
         NotificationType.SYSTEM -> Icons.Filled.Info
@@ -1111,6 +1123,12 @@ private fun NotificationUiModel.isOnTheWayOrderNotification(): Boolean =
         title.contains("a caminho", ignoreCase = true) ||
         description.contains("a caminho", ignoreCase = true)
 
+private fun NotificationUiModel.isCanceledOrderNotification(): Boolean =
+    type == NotificationType.PEDIDO_CANCELADO ||
+        statusKey == "cancelado" ||
+        title.contains("cancelado", ignoreCase = true) ||
+        description.contains("cancelado", ignoreCase = true)
+
 private fun NotificationUiModel.preparingRestaurantName(): String? {
     return orderRestaurantName()
 }
@@ -1121,6 +1139,7 @@ private fun NotificationUiModel.orderRestaurantName(): String? {
     val patterns = listOf(
         Regex("restaurante\\s+(.+?)\\s+(começou|iniciou|recebeu|confirmou)", RegexOption.IGNORE_CASE),
         Regex("pedido\\s+(?:do|da|de)\\s+(.+?)\\s+(?:saiu|foi|está|chegou|chegará)", RegexOption.IGNORE_CASE),
+        Regex("realizado\\s+em\\s+(.+?)\\s+foi\\s+cancelado", RegexOption.IGNORE_CASE),
         Regex("do\\s+(.+?)\\.", RegexOption.IGNORE_CASE),
         Regex("da\\s+(.+?)\\.", RegexOption.IGNORE_CASE)
     )

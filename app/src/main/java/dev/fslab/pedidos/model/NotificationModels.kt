@@ -9,6 +9,9 @@ enum class NotificationType {
     @SerializedName(value = "PEDIDO_A_CAMINHO", alternate = ["a_caminho"])
     PEDIDO_A_CAMINHO,
 
+    @SerializedName(value = "PEDIDO_CANCELADO", alternate = ["cancelado"])
+    PEDIDO_CANCELADO,
+
     @SerializedName("ORDER")
     ORDER,
 
@@ -86,9 +89,11 @@ private fun String.toNotificationType(): NotificationType = when (this) {
     "a_caminho",
     "PEDIDO_A_CAMINHO" -> NotificationType.PEDIDO_A_CAMINHO
 
+    "cancelado",
+    "PEDIDO_CANCELADO" -> NotificationType.PEDIDO_CANCELADO
+
     "pedido_confirmado",
-    "entregue",
-    "cancelado" -> NotificationType.ORDER
+    "entregue" -> NotificationType.ORDER
 
     "promocao",
     "promotion" -> NotificationType.PROMOTION
@@ -99,7 +104,8 @@ private fun String.toNotificationType(): NotificationType = when (this) {
 fun NotificationType.isOrderRelated(): Boolean = when (this) {
     NotificationType.ORDER,
     NotificationType.PEDIDO_EM_PREPARO,
-    NotificationType.PEDIDO_A_CAMINHO -> true
+    NotificationType.PEDIDO_A_CAMINHO,
+    NotificationType.PEDIDO_CANCELADO -> true
     NotificationType.PROMOTION,
     NotificationType.SYSTEM -> false
 }
@@ -107,6 +113,7 @@ fun NotificationType.isOrderRelated(): Boolean = when (this) {
 object NotificationMocks {
     private const val MOCK_PREPARING_ORDER_PREFIX = "mock-pedido-em-preparo-"
     private const val MOCK_ON_THE_WAY_ORDER_ID = "2"
+    private const val MOCK_CANCELED_ORDER_PREFIX = "mock-pedido-cancelado-"
 
     fun pedidoEmPreparo(
         restaurantName: String?,
@@ -146,6 +153,10 @@ object NotificationMocks {
         restaurantName: String? = null,
         pedidoId: String = MOCK_ON_THE_WAY_ORDER_ID
     ) = listOf(
+        pedidoCancelado(
+            restaurantName = restaurantName ?: "Padaria Central",
+            pedidoId = "cancelado-demo"
+        ),
         pedidoACaminho(
             restaurantName = restaurantName,
             pedidoId = pedidoId
@@ -153,7 +164,27 @@ object NotificationMocks {
     )
 
     fun isMockId(id: String): Boolean =
-        id == MOCK_ON_THE_WAY_ORDER_ID || id.startsWith(MOCK_PREPARING_ORDER_PREFIX)
+        id == MOCK_ON_THE_WAY_ORDER_ID ||
+            id.startsWith(MOCK_PREPARING_ORDER_PREFIX) ||
+            id.startsWith(MOCK_CANCELED_ORDER_PREFIX)
+
+    fun pedidoCancelado(
+        restaurantName: String? = null,
+        pedidoId: String = "3"
+    ) = NotificationUiModel(
+        id = "$MOCK_CANCELED_ORDER_PREFIX$pedidoId",
+        title = "Pedido cancelado",
+        description = restaurantName
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "O pedido realizado em $it foi cancelado." }
+            ?: "Seu pedido foi cancelado.",
+        createdAt = "Agora",
+        isRead = false,
+        type = NotificationType.PEDIDO_CANCELADO,
+        pedidoId = pedidoId,
+        restaurantName = restaurantName,
+        statusKey = "cancelado"
+    )
 
     private fun buildOnTheWayDescription(courierName: String?, restaurantName: String?): String {
         val courier = courierName?.takeIf { it.isNotBlank() }
