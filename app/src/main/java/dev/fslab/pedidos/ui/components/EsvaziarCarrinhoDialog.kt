@@ -11,12 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -24,15 +20,12 @@ import androidx.compose.ui.window.DialogProperties
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 
 /**
- * Dialog para conflito de restaurante.
- * Aparece quando o usuário tenta adicionar item de um restaurante
- * diferente do que já está no carrinho.
+ * Dialog para confirmar o esvaziamento do carrinho.
+ * Aparece quando o usuário tenta remover o último item do carrinho.
  */
 @Composable
-fun ConflitoRestauranteDialog(
-    nomeRestauranteAtual: String,
-    nomeRestauranteNovo: String,
-    onSubstituir: () -> Unit,
+fun EsvaziarCarrinhoDialog(
+    onConfirmar: () -> Unit,
     onCancelar: () -> Unit
 ) {
     val colors = LocalPedidosColors.current
@@ -56,18 +49,18 @@ fun ConflitoRestauranteDialog(
                     .padding(28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Ícone no topo com fundo
+                // Ícone no topo com fundo vermelho (erro/destrutivo)
                 Box(
                     modifier = Modifier
                         .size(80.dp)
                         .clip(CircleShape)
-                        .background(colors.primary.copy(alpha = 0.15f)),
+                        .background(colors.errorBackground),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.RemoveShoppingCart,
                         contentDescription = null,
-                        tint = colors.primary,
+                        tint = colors.error,
                         modifier = Modifier.size(40.dp)
                     )
                 }
@@ -75,7 +68,7 @@ fun ConflitoRestauranteDialog(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 Text(
-                    text = "Começar novo pedido?",
+                    text = "Esvaziar carrinho?",
                     fontWeight = FontWeight.Black,
                     fontSize = 24.sp,
                     color = colors.textPrimary,
@@ -85,17 +78,7 @@ fun ConflitoRestauranteDialog(
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 Text(
-                    text = buildAnnotatedString {
-                        append("Você já tem itens de ")
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = colors.textPrimary)) {
-                            append(nomeRestauranteAtual)
-                        }
-                        append(" no carrinho.\n\nDeseja limpar o carrinho atual para adicionar itens de ")
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = colors.textPrimary)) {
-                            append(nomeRestauranteNovo)
-                        }
-                        append("?")
-                    },
+                    text = "Ao remover este item, seu carrinho ficará vazio e você perderá o pedido atual.\n\nDeseja mesmo remover?",
                     fontSize = 14.sp,
                     lineHeight = 22.sp,
                     color = colors.textSecondary,
@@ -107,15 +90,15 @@ fun ConflitoRestauranteDialog(
                 // Botões
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Button(
-                        onClick = onSubstituir,
+                        onClick = onConfirmar,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = colors.primary),
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.errorButton),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Text(
-                            text = "Limpar e Adicionar",
+                            text = "Sim, esvaziar",
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 16.sp,
                             color = colors.textOnPrimary
