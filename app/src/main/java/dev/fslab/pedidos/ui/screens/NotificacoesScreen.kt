@@ -123,8 +123,7 @@ fun NotificacoesScreen(
     val filtros = listOf(
         null to "Todas",
         NotificationType.ORDER to "Pedidos",
-        NotificationType.PROMOTION to "Promoções",
-        NotificationType.SYSTEM to "Sistema"
+        NotificationType.PROMOTION to "Promoções"
     )
 
     activeOnTheWaySheet?.let { sheet ->

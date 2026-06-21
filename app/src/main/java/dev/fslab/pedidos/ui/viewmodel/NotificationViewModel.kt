@@ -48,7 +48,7 @@ class NotificationViewModel(
             when (val result = repository.listarNotificacoes()) {
                 is NetworkResult.Success -> {
                     publishState(
-                        notifications = mergeLocalNotifications(withDebugInterfaceMocks(result.data)),
+                        notifications = mergeLocalNotifications(withDebugInterfaceMocks(result.data.onlyVisibleNotifications())),
                         selectedCategory = _uiState.value.selectedCategory,
                         selectedNotificationId = _uiState.value.selectedNotification?.id
                     )
@@ -398,19 +398,20 @@ class NotificationViewModel(
         selectedNotificationId: String?,
         selectedNotificationIds: Set<String> = _uiState.value.selectedNotificationIds
     ) {
-        val notificationIds = notifications.map { it.id }.toSet()
+        val visibleNotifications = notifications.onlyVisibleNotifications()
+        val notificationIds = visibleNotifications.map { it.id }.toSet()
         val validSelectedNotificationIds = selectedNotificationIds.intersect(notificationIds)
         val filteredNotifications = selectedCategory?.let { category ->
-            notifications.filter { notification ->
+            visibleNotifications.filter { notification ->
                 when (category) {
                     NotificationType.ORDER -> notification.type.isOrderRelated()
                     else -> notification.type == category
                 }
             }
-        } ?: notifications
+        } ?: visibleNotifications
 
         _uiState.value = NotificationUiState(
-            notifications = notifications,
+            notifications = visibleNotifications,
             filteredNotifications = filteredNotifications,
             selectedCategory = selectedCategory,
             selectedNotification = notifications.find { it.id == selectedNotificationId },
@@ -428,3 +429,6 @@ class NotificationViewModel(
         private const val DEFAULT_MOCK_PEDIDO_ID = "1"
     }
 }
+
+private fun List<NotificationUiModel>.onlyVisibleNotifications(): List<NotificationUiModel> =
+    filterNot { it.type == NotificationType.SYSTEM }
