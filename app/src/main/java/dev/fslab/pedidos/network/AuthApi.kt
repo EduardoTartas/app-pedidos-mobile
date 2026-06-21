@@ -15,6 +15,7 @@ import retrofit2.http.Header
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Query
+import retrofit2.http.GET
 
 /**
  * AuthApi - Endpoints de autenticação da API app-pedidos
@@ -45,10 +46,18 @@ interface AuthApi {
     @POST("recover")
     suspend fun recoverPassword(@Body request: RecoverPasswordRequest): Response<BasicResponse>
 
-    /** PATCH /auth/password/reset/code - Redefinir senha via código */
+    /** PATCH /auth/password/reset - Redefinir senha via código */
     @PATCH("password/reset")
     suspend fun resetPasswordByCode(
         @Query("token") token: String,
         @Body request: ResetPasswordRequest
     ): Response<BasicResponse>
+
+    /** GET /auth/password/reset/validate - Validar token de recuperação */
+    @GET("password/reset/validate")
+    suspend fun validatePasswordResetToken(@Query("token") token: String): Response<BasicResponse>
+
+    /** GET /auth/verify - Verificar e-mail */
+    @GET("verify")
+    suspend fun verifyEmail(@Query("token") token: String): Response<BasicResponse>
 }

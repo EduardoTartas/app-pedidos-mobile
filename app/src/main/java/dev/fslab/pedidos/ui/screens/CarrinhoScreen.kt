@@ -81,6 +81,7 @@ fun CarrinhoScreen(
 
     var showEnderecoSheet by remember { mutableStateOf(false) }
     var showPagamentoSheet by remember { mutableStateOf(false) }
+    var itemToRemoveParaEsvaziar by remember { mutableStateOf<ItemCarrinho?>(null) }
 
     val subtotal = itens.sumOf { it.precoTotal * it.quantidade }
     val total = subtotal + taxaEntrega
@@ -196,8 +197,20 @@ fun CarrinhoScreen(
                         CarrinhoItemPremium(
                             item = item, 
                             onIncrementar = { viewModel.incrementarItem(item.id) },
-                            onDecrementar = { viewModel.decrementarItem(item.id) },
-                            onRemover = { viewModel.removerItem(item.id) },
+                            onDecrementar = { 
+                                if (itens.size == 1 && item.quantidade == 1) {
+                                    itemToRemoveParaEsvaziar = item
+                                } else {
+                                    viewModel.decrementarItem(item.id) 
+                                }
+                            },
+                            onRemover = { 
+                                if (itens.size == 1) {
+                                    itemToRemoveParaEsvaziar = item
+                                } else {
+                                    viewModel.removerItem(item.id) 
+                                }
+                            },
                             colors = colors
                         )
                         HorizontalDivider(
@@ -235,7 +248,19 @@ fun CarrinhoScreen(
         }
     }
 
-    // Bottom Sheets
+    // Bottom Sheets & Dialogs
+    itemToRemoveParaEsvaziar?.let { item ->
+        dev.fslab.pedidos.ui.components.EsvaziarCarrinhoDialog(
+            onConfirmar = { 
+                viewModel.removerItem(item.id)
+                itemToRemoveParaEsvaziar = null
+            },
+            onCancelar = { 
+                itemToRemoveParaEsvaziar = null 
+            }
+        )
+    }
+
     if (showEnderecoSheet) {
         EnderecosBottomSheet(
             enderecos = enderecos,
@@ -338,7 +363,7 @@ private fun CarrinhoItemPremium(
                 onClick = onDecrementar, 
                 modifier = Modifier.size(28.dp)
             ) {
-                Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(16.dp), tint = colors.textPrimary)
+                Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(16.dp), tint = Verde)
             }
             Text(
                 "${item.quantidade}", 
@@ -349,9 +374,9 @@ private fun CarrinhoItemPremium(
             )
             IconButton(
                 onClick = onIncrementar, 
-                modifier = Modifier.size(28.dp).background(Verde, CircleShape)
+                modifier = Modifier.size(28.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = Verde)
             }
         }
 
