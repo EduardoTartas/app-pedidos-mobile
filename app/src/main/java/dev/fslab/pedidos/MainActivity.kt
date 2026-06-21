@@ -47,6 +47,7 @@ import dev.fslab.pedidos.ui.screens.MeusEnderecosScreen
 import dev.fslab.pedidos.ui.screens.NovoEnderecoScreen
 import dev.fslab.pedidos.ui.screens.NotificacoesScreen
 import dev.fslab.pedidos.ui.screens.PerfilScreen
+import dev.fslab.pedidos.ui.screens.EditarPerfilScreen
 import dev.fslab.pedidos.ui.screens.PedidoConfirmacaoScreen
 import dev.fslab.pedidos.ui.screens.RestaurantesScreen
 import dev.fslab.pedidos.ui.screens.RestauranteDetalhesScreen
@@ -386,8 +387,8 @@ fun PedidosApp(activity: ComponentActivity) {
                         }
                     ),
                     deepLinks = listOf(
-                        androidx.navigation.navDeepLink { uriPattern = "rango://auth/recover?token={token}" },
-                        androidx.navigation.navDeepLink { uriPattern = "https://rango-api-qa.eduardotartas.dpdns.org/auth/app-redirect/recover?token={token}" }
+                        androidx.navigation.navDeepLink { uriPattern = "rango://recover?token={token}" },
+                        androidx.navigation.navDeepLink { uriPattern = "https://rango-api-qa.eduardotartas.dpdns.org/app-redirect/recover?token={token}" }
                     )
                 ) { backStackEntry ->
                     val email = backStackEntry.arguments?.getString("email") ?: ""
@@ -417,8 +418,8 @@ fun PedidosApp(activity: ComponentActivity) {
                         }
                     ),
                     deepLinks = listOf(
-                        androidx.navigation.navDeepLink { uriPattern = "rango://auth/verify?token={token}" },
-                        androidx.navigation.navDeepLink { uriPattern = "https://rango-api-qa.eduardotartas.dpdns.org/auth/app-redirect/verify?token={token}" }
+                        androidx.navigation.navDeepLink { uriPattern = "rango://verify?token={token}" },
+                        androidx.navigation.navDeepLink { uriPattern = "https://rango-api-qa.eduardotartas.dpdns.org/app-redirect/verify?token={token}" }
                     )
                 ) { backStackEntry ->
                     val token = backStackEntry.arguments?.getString("token") ?: ""
@@ -568,6 +569,9 @@ fun PedidosApp(activity: ComponentActivity) {
                     PerfilScreen(
                         user = currentUser,
                         bottomPadding = innerPadding.calculateBottomPadding(),
+                        onEditProfile = {
+                            navController.navigate("editar_perfil")
+                        },
                         onNavigateMeusEnderecos = {
                             navController.navigate("meus_enderecos")
                         },
@@ -580,6 +584,37 @@ fun PedidosApp(activity: ComponentActivity) {
                                 popUpTo("login") { inclusive = true }
                                 launchSingleTop = true
                             }
+                        }
+                    )
+                }
+
+                composable("editar_perfil") {
+                    EditarPerfilScreen(
+                        user = currentUser,
+                        onBack = { navController.popBackStack() },
+                        onDeactivateAccount = { onSuccess, onError ->
+                            authViewModel.deactivateAccount(
+                                onSuccess = {
+                                    onSuccess()
+                                    navController.navigate("login") {
+                                        popUpTo("home") { inclusive = true }
+                                    }
+                                },
+                                onError = { err -> onError(err) }
+                            )
+                        },
+                        onAlterarSenha = { onSuccess, onError ->
+                            val email = currentUser?.email ?: ""
+                            if (email.isNotBlank()) {
+                                authViewModel.recoverPassword(
+                                    email = email,
+                                    onSuccess = onSuccess,
+                                    onError = onError
+                                )
+                            }
+                        },
+                        onSaveProfile = { nome, telefone, cpf, onSuccess, onError ->
+                            authViewModel.updateUserProfile(nome, telefone, cpf, onSuccess, onError)
                         }
                     )
                 }

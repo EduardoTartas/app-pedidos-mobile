@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -70,13 +71,21 @@ fun CarrinhoScreen(
     }
 
     val context = LocalContext.current
+    var erroMessage by remember { mutableStateOf<String?>(null) }
 
     // Feedback de erro
     LaunchedEffect(pedidoState) {
         if (pedidoState is PedidoUiState.Error) {
-            android.widget.Toast.makeText(context, pedidoState.message, android.widget.Toast.LENGTH_LONG).show()
+            erroMessage = pedidoState.message
             onDismissErro()
         }
+    }
+
+    if (erroMessage != null) {
+        dev.fslab.pedidos.ui.components.ErroPedidoDialog(
+            mensagem = erroMessage!!,
+            onDismiss = { erroMessage = null }
+        )
     }
 
     var showEnderecoSheet by remember { mutableStateOf(false) }

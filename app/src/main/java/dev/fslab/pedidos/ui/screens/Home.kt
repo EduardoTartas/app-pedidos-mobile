@@ -18,7 +18,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -568,6 +571,7 @@ fun RecomendadoCard(
     val subTextColor = textColor.copy(alpha = 0.6f)
     val starColor = Color(0xFFEAB308)
     val greenColor = Color(0xFF14B822)
+    val isAberto = restaurante.status == "aberto"
 
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -577,6 +581,7 @@ fun RecomendadoCard(
             .width(260.dp)
             .clickable { onClick() }
             .border(1.dp, textColor.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
+            .alpha(if (isAberto) 1f else 0.5f)
     ) {
         Column {
             Box(
@@ -589,19 +594,36 @@ fun RecomendadoCard(
                     imageLoader = imageLoader,
                     contentDescription = "Imagem de ${restaurante.nome}",
                     contentScale = ContentScale.Crop,
+                    colorFilter = if (!isAberto) ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) else null,
                     modifier = Modifier.fillMaxSize()
                 )
-                // Overlay de proteção de contraste para a imagem
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f)),
-                                startY = 150f
+                
+                if (!isAberto) {
+                    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
+                    Text(
+                        "FECHADO",
+                        color = Color.White,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 14.sp,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                } else {
+                    // Overlay de proteção de contraste para a imagem original
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f)),
+                                    startY = 150f
+                                )
                             )
-                        )
-                )
+                    )
+                }
             }
             
             Column(modifier = Modifier.padding(14.dp)) {
@@ -685,6 +707,7 @@ fun PopularItem(
     val subTextColor = textColor.copy(alpha = 0.6f)
     val starColor = Color(0xFFEAB308)
     val greenColor = Color(0xFF14B822)
+    val isAberto = restaurante.status == "aberto"
 
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -695,6 +718,7 @@ fun PopularItem(
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .clickable { onClick() }
             .border(1.dp, textColor.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
+            .alpha(if (isAberto) 1f else 0.5f)
     ) {
         Row(
             modifier = Modifier
@@ -715,8 +739,12 @@ fun PopularItem(
                     imageLoader = imageLoader,
                     contentDescription = "Logo de ${restaurante.nome}",
                     contentScale = ContentScale.Crop,
+                    colorFilter = if (!isAberto) ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) else null,
                     modifier = Modifier.fillMaxSize()
                 )
+                if (!isAberto) {
+                    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)))
+                }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -762,6 +790,16 @@ fun PopularItem(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    
+                    if (!isAberto) {
+                        Text("•", color = subTextColor, fontSize = 12.sp)
+                        Text(
+                            text = "FECHADO",
+                            color = LocalPedidosColors.current.error,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
