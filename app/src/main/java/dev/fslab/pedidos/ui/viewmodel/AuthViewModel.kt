@@ -173,6 +173,56 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun updateUserProfile(nome: String, telefone: String, cpf: String? = null, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val user = _currentUser.value ?: return@launch
+            val updateMap = mutableMapOf("nome" to nome, "telefone" to telefone)
+            if (!cpf.isNullOrBlank()) {
+                updateMap["cpf"] = cpf
+            }
+            val result = NetworkUtils.safeApiCall { 
+                RetrofitClient.usuarioApi.atualizar(user.id, updateMap) 
+            }
+            
+            when (result) {
+                is NetworkResult.Success -> {
+                    val updatedUser = user.copy(
+                        nome = nome, 
+                        telefone = telefone, 
+                        cpf = if (!cpf.isNullOrBlank()) cpf else user.cpf
+                    )
+                    _currentUser.value = updatedUser
+                    _authState.value = AuthState.Success(updatedUser)
+                    try {
+                        AuthPreferences.saveUser(getApplication(), gson.toJson(updatedUser))
+                    } catch (e: Exception) { }
+                    onSuccess()
+                }
+                is NetworkResult.Error -> {
+                    onError(result.message)
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun deactivateAccount(onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val user = _currentUser.value ?: return@launch
+            val result = NetworkUtils.safeApiCall { 
+                RetrofitClient.usuarioApi.desativar(user.id, mapOf("status" to "inativo")) 
+            }
+            when (result) {
+                is NetworkResult.Success -> {
+                    logout()
+                    onSuccess()
+                }
+                is NetworkResult.Error -> onError(result.message)
+                else -> {}
+            }
+        }
+    }
+
     fun recoverPassword(email: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             val result = NetworkUtils.safeApiCall { 

@@ -56,7 +56,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="rango-api-qa.eduardotartas.dpdns.org" android:pathPrefix="/auth/app-redirect" />
+                <data android:scheme="https" android:host="rango-api-qa.eduardotartas.dpdns.org" android:pathPrefix="/app-redirect" />
             </intent-filter>
         </activity>
 
