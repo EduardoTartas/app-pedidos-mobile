@@ -109,14 +109,17 @@ object NotificationMocks {
     private const val MOCK_ON_THE_WAY_ORDER_ID = "2"
 
     fun pedidoEmPreparo(
-        restaurantName: String,
+        restaurantName: String?,
         pedidoId: String = "1"
     ) = NotificationUiModel(
         id = "$MOCK_PREPARING_ORDER_PREFIX$pedidoId",
         title = "Seu pedido está sendo preparado",
-        description = "O local $restaurantName começou a preparar seu pedido.",
+        description = restaurantName
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "$it começou a preparar seu pedido." }
+            ?: "Seu pedido começou a ser preparado.",
         createdAt = "Agora",
-        isRead = false,,
+        isRead = false,
         type = NotificationType.PEDIDO_EM_PREPARO,
         pedidoId = pedidoId,
         restaurantName = restaurantName,
@@ -124,13 +127,13 @@ object NotificationMocks {
     )
 
     fun pedidoACaminho(
-        courierName: String = "Emerson",
-        restaurantName: String = "Lugar",
+        courierName: String? = null,
+        restaurantName: String? = null,
         pedidoId: String = MOCK_ON_THE_WAY_ORDER_ID
     ) = NotificationUiModel(
         id = MOCK_ON_THE_WAY_ORDER_ID,
         title = "Pedido a caminho!",
-        description = "O entregador $courierName está a caminho com seu pedido para $restaurantName.",
+        description = buildOnTheWayDescription(courierName, restaurantName),
         createdAt = "Agora",
         isRead = false,
         type = NotificationType.PEDIDO_A_CAMINHO,
@@ -140,7 +143,7 @@ object NotificationMocks {
     )
 
     fun interfaceTestNotifications(
-        restaurantName: String = "Lugar",
+        restaurantName: String? = null,
         pedidoId: String = MOCK_ON_THE_WAY_ORDER_ID
     ) = listOf(
         pedidoACaminho(
@@ -151,4 +154,19 @@ object NotificationMocks {
 
     fun isMockId(id: String): Boolean =
         id == MOCK_ON_THE_WAY_ORDER_ID || id.startsWith(MOCK_PREPARING_ORDER_PREFIX)
+
+    private fun buildOnTheWayDescription(courierName: String?, restaurantName: String?): String {
+        val courier = courierName?.takeIf { it.isNotBlank() }
+        val restaurant = restaurantName?.takeIf { it.isNotBlank() }
+        return when {
+            courier != null && restaurant != null ->
+                "O entregador $courier está a caminho com seu pedido da $restaurant."
+            courier != null ->
+                "O entregador $courier está a caminho com seu pedido."
+            restaurant != null ->
+                "O entregador está a caminho com seu pedido da $restaurant."
+            else ->
+                "O entregador está a caminho com seu pedido."
+        }
+    }
 }

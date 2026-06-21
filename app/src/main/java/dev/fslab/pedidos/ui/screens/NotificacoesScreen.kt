@@ -1,4 +1,4 @@
-package dev.fslab.pedidos.ui.screens
+﻿package dev.fslab.pedidos.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -39,9 +39,7 @@ import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -305,7 +303,7 @@ fun NotificacoesScreen(
                             if (notificacao.isOnTheWayOrderNotification() && !isSelectionMode) {
                                 OrderOnTheWayNotificationCard(
                                     courierName = notificacao.onTheWayCourierName(),
-                                    restaurantName = notificacao.orderRestaurantName(defaultName = "Lugar"),
+                                    restaurantName = notificacao.orderRestaurantName(),
                                     modifier = Modifier.combinedClickable(
                                         onClick = onNotificationClick,
                                         onLongClick = onNotificationLongClick
@@ -358,6 +356,8 @@ fun NotificacoesScreen(
 @Composable
 fun HighlightOrderNotificationCard(
     modifier: Modifier = Modifier,
+    courierName: String? = null,
+    restaurantName: String? = null,
     onTrackClick: () -> Unit = {},
     onDetailsClick: () -> Unit = {}
 ) {
@@ -417,7 +417,7 @@ fun HighlightOrderNotificationCard(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "O entregador Emerson está a caminho com seu pedido para o Burger King.",
+                text = onTheWayDescription(courierName, restaurantName),
                 color = Color.White.copy(alpha = 0.74f),
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -482,7 +482,7 @@ private fun OnTheWayTrackingSheet(
 ) {
     val colors = LocalPedidosColors.current
     val green = colors.primary
-    val restaurantName = notification.orderRestaurantName(defaultName = "Lugar")
+    val restaurantName = notification.orderRestaurantName()
     val courierName = notification.onTheWayCourierName()
 
     Column(
@@ -502,14 +502,12 @@ private fun OnTheWayTrackingSheet(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Seu pedido para $restaurantName saiu para entrega.",
+            text = restaurantName
+                ?.let { "Seu pedido da $it saiu para entrega." }
+                ?: "Seu pedido saiu para entrega.",
             color = Color.White.copy(alpha = 0.7f),
             style = MaterialTheme.typography.bodyMedium
         )
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        DemoDeliveryMap(restaurantName = restaurantName)
 
         Spacer(modifier = Modifier.height(18.dp))
 
@@ -524,8 +522,12 @@ private fun OnTheWayTrackingSheet(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                DeliveryInfoRow(label = "Entregador", value = courierName)
-                DeliveryInfoRow(label = "Local", value = restaurantName)
+                courierName?.let {
+                    DeliveryInfoRow(label = "Entregador", value = it)
+                }
+                restaurantName?.let {
+                    DeliveryInfoRow(label = "Restaurante", value = it)
+                }
                 DeliveryInfoRow(label = "Chegada estimada", value = "10 minutos")
             }
         }
@@ -543,7 +545,9 @@ private fun OnTheWayTrackingSheet(
 
         DeliveryTimelineStep(
             title = "Pedido confirmado",
-            description = "O local recebeu seu pedido.",
+            description = restaurantName
+                ?.let { "$it recebeu seu pedido." }
+                ?: "Seu pedido foi recebido.",
             isDone = true
         )
         DeliveryTimelineStep(
@@ -571,7 +575,7 @@ private fun OnTheWayDetailsSheet(
 ) {
     val colors = LocalPedidosColors.current
     val green = colors.primary
-    val restaurantName = notification.orderRestaurantName(defaultName = "Lugar")
+    val restaurantName = notification.orderRestaurantName()
     val courierName = notification.onTheWayCourierName()
 
     Column(
@@ -623,9 +627,20 @@ private fun OnTheWayDetailsSheet(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                DeliveryInfoRow(label = "Pedido", value = "#0002")
-                DeliveryInfoRow(label = "Local", value = restaurantName)
-                DeliveryInfoRow(label = "Entregador", value = courierName)
+                DeliveryInfoRow(
+                    label = "Pedido",
+                    value = notification.pedidoIdFromNotification()
+                        ?.takeLast(8)
+                        ?.uppercase()
+                        ?.let { "#$it" }
+                        ?: "-"
+                )
+                restaurantName?.let {
+                    DeliveryInfoRow(label = "Restaurante", value = it)
+                }
+                courierName?.let {
+                    DeliveryInfoRow(label = "Entregador", value = it)
+                }
                 DeliveryInfoRow(label = "Previsão", value = "10 minutos")
 
                 HorizontalDivider(
@@ -671,147 +686,6 @@ private fun OnTheWayDetailsSheet(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun DemoDeliveryMap(
-    restaurantName: String,
-    modifier: Modifier = Modifier
-) {
-    val colors = LocalPedidosColors.current
-    val green = colors.primary
-    val transition = rememberInfiniteTransition(label = "delivery-map")
-    val progress by transition.animateFloat(
-        initialValue = 0.08f,
-        targetValue = 0.92f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 24000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "delivery-progress"
-    )
-
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(168.dp)
-            .background(Color(0xFF111827), RoundedCornerShape(20.dp))
-            .padding(14.dp)
-    ) {
-        Canvas(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            val routeStart = Offset(size.width * 0.12f, size.height * 0.72f)
-            val routeMiddle = Offset(size.width * 0.48f, size.height * 0.45f)
-            val routeEnd = Offset(size.width * 0.88f, size.height * 0.28f)
-
-            drawLine(
-                color = Color.White.copy(alpha = 0.08f),
-                start = Offset(size.width * 0.05f, size.height * 0.18f),
-                end = Offset(size.width * 0.94f, size.height * 0.18f),
-                strokeWidth = 10.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-            drawLine(
-                color = Color.White.copy(alpha = 0.06f),
-                start = Offset(size.width * 0.18f, size.height * 0.92f),
-                end = Offset(size.width * 0.94f, size.height * 0.58f),
-                strokeWidth = 12.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-            drawLine(
-                color = Color(0xFF334155),
-                start = routeStart,
-                end = routeMiddle,
-                strokeWidth = 9.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-            drawLine(
-                color = Color(0xFF334155),
-                start = routeMiddle,
-                end = routeEnd,
-                strokeWidth = 9.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-            drawLine(
-                color = green,
-                start = routeStart,
-                end = routeMiddle,
-                strokeWidth = 4.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-            drawLine(
-                color = green,
-                start = routeMiddle,
-                end = routeEnd,
-                strokeWidth = 4.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-            drawCircle(color = green, radius = 7.dp.toPx(), center = routeStart)
-            drawCircle(color = Color.White, radius = 6.dp.toPx(), center = routeEnd)
-            drawCircle(color = green.copy(alpha = 0.2f), radius = 14.dp.toPx(), center = routeEnd)
-        }
-
-        MapLocationMarker(
-            icon = Icons.Filled.Restaurant,
-            label = restaurantName,
-            modifier = Modifier.align(Alignment.BottomStart)
-        )
-
-        MapLocationMarker(
-            icon = Icons.Filled.Home,
-            label = "Você",
-            modifier = Modifier.align(Alignment.TopEnd)
-        )
-
-        Box(
-            modifier = Modifier
-                .offset(
-                    x = (maxWidth - 56.dp) * progress,
-                    y = 95.dp - (58.dp * progress)
-                )
-                .size(42.dp)
-                .background(green, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Filled.TwoWheeler,
-                contentDescription = "Moto em movimento",
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun MapLocationMarker(
-    icon: ImageVector,
-    label: String,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .background(Color(0xFF020617).copy(alpha = 0.86f), RoundedCornerShape(999.dp))
-            .padding(horizontal = 9.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = LocalPedidosColors.current.primary,
-            modifier = Modifier.size(16.dp)
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = label,
-            color = Color.White,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
     }
 }
 
@@ -1109,12 +983,12 @@ private fun NotificationUiModel.isOnTheWayOrderNotification(): Boolean =
         title.contains("a caminho", ignoreCase = true) ||
         description.contains("a caminho", ignoreCase = true)
 
-private fun NotificationUiModel.preparingRestaurantName(): String {
-    return orderRestaurantName(defaultName = "Burger House")
+private fun NotificationUiModel.preparingRestaurantName(): String? {
+    return orderRestaurantName()
 }
 
-private fun NotificationUiModel.orderRestaurantName(defaultName: String): String {
-    restaurantName?.takeIf { it.isNotBlank() }?.let { return it }
+private fun NotificationUiModel.orderRestaurantName(): String? {
+    restaurantName?.asValidRestaurantName()?.let { return it }
 
     val patterns = listOf(
         Regex("restaurante\\s+(.+?)\\s+(começou|iniciou|recebeu|confirmou)", RegexOption.IGNORE_CASE),
@@ -1129,10 +1003,10 @@ private fun NotificationUiModel.orderRestaurantName(defaultName: String): String
         patterns.firstNotNullOfOrNull { pattern ->
             pattern.find(text)?.groupValues?.getOrNull(1)?.trim()
         }
-    }?.takeIf { it.isNotBlank() } ?: defaultName
+    }?.asValidRestaurantName()
 }
 
-private fun NotificationUiModel.onTheWayCourierName(): String {
+private fun NotificationUiModel.onTheWayCourierName(): String? {
     return Regex(
         pattern = "entregador\\s+(.+?)\\s+está\\s+a\\s+caminho",
         option = RegexOption.IGNORE_CASE
@@ -1141,7 +1015,34 @@ private fun NotificationUiModel.onTheWayCourierName(): String {
         ?.getOrNull(1)
         ?.trim()
         ?.takeIf { it.isNotBlank() }
-        ?: "Emerson"
+}
+
+private fun String.asValidRestaurantName(): String? {
+    val value = trim()
+    val normalized = value.lowercase()
+    return value.takeIf {
+        it.isNotBlank() &&
+            normalized != "restaurante" &&
+            normalized != "o restaurante" &&
+            normalized != "local" &&
+            normalized != "o local" &&
+            normalized != "lugar"
+    }
+}
+
+private fun onTheWayDescription(courierName: String?, restaurantName: String?): String {
+    val courier = courierName?.takeIf { it.isNotBlank() }
+    val restaurant = restaurantName?.asValidRestaurantName()
+    return when {
+        courier != null && restaurant != null ->
+            "O entregador $courier está a caminho com seu pedido da $restaurant."
+        courier != null ->
+            "O entregador $courier está a caminho com seu pedido."
+        restaurant != null ->
+            "O entregador está a caminho com seu pedido da $restaurant."
+        else ->
+            "O entregador está a caminho com seu pedido."
+    }
 }
 
 private fun NotificationUiModel.createdAtLabel(): String {

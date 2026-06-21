@@ -224,20 +224,20 @@ class NotificationViewModel(
         pedido: Pedido,
         nomeRestaurante: String
     ): NotificationUiModel {
-        val placeName = nomeRestaurante.takeIf { it.isNotBlank() && it.lowercase() != "restaurante" }
-            ?: pedido.restauranteNome.takeIf { it.isNotBlank() && it.lowercase() != "restaurante" }
-            ?: "Lugar"
-        val destinationName = placeName.ifBlank { "local" }
+        val restaurantName = nomeRestaurante.asValidRestaurantName()
+            ?: pedido.restauranteNomeOrNull?.asValidRestaurantName()
 
         val notification = NotificationUiModel(
             id = "$LOCAL_NOTIFICATION_PREFIX${pedido.id}",
             title = "Pedido realizado!",
-            description = "Pedido #${pedido.id.takeLast(8).uppercase()} enviado para $destinationName.",
+            description = restaurantName
+                ?.let { "Pedido #${pedido.id.takeLast(8).uppercase()} enviado para $it." }
+                ?: "Pedido #${pedido.id.takeLast(8).uppercase()} enviado.",
             createdAt = pedido.criadoEm ?: Instant.now().toString(),
             isRead = false,
             type = NotificationType.ORDER,
             pedidoId = pedido.id,
-            restaurantName = placeName,
+            restaurantName = restaurantName,
             statusKey = "pedido_confirmado"
         )
 
@@ -320,7 +320,7 @@ class NotificationViewModel(
     }
 
     private data class PreparingMockContext(
-        val restaurantName: String,
+        val restaurantName: String?,
         val pedidoId: String
     )
 
@@ -337,7 +337,6 @@ class NotificationViewModel(
             ?.asValidRestaurantName()
             ?: confirmedOrderNotification?.restaurantNameFromConfirmedOrder()
             ?: notifications.firstNotNullOfOrNull { it.restaurantNameFromAnyOrderMessage() }
-            ?: DEFAULT_MOCK_RESTAURANT_NAME
 
         val pedidoId = confirmedOrderNotification?.pedidoId
             ?: confirmedOrderNotification?.id
@@ -386,7 +385,10 @@ class NotificationViewModel(
         return value.takeIf {
             it.isNotBlank() &&
                 normalized != "restaurante" &&
-                normalized != "o restaurante"
+                normalized != "o restaurante" &&
+                normalized != "lugar" &&
+                normalized != "local" &&
+                normalized != "o local"
         }
     }
 
@@ -423,7 +425,6 @@ class NotificationViewModel(
 
     companion object {
         private const val LOCAL_NOTIFICATION_PREFIX = "local-pedido-"
-        private const val DEFAULT_MOCK_RESTAURANT_NAME = "Lugar"
         private const val DEFAULT_MOCK_PEDIDO_ID = "1"
     }
 }

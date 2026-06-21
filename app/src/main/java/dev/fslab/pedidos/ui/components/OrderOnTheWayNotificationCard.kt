@@ -42,8 +42,8 @@ private val OnTheWaySecondaryButton = Color(0xFF26324A)
 @Composable
 fun OrderOnTheWayNotificationCard(
     modifier: Modifier = Modifier,
-    courierName: String = "Emerson",
-    restaurantName: String = "Burger King",
+    courierName: String? = null,
+    restaurantName: String? = null,
     estimatedArrivalMinutes: Int = 10,
     progress: Float = 0.65f,
     onTrackClick: () -> Unit = {},
@@ -107,7 +107,7 @@ fun OrderOnTheWayNotificationCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "O entregador $courierName está a caminho com seu pedido para $restaurantName.",
+                text = onTheWayDescription(courierName, restaurantName),
                 color = Color.White.copy(alpha = 0.72f),
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -184,6 +184,21 @@ fun OrderOnTheWayNotificationCard(
                 )
             }
         }
+    }
+}
+
+private fun onTheWayDescription(courierName: String?, restaurantName: String?): String {
+    val courier = courierName?.takeIf { it.isNotBlank() }
+    val restaurant = restaurantName?.takeIf { it.isNotBlank() }
+    return when {
+        courier != null && restaurant != null ->
+            "O entregador $courier está a caminho com seu pedido da $restaurant."
+        courier != null ->
+            "O entregador $courier está a caminho com seu pedido."
+        restaurant != null ->
+            "O entregador está a caminho com seu pedido da $restaurant."
+        else ->
+            "O entregador está a caminho com seu pedido."
     }
 }
 

@@ -38,7 +38,7 @@ private val PreparingTrack = Color(0xFF334155)
 @Composable
 fun OrderPreparingNotificationCard(
     modifier: Modifier = Modifier,
-    restaurantName: String = "Burger House",
+    restaurantName: String? = null,
     estimatedTimeMinutes: Int = 20,
     progress: Float = 0.3f
 ) {
@@ -100,7 +100,10 @@ fun OrderPreparingNotificationCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "O local $restaurantName começou a preparar seu pedido.",
+                text = restaurantName
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { "$it começou a preparar seu pedido." }
+                    ?: "Seu pedido começou a ser preparado.",
                 color = Color.White.copy(alpha = 0.72f),
                 style = MaterialTheme.typography.bodyMedium
             )
