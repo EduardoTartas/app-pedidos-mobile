@@ -30,12 +30,28 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
 import android.net.Uri
@@ -49,6 +65,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import coil.compose.AsyncImage
 import dev.fslab.pedidos.model.User
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
@@ -129,24 +147,6 @@ fun PerfilScreen(
                             )
                         }
                     }
-
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(22.dp)
-                            .clip(CircleShape)
-                            .background(colors.primary)
-                            .border(width = 1.5.dp, color = colors.surface, shape = CircleShape)
-                            .clickable(onClick = onEditProfile),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Edit,
-                            contentDescription = "Editar foto do usuario",
-                            tint = colors.textOnPrimary,
-                            modifier = Modifier.size(12.dp)
-                        )
-                    }
                 }
 
                 Spacer(modifier = Modifier.height(if (compactHeight) 8.dp else 12.dp))
@@ -186,6 +186,14 @@ fun PerfilScreen(
                     .padding(horizontal = screenHorizontalPadding),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                PerfilInfoItem(
+                    title = "Minha Conta",
+                    icon = Icons.Outlined.Person,
+                    compactWidth = compactWidth,
+                    minHeight = cardHeight,
+                    onClick = onEditProfile
+                )
+
                 PerfilInfoItem(
                     title = "Meus endereços",
                     icon = Icons.Outlined.LocationOn,

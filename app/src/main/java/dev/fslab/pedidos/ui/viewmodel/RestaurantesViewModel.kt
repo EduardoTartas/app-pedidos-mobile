@@ -142,7 +142,10 @@ class RestaurantesViewModel : ViewModel() {
             )
 
             if (restaurantesResponse.isSuccessful) {
-                val restaurantes = restaurantesResponse.body()?.data?.docs ?: emptyList()
+                var restaurantes = restaurantesResponse.body()?.data?.docs ?: emptyList()
+
+                // Ordenar: restaurantes abertos primeiro
+                restaurantes = restaurantes.sortedByDescending { it.status == "aberto" }
 
                 _uiState.value = RestaurantesUiState.Success(
                     restaurantes = restaurantes,

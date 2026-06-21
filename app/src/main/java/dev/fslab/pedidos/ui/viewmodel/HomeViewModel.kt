@@ -138,6 +138,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 filtrados = filtrados.filter { normalizarString(it.nome).contains(normalizedQuery) }
             }
 
+            // Ordenar: restaurantes abertos primeiro
+            filtrados = filtrados.sortedByDescending { it.status == "aberto" }
+
             val fallbackId = if (selectedEndereco != null) selectedEndereco.id else "gps_location"
             
             withContext(Dispatchers.Main) {
