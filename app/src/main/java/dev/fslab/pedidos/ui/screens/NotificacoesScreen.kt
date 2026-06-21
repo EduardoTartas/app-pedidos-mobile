@@ -39,7 +39,9 @@ import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -510,6 +512,10 @@ private fun OnTheWayTrackingSheet(
 
         Spacer(modifier = Modifier.height(18.dp))
 
+        DemoDeliveryRoute()
+
+        Spacer(modifier = Modifier.height(18.dp))
+
         Card(
             shape = RoundedCornerShape(18.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFF161B2E)),
@@ -685,6 +691,129 @@ private fun OnTheWayDetailsSheet(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DemoDeliveryRoute(
+    modifier: Modifier = Modifier
+) {
+    val green = LocalPedidosColors.current.primary
+    val transition = rememberInfiniteTransition(label = "delivery-route")
+    val progress by transition.animateFloat(
+        initialValue = 0.08f,
+        targetValue = 0.92f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 18000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "delivery-route-progress"
+    )
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(168.dp)
+            .background(Color(0xFF111827), RoundedCornerShape(20.dp))
+            .padding(16.dp)
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val start = Offset(size.width * 0.12f, size.height * 0.72f)
+            val middle = Offset(size.width * 0.50f, size.height * 0.42f)
+            val end = Offset(size.width * 0.88f, size.height * 0.28f)
+
+            drawLine(
+                color = Color.White.copy(alpha = 0.06f),
+                start = Offset(size.width * 0.06f, size.height * 0.18f),
+                end = Offset(size.width * 0.94f, size.height * 0.18f),
+                strokeWidth = 10.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            drawLine(
+                color = Color(0xFF334155),
+                start = start,
+                end = middle,
+                strokeWidth = 9.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            drawLine(
+                color = Color(0xFF334155),
+                start = middle,
+                end = end,
+                strokeWidth = 9.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            drawLine(
+                color = green,
+                start = start,
+                end = middle,
+                strokeWidth = 4.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            drawLine(
+                color = green,
+                start = middle,
+                end = end,
+                strokeWidth = 4.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+        }
+
+        RouteIconMarker(
+            icon = Icons.Filled.Restaurant,
+            contentDescription = "Origem do pedido",
+            modifier = Modifier.align(Alignment.BottomStart)
+        )
+
+        RouteIconMarker(
+            icon = Icons.Filled.Home,
+            contentDescription = "Casa do cliente",
+            modifier = Modifier.align(Alignment.TopEnd)
+        )
+
+        Box(
+            modifier = Modifier
+                .offset(
+                    x = (maxWidth - 58.dp) * progress,
+                    y = 96.dp - (60.dp * progress)
+                )
+                .size(44.dp)
+                .background(green, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.TwoWheeler,
+                contentDescription = "Moto a caminho",
+                tint = Color.White,
+                modifier = Modifier.size(25.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun RouteIconMarker(
+    icon: ImageVector,
+    contentDescription: String,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(44.dp)
+            .background(Color(0xFF020617).copy(alpha = 0.9f), CircleShape)
+            .border(
+                width = 1.dp,
+                color = LocalPedidosColors.current.primary.copy(alpha = 0.5f),
+                shape = CircleShape
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = LocalPedidosColors.current.primary,
+            modifier = Modifier.size(24.dp)
+        )
     }
 }
 
