@@ -54,6 +54,43 @@ class EnderecoViewModel : ViewModel() {
         }
     }
 
+    fun buscarEnderecoPorCoordenadas(context: android.content.Context, lat: Double, lng: Double) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val geocoder = android.location.Geocoder(context, java.util.Locale("pt", "BR"))
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    geocoder.getFromLocation(lat, lng, 1) { addresses ->
+                        addresses.firstOrNull()?.let { addr ->
+                            val viaCepResponse = ViaCepResponse(
+                                logradouro = addr.thoroughfare,
+                                bairro = addr.subLocality,
+                                localidade = addr.subAdminArea ?: addr.locality,
+                                uf = getUf(addr.adminArea),
+                                cep = addr.postalCode?.replace("-", "") ?: ""
+                            )
+                            _uiState.value = EnderecoUiState.CepLoaded(viaCepResponse)
+                        }
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    val addresses = geocoder.getFromLocation(lat, lng, 1)
+                    addresses?.firstOrNull()?.let { addr ->
+                        val viaCepResponse = ViaCepResponse(
+                            logradouro = addr.thoroughfare,
+                            bairro = addr.subLocality,
+                            localidade = addr.subAdminArea ?: addr.locality,
+                            uf = getUf(addr.adminArea),
+                            cep = addr.postalCode?.replace("-", "") ?: ""
+                        )
+                        _uiState.value = EnderecoUiState.CepLoaded(viaCepResponse)
+                    }
+                }
+            } catch (e: Exception) {
+                // Ignore geocoding errors so it doesn't crash
+            }
+        }
+    }
+
     fun listarEnderecos(usuarioId: String) {
         viewModelScope.launch {
             _uiState.value = EnderecoUiState.Loading
@@ -170,6 +207,26 @@ class EnderecoViewModel : ViewModel() {
                 _uiState.value = EnderecoUiState.Error(e.localizedMessage ?: "Erro de conexão.")
             }
         }
+    }
+
+    private fun getUf(stateName: String?): String? {
+        if (stateName == null) return null
+        if (stateName.length == 2) return stateName.uppercase()
+        
+        val map = mapOf(
+            "acre" to "AC", "alagoas" to "AL", "amapá" to "AP", "amapa" to "AP",
+            "amazonas" to "AM", "bahia" to "BA", "ceará" to "CE", "ceara" to "CE",
+            "distrito federal" to "DF", "espírito santo" to "ES", "espirito santo" to "ES",
+            "goiás" to "GO", "goias" to "GO", "maranhão" to "MA", "maranhao" to "MA",
+            "mato grosso" to "MT", "mato grosso do sul" to "MS", "minas gerais" to "MG",
+            "pará" to "PA", "para" to "PA", "paraíba" to "PB", "paraiba" to "PB",
+            "paraná" to "PR", "parana" to "PR", "pernambuco" to "PE", "piauí" to "PI",
+            "piaui" to "PI", "rio de janeiro" to "RJ", "rio grande do norte" to "RN",
+            "rio grande do sul" to "RS", "rondônia" to "RO", "rondonia" to "RO",
+            "roraima" to "RR", "santa catarina" to "SC", "são paulo" to "SP",
+            "sao paulo" to "SP", "sergipe" to "SE", "tocantins" to "TO"
+        )
+        return map[stateName.lowercase()] ?: stateName
     }
 
     fun resetState() {

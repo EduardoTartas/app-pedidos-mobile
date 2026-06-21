@@ -73,7 +73,14 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 
+import android.content.Intent
+
 class MainActivity : ComponentActivity() {
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -83,8 +90,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private const val GOOGLE_WEB_CLIENT_ID =
-    "1053347409082-qb4s3d724bp69hs78kdt38s35brinr7n.apps.googleusercontent.com"
+private val GOOGLE_WEB_CLIENT_ID = BuildConfig.GOOGLE_WEB_CLIENT_ID
 
 private val mainScreenRoutes = bottomNavItems.map { it.route }.toSet()
 private val splashRoute = "splash"
@@ -170,6 +176,54 @@ fun PedidosApp(activity: ComponentActivity) {
                 popUpTo("carrinho") { inclusive = true }
                 launchSingleTop = true
             }
+        }
+    }
+
+    // FORÇAR PROCESSAMENTO DE DEEP LINKS QUANDO O APP JÁ ESTÁ ABERTO (singleTask)
+    androidx.compose.runtime.DisposableEffect(activity) {
+        val handleIntent = { intent: Intent ->
+            try {
+                if (intent.data != null) {
+                    // Tenta deixar o Navigation do Compose lidar com o deep link
+                    var handled = false
+                    try {
+                        handled = navController.handleDeepLink(intent)
+                    } catch (e: Exception) {
+                        // Ignora erro do handleDeepLink (pode ocorrer se o gráfico não estiver pronto)
+                    }
+                    
+                    // Fallback manual super robusto caso a biblioteca falhe em casar a rota
+                    if (!handled) {
+                        val uriString = intent.data.toString()
+                        if (uriString.contains("auth/recover") || uriString.contains("auth/app-redirect/recover")) {
+                            val token = intent.data?.getQueryParameter("token") ?: ""
+                            try {
+                                navController.navigate("esqueci_senha?email=&token=$token") {
+                                    launchSingleTop = true
+                                }
+                            } catch (e: Exception) {}
+                        } else if (uriString.contains("auth/verify") || uriString.contains("auth/app-redirect/verify")) {
+                            val token = intent.data?.getQueryParameter("token") ?: ""
+                            try {
+                                navController.navigate("verificacao_email?token=$token") {
+                                    launchSingleTop = true
+                                }
+                            } catch (e: Exception) {}
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Previne qualquer crash que faça o app fechar com tela branca
+            }
+        }
+
+        val consumer = androidx.core.util.Consumer<Intent> { intent ->
+            handleIntent(intent)
+        }
+        activity.addOnNewIntentListener(consumer)
+        
+        onDispose {
+            activity.removeOnNewIntentListener(consumer)
         }
     }
 
@@ -319,23 +373,64 @@ fun PedidosApp(activity: ComponentActivity) {
                 }
 
                 composable(
-                    route = "esqueci_senha?email={email}",
+                    route = "esqueci_senha?email={email}&token={token}",
                     arguments = listOf(
                         navArgument("email") {
                             type = NavType.StringType
                             defaultValue = ""
+                        },
+                        navArgument("token") {
+                            type = NavType.StringType
+                            defaultValue = ""
+                            nullable = true
                         }
+                    ),
+                    deepLinks = listOf(
+                        androidx.navigation.navDeepLink { uriPattern = "rango://auth/recover?token={token}" },
+                        androidx.navigation.navDeepLink { uriPattern = "https://rango-api-qa.eduardotartas.dpdns.org/auth/app-redirect/recover?token={token}" }
                     )
                 ) { backStackEntry ->
                     val email = backStackEntry.arguments?.getString("email") ?: ""
+                    val token = backStackEntry.arguments?.getString("token")
                     EsqueciSenhaScreen(
                         emailInicial = email,
+                        tokenInicial = token,
                         onBackToLogin = { navController.popBackStack() },
                         onRecoverPassword = { emailInput, onSuccess, onError ->
                             authViewModel.recoverPassword(emailInput, onSuccess, onError)
                         },
                         onResetPassword = { token, novaSenha, onSuccess, onError ->
                             authViewModel.resetPasswordByCode(token, novaSenha, onSuccess, onError)
+                        },
+                        onValidateToken = { tokenParam, onSuccess, onError ->
+                            authViewModel.validatePasswordResetToken(tokenParam, onSuccess, onError)
+                        }
+                    )
+                }
+
+                composable(
+                    route = "verificacao_email?token={token}",
+                    arguments = listOf(
+                        navArgument("token") {
+                            type = NavType.StringType
+                            defaultValue = ""
+                        }
+                    ),
+                    deepLinks = listOf(
+                        androidx.navigation.navDeepLink { uriPattern = "rango://auth/verify?token={token}" },
+                        androidx.navigation.navDeepLink { uriPattern = "https://rango-api-qa.eduardotartas.dpdns.org/auth/app-redirect/verify?token={token}" }
+                    )
+                ) { backStackEntry ->
+                    val token = backStackEntry.arguments?.getString("token") ?: ""
+                    dev.fslab.pedidos.ui.screens.auth.VerificacaoEmailScreen(
+                        token = token,
+                        onNavigateToLogin = {
+                            navController.navigate("login") {
+                                popUpTo(0)
+                            }
+                        },
+                        onVerifyEmail = { t, onSuccess, onError ->
+                            authViewModel.verifyEmail(t, onSuccess, onError)
                         }
                     )
                 }
