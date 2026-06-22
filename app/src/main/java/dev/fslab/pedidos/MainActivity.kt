@@ -2,6 +2,7 @@ package dev.fslab.pedidos
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -623,7 +624,7 @@ fun PedidosApp(activity: ComponentActivity) {
                     NotificacoesScreen(
                         onBack = { navController.popBackStack() },
                         onNavigateToPedidoDetalhes = { pedidoId ->
-                            navController.navigate("pedido_detalhes/$pedidoId")
+                            navController.navigate("pedido_detalhes/${Uri.encode(pedidoId)}")
                         },
                         viewModel = notificationViewModel
                     )
@@ -634,7 +635,7 @@ fun PedidosApp(activity: ComponentActivity) {
                     dev.fslab.pedidos.ui.screens.PedidosScreen(
                         bottomPadding = innerPadding.calculateBottomPadding(),
                         onNavigateToPedidoDetalhes = { pedidoId ->
-                            navController.navigate("pedido_detalhes/$pedidoId")
+                            navController.navigate("pedido_detalhes/${Uri.encode(pedidoId)}")
                         },
                         viewModel = historyViewModel
                     )
@@ -885,7 +886,7 @@ fun PedidosApp(activity: ComponentActivity) {
                             onAcompanharPedido = {
                                 val pid = pedidoInicial.id
                                 pedidoViewModel.resetar()
-                                navController.navigate("pedido_detalhes/$pid") {
+                                navController.navigate("pedido_detalhes/${Uri.encode(pid)}") {
                                     popUpTo("home") { inclusive = false }
                                 }
                             }

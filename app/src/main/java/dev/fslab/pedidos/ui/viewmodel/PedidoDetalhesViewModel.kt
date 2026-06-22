@@ -88,6 +88,10 @@ class PedidoDetalhesViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val response = api.obterPedido(pedidoId)
+                if (!response.isSuccessful) {
+                    carregarPedidoPelaLista(pedidoId)
+                    return@launch
+                }
                 if (response.isSuccessful) {
                     val pedido = response.body()?.data
                     if (pedido != null) {
@@ -97,7 +101,10 @@ class PedidoDetalhesViewModel : ViewModel() {
                         _uiState.value = PedidoDetalhesUiState.Error("Pedido não encontrado.")
                     }
                 } else {
-                    _uiState.value = PedidoDetalhesUiState.Error("Erro ao carregar detalhes do pedido.")
+                    val apiMessage = response.errorBody()?.string()?.let(::extrairMensagemErro)
+                    _uiState.value = PedidoDetalhesUiState.Error(
+                        apiMessage ?: "Erro ao carregar detalhes do pedido."
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.value = PedidoDetalhesUiState.Error(
@@ -195,6 +202,44 @@ class PedidoDetalhesViewModel : ViewModel() {
     
     fun resetAvaliacao() {
         _avaliacaoSucesso.value = false
+    }
+
+    private fun extrairMensagemErro(body: String): String? {
+        return runCatching {
+            val json = JSONObject(body)
+            json.optString("message")
+                .ifBlank { json.optString("error") }
+                .takeIf { it.isNotBlank() }
+        }.getOrNull()
+    }
+
+    private suspend fun carregarPedidoPelaLista(
+        pedidoId: String,
+        fallbackMessage: String = "Pedido não encontrado."
+    ) {
+        try {
+            val response = api.listarMeusPedidos(limit = 100)
+            if (response.isSuccessful) {
+                val pedido = response.body()
+                    ?.data
+                    ?.docs
+                    ?.firstOrNull { it.id == pedidoId }
+
+                if (pedido != null) {
+                    _uiState.value = PedidoDetalhesUiState.Success(pedido)
+                    conectarSocket(pedidoId)
+                } else {
+                    _uiState.value = PedidoDetalhesUiState.Error(fallbackMessage)
+                }
+            } else {
+                val apiMessage = response.errorBody()?.string()?.let(::extrairMensagemErro)
+                _uiState.value = PedidoDetalhesUiState.Error(apiMessage ?: fallbackMessage)
+            }
+        } catch (e: Exception) {
+            _uiState.value = PedidoDetalhesUiState.Error(
+                e.localizedMessage ?: fallbackMessage
+            )
+        }
     }
 
     override fun onCleared() {
