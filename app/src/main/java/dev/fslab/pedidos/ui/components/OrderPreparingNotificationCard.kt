@@ -29,10 +29,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 
 private val PreparingCardBackground = Color(0xFF161B2E)
-private val PreparingGreen = Color(0xFF22C55E)
 private val PreparingTrack = Color(0xFF334155)
 
 @Composable
@@ -42,6 +42,7 @@ fun OrderPreparingNotificationCard(
     estimatedTimeMinutes: Int = 20,
     progress: Float = 0.3f
 ) {
+    val primaryColor = LocalPedidosColors.current.primary
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -61,14 +62,13 @@ fun OrderPreparingNotificationCard(
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .clip(CircleShape)
-                        .background(PreparingGreen.copy(alpha = 0.14f)),
+                        .background(primaryColor.copy(alpha = 0.2f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Restaurant,
-                        contentDescription = "Pedido em preparo",
-                        tint = PreparingGreen,
+                        contentDescription = null,
+                        tint = primaryColor,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -76,12 +76,12 @@ fun OrderPreparingNotificationCard(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(999.dp))
-                        .background(PreparingGreen.copy(alpha = 0.16f))
+                        .background(primaryColor.copy(alpha = 0.16f))
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
                         text = "Agora",
-                        color = PreparingGreen,
+                        color = primaryColor,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -116,7 +116,7 @@ fun OrderPreparingNotificationCard(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(999.dp)),
-                color = PreparingGreen,
+                color = primaryColor,
                 trackColor = PreparingTrack
             )
 
@@ -129,7 +129,7 @@ fun OrderPreparingNotificationCard(
                     modifier = Modifier
                         .size(8.dp)
                         .clip(CircleShape)
-                        .background(PreparingGreen)
+                        .background(primaryColor)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(

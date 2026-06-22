@@ -54,7 +54,7 @@ object OrderNotificationHelper {
             .setStyle(NotificationCompat.BigTextStyle().bigText(notification.description))
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
-            .setColor(0xFF22C55E.toInt())
+            .setColor(0xFF14B822.toInt())
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .build()

@@ -435,7 +435,7 @@ class NotificationViewModel(
         selectedNotificationId: String?,
         selectedNotificationIds: Set<String> = _uiState.value.selectedNotificationIds
     ) {
-        val visibleNotifications = notifications.onlyVisibleNotifications()
+        val visibleNotifications = notifications.onlyVisibleNotifications().sortedByDescending { it.createdAt }
         val notificationIds = visibleNotifications.map { it.id }.toSet()
         val validSelectedNotificationIds = selectedNotificationIds.intersect(notificationIds)
         val filteredNotifications = selectedCategory?.let { category ->

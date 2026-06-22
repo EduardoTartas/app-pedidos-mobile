@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 
 private val DeliveredCardBackground = Color(0xFF161B2E)
-private val DeliveredGreen = Color(0xFF22C55E)
 
 @Composable
 fun OrderDeliveredNotificationCard(
@@ -41,6 +40,7 @@ fun OrderDeliveredNotificationCard(
     deliveredAt: String = "Agora",
     onOrderClick: () -> Unit = {}
 ) {
+    val DeliveredGreen = dev.fslab.pedidos.ui.theme.LocalPedidosColors.current.primary
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
