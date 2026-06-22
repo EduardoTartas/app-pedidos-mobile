@@ -301,6 +301,7 @@ class NotificationViewModel(
         notifications: List<NotificationUiModel>
     ): List<NotificationUiModel> {
         if (!BuildConfig.DEBUG) return notifications
+        if (notifications.isNotEmpty() || localNotifications.isNotEmpty()) return notifications
 
         val mockContext = resolvePreparingMockContext(localNotifications + notifications)
         val interfaceTestNotifications = NotificationMocks.interfaceTestNotifications(
@@ -430,5 +431,76 @@ class NotificationViewModel(
     }
 }
 
-private fun List<NotificationUiModel>.onlyVisibleNotifications(): List<NotificationUiModel> =
-    filterNot { it.type == NotificationType.SYSTEM }
+private fun List<NotificationUiModel>.onlyVisibleNotifications(): List<NotificationUiModel> {
+    val visibleNotifications = filterNot { it.type == NotificationType.SYSTEM }
+    val currentOrderNotificationIds = visibleNotifications
+        .filter { it.type.isOrderRelated() }
+        .mapNotNull { notification ->
+            notification.orderStatusGroupKey()?.let { key -> key to notification }
+        }
+        .groupBy(keySelector = { it.first }, valueTransform = { it.second })
+        .values
+        .mapNotNull { notifications ->
+            notifications.maxWithOrNull(
+                compareBy<NotificationUiModel> { it.orderStatusPriority() }
+                    .thenBy { it.createdAtSortValue() }
+            )?.id
+        }
+        .toSet()
+
+    if (currentOrderNotificationIds.isEmpty()) return visibleNotifications
+
+    return visibleNotifications.filter { notification ->
+        val orderKey = notification.orderStatusGroupKey()
+        orderKey == null || notification.id in currentOrderNotificationIds
+    }
+}
+
+private fun NotificationUiModel.orderStatusGroupKey(): String? =
+    pedidoId
+        ?.takeIf { it.isNotBlank() }
+        ?: id
+            .removePrefix("local-pedido-")
+            .removePrefix("mock-pedido-em-preparo-")
+            .removePrefix("mock-pedido-cancelado-")
+            .takeIf { normalizedId -> normalizedId != id && normalizedId.isNotBlank() }
+
+private fun NotificationUiModel.orderStatusPriority(): Int {
+    val status = statusKey?.lowercase().orEmpty()
+    val titleText = title.lowercase()
+    val descriptionText = description.lowercase()
+
+    return when {
+        type == NotificationType.PEDIDO_CANCELADO ||
+            status == "cancelado" ||
+            titleText.contains("cancelado") ||
+            descriptionText.contains("cancelado") -> 100
+
+        status == "entregue" ||
+            titleText.contains("entregue") ||
+            descriptionText.contains("entregue") -> 90
+
+        type == NotificationType.PEDIDO_A_CAMINHO ||
+            status == "a_caminho" ||
+            titleText.contains("a caminho") ||
+            descriptionText.contains("a caminho") -> 80
+
+        type == NotificationType.PEDIDO_EM_PREPARO ||
+            status == "em_preparo" ||
+            status == "preparando" ||
+            status == "aceito" ||
+            titleText.contains("preparo") ||
+            titleText.contains("preparado") ||
+            descriptionText.contains("preparar") -> 70
+
+        status == "pedido_confirmado" ||
+            status == "confirmado" ||
+            titleText.contains("confirmado") ||
+            descriptionText.contains("recebeu seu pedido") -> 60
+
+        else -> 10
+    }
+}
+
+private fun NotificationUiModel.createdAtSortValue(): Long =
+    runCatching { Instant.parse(createdAt).toEpochMilli() }.getOrDefault(0L)

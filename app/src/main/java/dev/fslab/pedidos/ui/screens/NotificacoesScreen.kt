@@ -359,6 +359,15 @@ fun NotificacoesScreen(
                                         onLongClick = onNotificationLongClick
                                     )
                                 )
+                            } else if (notificacao.isConfirmedOrderNotification() && !isSelectionMode) {
+                                OrderConfirmedNotificationCard(
+                                    restaurantName = notificacao.orderRestaurantName(),
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = onNotificationClick,
+                                        onLongClick = onNotificationLongClick
+                                    ),
+                                    onDetailsClick = onNotificationClick
+                                )
                             } else {
                                 NotificationItemCard(
                                     icon = notificacao.type.icon,
@@ -376,6 +385,109 @@ fun NotificacoesScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OrderConfirmedNotificationCard(
+    modifier: Modifier = Modifier,
+    restaurantName: String? = null,
+    onDetailsClick: () -> Unit = {}
+) {
+    val colors = LocalPedidosColors.current
+    val green = colors.primary
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF161B2E)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(green.copy(alpha = 0.14f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
+                        contentDescription = "Pedido confirmado",
+                        tint = green,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Text(
+                    text = "Confirmado",
+                    color = green,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .background(green.copy(alpha = 0.16f), RoundedCornerShape(999.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Pedido confirmado",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = restaurantName
+                    ?.let { "$it recebeu seu pedido. Em breve ele entra em preparo." }
+                    ?: "Seu pedido foi recebido. Em breve ele entra em preparo.",
+                color = Color.White.copy(alpha = 0.72f),
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            LinearProgressIndicator(
+                progress = { 0.12f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp),
+                color = green,
+                trackColor = Color(0xFF334155)
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Button(
+                onClick = onDetailsClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = green,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(
+                    text = "Acompanhar pedido",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -1244,8 +1356,24 @@ private const val LOCAL_ORDER_NOTIFICATION_PREFIX = "local-pedido-"
 private fun NotificationUiModel.isPreparingOrderNotification(): Boolean =
     type == NotificationType.PEDIDO_EM_PREPARO ||
         statusKey == "em_preparo" ||
+        statusKey == "preparando" ||
+        statusKey == "aceito" ||
         title.contains("preparo", ignoreCase = true) ||
+        title.contains("aceito", ignoreCase = true) ||
         description.contains("prepar", ignoreCase = true)
+
+private fun NotificationUiModel.isConfirmedOrderNotification(): Boolean =
+    type == NotificationType.ORDER &&
+        (
+            statusKey == "pedido_confirmado" ||
+                statusKey == "confirmado" ||
+                statusKey == "criado" ||
+                statusKey == "pendente" ||
+                title.contains("pedido realizado", ignoreCase = true) ||
+                title.contains("pedido confirmado", ignoreCase = true) ||
+                description.contains("recebeu seu pedido", ignoreCase = true) ||
+                description.contains("enviado", ignoreCase = true)
+            )
 
 private fun NotificationUiModel.isOnTheWayOrderNotification(): Boolean =
     type == NotificationType.PEDIDO_A_CAMINHO ||

@@ -84,15 +84,22 @@ data class NotificacaoResponse(
 
 private fun String.toNotificationType(): NotificationType = when (this) {
     "em_preparo",
+    "preparando",
+    "preparo",
+    "aceito",
     "PEDIDO_EM_PREPARO" -> NotificationType.PEDIDO_EM_PREPARO
 
     "a_caminho",
+    "saiu_para_entrega",
     "PEDIDO_A_CAMINHO" -> NotificationType.PEDIDO_A_CAMINHO
 
     "cancelado",
     "PEDIDO_CANCELADO" -> NotificationType.PEDIDO_CANCELADO
 
     "pedido_confirmado",
+    "confirmado",
+    "criado",
+    "pendente",
     "entregue" -> NotificationType.ORDER
 
     "promocao",
@@ -144,7 +151,7 @@ object NotificationMocks {
         createdAt = "Agora",
         isRead = false,
         type = NotificationType.PEDIDO_A_CAMINHO,
-        pedidoId = null,
+        pedidoId = pedidoId,
         restaurantName = restaurantName,
         statusKey = "a_caminho"
     )
@@ -155,7 +162,7 @@ object NotificationMocks {
     ) = listOf(
         pedidoCancelado(
             restaurantName = restaurantName,
-            pedidoId = "cancelado-demo"
+            pedidoId = pedidoId
         ),
         pedidoACaminho(
             restaurantName = restaurantName,
