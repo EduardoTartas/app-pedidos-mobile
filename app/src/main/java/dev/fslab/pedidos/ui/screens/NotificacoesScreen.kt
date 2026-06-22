@@ -1348,6 +1348,7 @@ fun NotificationItemCard(
 
 private val NotificationType.icon: ImageVector
     get() = when (this) {
+        NotificationType.PEDIDO_CONFIRMADO -> Icons.AutoMirrored.Filled.ReceiptLong
         NotificationType.PEDIDO_A_CAMINHO -> Icons.Filled.TwoWheeler
         NotificationType.PEDIDO_EM_PREPARO -> Icons.AutoMirrored.Filled.ReceiptLong
         NotificationType.PEDIDO_CANCELADO -> Icons.Filled.Cancel
@@ -1375,16 +1376,19 @@ private fun NotificationUiModel.isPreparingOrderNotification(): Boolean =
         description.contains("prepar", ignoreCase = true)
 
 private fun NotificationUiModel.isConfirmedOrderNotification(): Boolean =
-    type == NotificationType.ORDER &&
+    type == NotificationType.PEDIDO_CONFIRMADO ||
         (
-            statusKey == "pedido_confirmado" ||
-                statusKey == "confirmado" ||
-                statusKey == "criado" ||
-                statusKey == "pendente" ||
-                title.contains("pedido realizado", ignoreCase = true) ||
-                title.contains("pedido confirmado", ignoreCase = true) ||
-                description.contains("recebeu seu pedido", ignoreCase = true) ||
-                description.contains("enviado", ignoreCase = true)
+            type == NotificationType.ORDER &&
+                (
+                    statusKey == "pedido_confirmado" ||
+                        statusKey == "confirmado" ||
+                        statusKey == "criado" ||
+                        statusKey == "pendente" ||
+                        title.contains("pedido realizado", ignoreCase = true) ||
+                        title.contains("pedido confirmado", ignoreCase = true) ||
+                        description.contains("recebeu seu pedido", ignoreCase = true) ||
+                        description.contains("enviado", ignoreCase = true)
+                    )
             )
 
 private fun NotificationUiModel.isOnTheWayOrderNotification(): Boolean =

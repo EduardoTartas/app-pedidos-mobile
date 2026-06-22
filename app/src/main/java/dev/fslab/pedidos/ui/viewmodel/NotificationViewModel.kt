@@ -461,6 +461,7 @@ private fun NotificationUiModel.orderStatusGroupKey(): String? =
         ?.takeIf { it.isNotBlank() }
         ?: id
             .removePrefix("local-pedido-")
+            .removePrefix("mock-pedido-confirmado-")
             .removePrefix("mock-pedido-em-preparo-")
             .removePrefix("mock-pedido-cancelado-")
             .removePrefix("mock-pedido-entregue-")
@@ -495,8 +496,11 @@ private fun NotificationUiModel.orderStatusPriority(): Int {
             titleText.contains("preparado") ||
             descriptionText.contains("preparar") -> 70
 
-        status == "pedido_confirmado" ||
+        type == NotificationType.PEDIDO_CONFIRMADO ||
+            status == "pedido_confirmado" ||
             status == "confirmado" ||
+            status == "criado" ||
+            status == "pendente" ||
             titleText.contains("confirmado") ||
             descriptionText.contains("recebeu seu pedido") -> 60
 

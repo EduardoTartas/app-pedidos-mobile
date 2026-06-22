@@ -3,6 +3,9 @@ package dev.fslab.pedidos.model
 import com.google.gson.annotations.SerializedName
 
 enum class NotificationType {
+    @SerializedName(value = "PEDIDO_CONFIRMADO", alternate = ["pedido_confirmado", "confirmado", "criado", "pendente"])
+    PEDIDO_CONFIRMADO,
+
     @SerializedName(value = "PEDIDO_EM_PREPARO", alternate = ["em_preparo"])
     PEDIDO_EM_PREPARO,
 
@@ -103,9 +106,10 @@ private fun String.toNotificationType(): NotificationType = when (this) {
     "PEDIDO_ENTREGUE" -> NotificationType.PEDIDO_ENTREGUE
 
     "pedido_confirmado",
+    "PEDIDO_CONFIRMADO",
     "confirmado",
     "criado",
-    "pendente" -> NotificationType.ORDER
+    "pendente" -> NotificationType.PEDIDO_CONFIRMADO
 
     "promocao",
     "promotion" -> NotificationType.PROMOTION
@@ -114,6 +118,7 @@ private fun String.toNotificationType(): NotificationType = when (this) {
 }
 
 fun NotificationType.isOrderRelated(): Boolean = when (this) {
+    NotificationType.PEDIDO_CONFIRMADO,
     NotificationType.ORDER,
     NotificationType.PEDIDO_EM_PREPARO,
     NotificationType.PEDIDO_A_CAMINHO,
@@ -124,10 +129,29 @@ fun NotificationType.isOrderRelated(): Boolean = when (this) {
 }
 
 object NotificationMocks {
+    private const val MOCK_CONFIRMED_ORDER_PREFIX = "mock-pedido-confirmado-"
     private const val MOCK_PREPARING_ORDER_PREFIX = "mock-pedido-em-preparo-"
     private const val MOCK_ON_THE_WAY_ORDER_ID = "2"
     private const val MOCK_CANCELED_ORDER_PREFIX = "mock-pedido-cancelado-"
     private const val MOCK_DELIVERED_ORDER_PREFIX = "mock-pedido-entregue-"
+
+    fun pedidoConfirmado(
+        restaurantName: String? = null,
+        pedidoId: String = "1"
+    ) = NotificationUiModel(
+        id = "$MOCK_CONFIRMED_ORDER_PREFIX$pedidoId",
+        title = "Pedido confirmado",
+        description = restaurantName
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "$it recebeu seu pedido." }
+            ?: "Seu pedido foi recebido.",
+        createdAt = "Agora",
+        isRead = false,
+        type = NotificationType.PEDIDO_CONFIRMADO,
+        pedidoId = pedidoId,
+        restaurantName = restaurantName,
+        statusKey = "pedido_confirmado"
+    )
 
     fun pedidoEmPreparo(
         restaurantName: String?,
@@ -171,11 +195,15 @@ object NotificationMocks {
             restaurantName = restaurantName,
             pedidoId = pedidoId
         ),
-        pedidoCancelado(
+        pedidoACaminho(
             restaurantName = restaurantName,
             pedidoId = pedidoId
         ),
-        pedidoACaminho(
+        pedidoEmPreparo(
+            restaurantName = restaurantName,
+            pedidoId = pedidoId
+        ),
+        pedidoConfirmado(
             restaurantName = restaurantName,
             pedidoId = pedidoId
         )
@@ -183,6 +211,7 @@ object NotificationMocks {
 
     fun isMockId(id: String): Boolean =
         id == MOCK_ON_THE_WAY_ORDER_ID ||
+            id.startsWith(MOCK_CONFIRMED_ORDER_PREFIX) ||
             id.startsWith(MOCK_PREPARING_ORDER_PREFIX) ||
             id.startsWith(MOCK_CANCELED_ORDER_PREFIX) ||
             id.startsWith(MOCK_DELIVERED_ORDER_PREFIX)
