@@ -171,7 +171,6 @@ private fun OrderDeliveredNotificationCardPreview() {
     PedidosTheme(darkTheme = true) {
         OrderDeliveredNotificationCard(
             modifier = Modifier.padding(16.dp),
-            restaurantName = "Cantina Verde",
             deliveredAt = "18:42"
         )
     }

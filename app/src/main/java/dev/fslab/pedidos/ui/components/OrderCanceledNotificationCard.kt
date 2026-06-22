@@ -143,8 +143,7 @@ private fun canceledDescription(restaurantName: String?): String {
 private fun OrderCanceledNotificationCardPreview() {
     PedidosTheme(darkTheme = true) {
         OrderCanceledNotificationCard(
-            modifier = Modifier.padding(16.dp),
-            restaurantName = "Padaria Central"
+            modifier = Modifier.padding(16.dp)
         )
     }
 }
