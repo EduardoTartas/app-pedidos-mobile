@@ -154,7 +154,7 @@ object NotificationMocks {
         pedidoId: String = MOCK_ON_THE_WAY_ORDER_ID
     ) = listOf(
         pedidoCancelado(
-            restaurantName = restaurantName ?: "Padaria Central",
+            restaurantName = restaurantName,
             pedidoId = "cancelado-demo"
         ),
         pedidoACaminho(

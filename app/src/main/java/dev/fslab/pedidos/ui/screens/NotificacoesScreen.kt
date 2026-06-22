@@ -118,6 +118,7 @@ fun NotificacoesScreen(
     val selectedCount = uiState.selectedNotificationIds.size
     val isSelectionMode = selectedCount > 0
     var activeOnTheWaySheet by remember { mutableStateOf<OnTheWayNotificationSheet?>(null) }
+    var activeCanceledNotification by remember { mutableStateOf<NotificationUiModel?>(null) }
     val onTheWaySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     LaunchedEffect(Unit) {
@@ -145,6 +146,17 @@ fun NotificacoesScreen(
                     notification = sheet.notification
                 )
             }
+        }
+    }
+
+    activeCanceledNotification?.let { notification ->
+        ModalBottomSheet(
+            onDismissRequest = { activeCanceledNotification = null },
+            sheetState = onTheWaySheetState,
+            containerColor = Color(0xFF0F172A),
+            contentColor = Color.White
+        ) {
+            OrderCanceledDetailsSheet(notification = notification)
         }
     }
 
@@ -304,13 +316,17 @@ fun NotificacoesScreen(
                             }
 
                             if (notificacao.isCanceledOrderNotification() && !isSelectionMode) {
+                                val openCanceledDetails = {
+                                    viewModel.marcarComoLida(notificacao.id)
+                                    activeCanceledNotification = notificacao
+                                }
                                 OrderCanceledNotificationCard(
                                     restaurantName = notificacao.orderRestaurantName(),
                                     modifier = Modifier.combinedClickable(
-                                        onClick = onNotificationClick,
+                                        onClick = openCanceledDetails,
                                         onLongClick = onNotificationLongClick
                                     ),
-                                    onDetailsClick = onNotificationClick
+                                    onDetailsClick = openCanceledDetails
                                 )
                             } else if (notificacao.isOnTheWayOrderNotification() && !isSelectionMode) {
                                 OrderOnTheWayNotificationCard(
@@ -582,6 +598,120 @@ private fun OnTheWayTrackingSheet(
             description = "Confirme o recebimento quando chegar.",
             isDone = false
         )
+    }
+}
+
+@Composable
+private fun OrderCanceledDetailsSheet(
+    notification: NotificationUiModel
+) {
+    val restaurantName = notification.orderRestaurantName()
+    val red = Color(0xFFEF4444)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 28.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Pedido cancelado",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    text = "Resumo da notificação",
+                    color = Color.White.copy(alpha = 0.58f),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Text(
+                text = "Cancelado",
+                color = red,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .background(red.copy(alpha = 0.16f), RoundedCornerShape(999.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF161B2E)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .background(red.copy(alpha = 0.14f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Cancel,
+                            contentDescription = null,
+                            tint = red,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Cancelamento registrado",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = restaurantName
+                                ?.let { "O pedido realizado em $it foi cancelado." }
+                                ?: "Seu pedido foi cancelado.",
+                            color = Color.White.copy(alpha = 0.68f),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 14.dp),
+                    color = Color.White.copy(alpha = 0.08f)
+                )
+
+                DeliveryInfoRow(
+                    label = "Pedido",
+                    value = notification.pedidoIdFromNotification()
+                        ?.takeLast(8)
+                        ?.uppercase()
+                        ?.let { "#$it" }
+                        ?: "-"
+                )
+                restaurantName?.let {
+                    DeliveryInfoRow(label = "Restaurante", value = it)
+                }
+                DeliveryInfoRow(label = "Status", value = "Cancelado")
+                DeliveryInfoRow(label = "Data", value = notification.createdAtLabel())
+            }
+        }
     }
 }
 
