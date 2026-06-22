@@ -25,4 +25,18 @@ interface UsuarioApi {
         @Path("id") id: String,
         @Body body: Map<String, String>
     ): Response<BasicResponse>
+
+    /** POST /usuarios/:id/foto - Upload de foto de perfil */
+    @retrofit2.http.Multipart
+    @retrofit2.http.POST("usuarios/{id}/foto")
+    suspend fun uploadFoto(
+        @Path("id") id: String,
+        @retrofit2.http.Part file: okhttp3.MultipartBody.Part
+    ): Response<BasicResponse>
+
+    /** DELETE /usuarios/:id/foto - Remover foto de perfil */
+    @retrofit2.http.DELETE("usuarios/{id}/foto")
+    suspend fun deleteFoto(
+        @Path("id") id: String
+    ): Response<BasicResponse>
 }

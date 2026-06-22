@@ -616,6 +616,12 @@ fun PedidosApp(activity: ComponentActivity) {
                         },
                         onSaveProfile = { nome, telefone, cpf, onSuccess, onError ->
                             authViewModel.updateUserProfile(nome, telefone, cpf, onSuccess, onError)
+                        },
+                        onUploadPhoto = { file, onSuccess, onError ->
+                            authViewModel.uploadProfilePicture(file, onSuccess, onError)
+                        },
+                        onDeletePhoto = { onSuccess, onError ->
+                            authViewModel.deleteProfilePicture(onSuccess, onError)
                         }
                     )
                 }
