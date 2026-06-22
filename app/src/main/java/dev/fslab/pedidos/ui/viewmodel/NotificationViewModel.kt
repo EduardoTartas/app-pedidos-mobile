@@ -34,6 +34,8 @@ class NotificationViewModel(
 ) : ViewModel() {
 
     private var localNotifications: List<NotificationUiModel> = emptyList()
+    private var removedLocalOrMockNotificationIds: Set<String> = emptySet()
+    private var removedLocalOrMockOrderKeys: Set<String> = emptySet()
 
     private val _uiState = MutableStateFlow(NotificationUiState(isLoading = true))
     val uiState: StateFlow<NotificationUiState> = _uiState.asStateFlow()
@@ -48,7 +50,11 @@ class NotificationViewModel(
             when (val result = repository.listarNotificacoes()) {
                 is NetworkResult.Success -> {
                     publishState(
-                        notifications = mergeLocalNotifications(withDebugInterfaceMocks(result.data)),
+                        notifications = mergeLocalNotifications(
+                            withoutRemovedLocalOrMockNotifications(
+                                withDebugInterfaceMocks(result.data.onlyVisibleNotifications())
+                            )
+                        ),
                         selectedCategory = _uiState.value.selectedCategory,
                         selectedNotificationId = _uiState.value.selectedNotification?.id
                     )
@@ -56,7 +62,11 @@ class NotificationViewModel(
                 is NetworkResult.Error -> {
                     if (BuildConfig.DEBUG) {
                         publishState(
-                            notifications = mergeLocalNotifications(withDebugInterfaceMocks(emptyList())),
+                            notifications = mergeLocalNotifications(
+                                withoutRemovedLocalOrMockNotifications(
+                                    withDebugInterfaceMocks(emptyList())
+                                )
+                            ),
                             selectedCategory = _uiState.value.selectedCategory,
                             selectedNotificationId = _uiState.value.selectedNotification?.id
                         )
@@ -89,6 +99,12 @@ class NotificationViewModel(
         val remoteIds = ids - localIds
 
         if (localIds.isNotEmpty()) {
+            val currentLocalOrMockNotifications = _uiState.value.notifications
+                .filter { it.id in localIds }
+            removedLocalOrMockNotificationIds += localIds
+            removedLocalOrMockOrderKeys += currentLocalOrMockNotifications
+                .mapNotNull { it.orderStatusGroupKey() }
+                .toSet()
             localNotifications = localNotifications.filterNot { it.id in localIds }
         }
 
@@ -224,17 +240,20 @@ class NotificationViewModel(
         pedido: Pedido,
         nomeRestaurante: String
     ): NotificationUiModel {
-        val restaurante = nomeRestaurante.ifBlank { "O restaurante" }
+        val restaurantName = nomeRestaurante.asValidRestaurantName()
+            ?: pedido.restauranteNomeOrNull?.asValidRestaurantName()
 
         val notification = NotificationUiModel(
             id = "$LOCAL_NOTIFICATION_PREFIX${pedido.id}",
             title = "Pedido realizado!",
-            description = "Pedido #${pedido.id.takeLast(8).uppercase()} enviado para $restaurante.",
+            description = restaurantName
+                ?.let { "Pedido #${pedido.id.takeLast(8).uppercase()} enviado para $it." }
+                ?: "Pedido #${pedido.id.takeLast(8).uppercase()} enviado.",
             createdAt = pedido.criadoEm ?: Instant.now().toString(),
             isRead = false,
             type = NotificationType.ORDER,
             pedidoId = pedido.id,
-            restaurantName = restaurante,
+            restaurantName = restaurantName,
             statusKey = "pedido_confirmado"
         )
 
@@ -298,6 +317,7 @@ class NotificationViewModel(
         notifications: List<NotificationUiModel>
     ): List<NotificationUiModel> {
         if (!BuildConfig.DEBUG) return notifications
+        if (notifications.isNotEmpty() || localNotifications.isNotEmpty()) return notifications
 
         val mockContext = resolvePreparingMockContext(localNotifications + notifications)
         val interfaceTestNotifications = NotificationMocks.interfaceTestNotifications(
@@ -307,8 +327,26 @@ class NotificationViewModel(
         val existingIds = notifications.map { it.id }.toSet()
         val missingMocks = interfaceTestNotifications
             .filterNot { it.id in existingIds }
+            .filterNot { it.id in removedLocalOrMockNotificationIds }
+            .filterNot { notification ->
+                notification.orderStatusGroupKey()
+                    ?.let { it in removedLocalOrMockOrderKeys } == true
+            }
 
         return missingMocks + notifications
+    }
+
+    private fun withoutRemovedLocalOrMockNotifications(
+        notifications: List<NotificationUiModel>
+    ): List<NotificationUiModel> {
+        return notifications.filterNot { notification ->
+            isLocalOrMockNotification(notification.id) &&
+                (
+                    notification.id in removedLocalOrMockNotificationIds ||
+                        notification.orderStatusGroupKey()
+                            ?.let { it in removedLocalOrMockOrderKeys } == true
+                    )
+        }
     }
 
     private fun isLocalOrMockNotification(id: String): Boolean {
@@ -317,7 +355,7 @@ class NotificationViewModel(
     }
 
     private data class PreparingMockContext(
-        val restaurantName: String,
+        val restaurantName: String?,
         val pedidoId: String
     )
 
@@ -334,7 +372,6 @@ class NotificationViewModel(
             ?.asValidRestaurantName()
             ?: confirmedOrderNotification?.restaurantNameFromConfirmedOrder()
             ?: notifications.firstNotNullOfOrNull { it.restaurantNameFromAnyOrderMessage() }
-            ?: DEFAULT_MOCK_RESTAURANT_NAME
 
         val pedidoId = confirmedOrderNotification?.pedidoId
             ?: confirmedOrderNotification?.id
@@ -362,9 +399,11 @@ class NotificationViewModel(
         restaurantName?.asValidRestaurantName()?.let { return it }
 
         val patterns = listOf(
-            Regex("restaurante\\s+(.+?)\\s+(começou|iniciou|confirmou)", RegexOption.IGNORE_CASE),
+            Regex("restaurante\\s+(.+?)\\s+(começou|iniciou|confirmou|recebeu)", RegexOption.IGNORE_CASE),
             Regex("^(.+?)\\s+confirmou\\s+seu\\s+pedido", RegexOption.IGNORE_CASE),
-            Regex("do\\s+(.+?)\\.", RegexOption.IGNORE_CASE)
+            Regex("pedido\\s+(?:do|da|de)\\s+(.+?)\\s+(?:saiu|foi|está|chegou|chegará)", RegexOption.IGNORE_CASE),
+            Regex("do\\s+(.+?)\\.", RegexOption.IGNORE_CASE),
+            Regex("da\\s+(.+?)\\.", RegexOption.IGNORE_CASE)
         )
 
         return patterns.firstNotNullOfOrNull { pattern ->
@@ -381,7 +420,12 @@ class NotificationViewModel(
         return value.takeIf {
             it.isNotBlank() &&
                 normalized != "restaurante" &&
-                normalized != "o restaurante"
+                normalized != "o restaurante" &&
+                normalized != "lugar" &&
+                normalized != "local" &&
+                normalized != "o local" &&
+                !normalized.contains("foi entregue") &&
+                !normalized.contains("entregue com sucesso")
         }
     }
 
@@ -391,23 +435,24 @@ class NotificationViewModel(
         selectedNotificationId: String?,
         selectedNotificationIds: Set<String> = _uiState.value.selectedNotificationIds
     ) {
-        val notificationIds = notifications.map { it.id }.toSet()
+        val visibleNotifications = notifications.onlyVisibleNotifications()
+        val notificationIds = visibleNotifications.map { it.id }.toSet()
         val validSelectedNotificationIds = selectedNotificationIds.intersect(notificationIds)
         val filteredNotifications = selectedCategory?.let { category ->
-            notifications.filter { notification ->
+            visibleNotifications.filter { notification ->
                 when (category) {
                     NotificationType.ORDER -> notification.type.isOrderRelated()
                     else -> notification.type == category
                 }
             }
-        } ?: notifications
+        } ?: visibleNotifications
 
         _uiState.value = NotificationUiState(
-            notifications = notifications,
+            notifications = visibleNotifications,
             filteredNotifications = filteredNotifications,
             selectedCategory = selectedCategory,
             selectedNotification = notifications.find { it.id == selectedNotificationId },
-            unreadCount = notifications.count { !it.isRead },
+            unreadCount = visibleNotifications.count { !it.isRead },
             isLoading = false,
             isMarkingAsRead = false,
             isDeleting = false,
@@ -418,7 +463,86 @@ class NotificationViewModel(
 
     companion object {
         private const val LOCAL_NOTIFICATION_PREFIX = "local-pedido-"
-        private const val DEFAULT_MOCK_RESTAURANT_NAME = "Burger House"
         private const val DEFAULT_MOCK_PEDIDO_ID = "1"
     }
 }
+
+private fun List<NotificationUiModel>.onlyVisibleNotifications(): List<NotificationUiModel> {
+    val visibleNotifications = filterNot { it.type == NotificationType.SYSTEM }
+    val currentOrderNotificationIds = visibleNotifications
+        .filter { it.type.isOrderRelated() }
+        .mapNotNull { notification ->
+            notification.orderStatusGroupKey()?.let { key -> key to notification }
+        }
+        .groupBy(keySelector = { it.first }, valueTransform = { it.second })
+        .values
+        .mapNotNull { notifications ->
+            notifications.maxWithOrNull(
+                compareBy<NotificationUiModel> { it.orderStatusPriority() }
+                    .thenBy { it.createdAtSortValue() }
+            )?.id
+        }
+        .toSet()
+
+    if (currentOrderNotificationIds.isEmpty()) return visibleNotifications
+
+    return visibleNotifications.filter { notification ->
+        val orderKey = notification.orderStatusGroupKey()
+        orderKey == null || notification.id in currentOrderNotificationIds
+    }
+}
+
+private fun NotificationUiModel.orderStatusGroupKey(): String? =
+    pedidoId
+        ?.takeIf { it.isNotBlank() }
+        ?: id
+            .removePrefix("local-pedido-")
+            .removePrefix("mock-pedido-confirmado-")
+            .removePrefix("mock-pedido-em-preparo-")
+            .removePrefix("mock-pedido-cancelado-")
+            .removePrefix("mock-pedido-entregue-")
+            .takeIf { normalizedId -> normalizedId != id && normalizedId.isNotBlank() }
+
+private fun NotificationUiModel.orderStatusPriority(): Int {
+    val status = statusKey?.lowercase().orEmpty()
+    val titleText = title.lowercase()
+    val descriptionText = description.lowercase()
+
+    return when {
+        type == NotificationType.PEDIDO_CANCELADO ||
+            status == "cancelado" ||
+            titleText.contains("cancelado") ||
+            descriptionText.contains("cancelado") -> 100
+
+        type == NotificationType.PEDIDO_ENTREGUE ||
+            status == "entregue" ||
+            titleText.contains("entregue") ||
+            descriptionText.contains("entregue") -> 90
+
+        type == NotificationType.PEDIDO_A_CAMINHO ||
+            status == "a_caminho" ||
+            titleText.contains("a caminho") ||
+            descriptionText.contains("a caminho") -> 80
+
+        type == NotificationType.PEDIDO_EM_PREPARO ||
+            status == "em_preparo" ||
+            status == "preparando" ||
+            status == "aceito" ||
+            titleText.contains("preparo") ||
+            titleText.contains("preparado") ||
+            descriptionText.contains("preparar") -> 70
+
+        type == NotificationType.PEDIDO_CONFIRMADO ||
+            status == "pedido_confirmado" ||
+            status == "confirmado" ||
+            status == "criado" ||
+            status == "pendente" ||
+            titleText.contains("confirmado") ||
+            descriptionText.contains("recebeu seu pedido") -> 60
+
+        else -> 10
+    }
+}
+
+private fun NotificationUiModel.createdAtSortValue(): Long =
+    runCatching { Instant.parse(createdAt).toEpochMilli() }.getOrDefault(0L)

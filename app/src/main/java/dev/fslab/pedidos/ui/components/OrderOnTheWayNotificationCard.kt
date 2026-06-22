@@ -14,13 +14,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.TwoWheeler
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,21 +34,25 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 
-private val PreparingCardBackground = Color(0xFF161B2E)
-private val PreparingGreen = Color(0xFF22C55E)
-private val PreparingTrack = Color(0xFF334155)
+private val OnTheWayCardBackground = Color(0xFF161B2E)
+private val OnTheWayGreen = Color(0xFF22C55E)
+private val OnTheWayTrack = Color(0xFF334155)
+private val OnTheWaySecondaryButton = Color(0xFF26324A)
 
 @Composable
-fun OrderPreparingNotificationCard(
+fun OrderOnTheWayNotificationCard(
     modifier: Modifier = Modifier,
+    courierName: String? = null,
     restaurantName: String? = null,
-    estimatedTimeMinutes: Int = 20,
-    progress: Float = 0.3f
+    estimatedArrivalMinutes: Int = 10,
+    progress: Float = 0.65f,
+    onTrackClick: () -> Unit = {},
+    onDetailsClick: () -> Unit = {}
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = PreparingCardBackground),
+        colors = CardDefaults.cardColors(containerColor = OnTheWayCardBackground),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
@@ -62,26 +69,26 @@ fun OrderPreparingNotificationCard(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape)
-                        .background(PreparingGreen.copy(alpha = 0.14f)),
+                        .background(OnTheWayGreen.copy(alpha = 0.14f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Restaurant,
-                        contentDescription = "Pedido em preparo",
-                        tint = PreparingGreen,
-                        modifier = Modifier.size(24.dp)
+                        imageVector = Icons.Filled.TwoWheeler,
+                        contentDescription = "Pedido a caminho",
+                        tint = OnTheWayGreen,
+                        modifier = Modifier.size(25.dp)
                     )
                 }
 
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(999.dp))
-                        .background(PreparingGreen.copy(alpha = 0.16f))
+                        .background(OnTheWayGreen.copy(alpha = 0.16f))
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
                         text = "Agora",
-                        color = PreparingGreen,
+                        color = OnTheWayGreen,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -91,7 +98,7 @@ fun OrderPreparingNotificationCard(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Seu pedido está sendo preparado",
+                text = "Pedido a caminho!",
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold
@@ -100,10 +107,7 @@ fun OrderPreparingNotificationCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = restaurantName
-                    ?.takeIf { it.isNotBlank() }
-                    ?.let { "$it começou a preparar seu pedido." }
-                    ?: "Seu pedido começou a ser preparado.",
+                text = onTheWayDescription(courierName, restaurantName),
                 color = Color.White.copy(alpha = 0.72f),
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -116,8 +120,8 @@ fun OrderPreparingNotificationCard(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(999.dp)),
-                color = PreparingGreen,
-                trackColor = PreparingTrack
+                color = OnTheWayGreen,
+                trackColor = OnTheWayTrack
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -129,29 +133,84 @@ fun OrderPreparingNotificationCard(
                     modifier = Modifier
                         .size(8.dp)
                         .clip(CircleShape)
-                        .background(PreparingGreen)
+                        .background(OnTheWayGreen)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Tempo estimado: $estimatedTimeMinutes minutos",
+                    text = "Chegada estimada: $estimatedArrivalMinutes minutos",
                     color = Color.White.copy(alpha = 0.86f),
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Button(
+                onClick = onTrackClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = OnTheWayGreen,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(
+                    text = "Acompanhar",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            TextButton(
+                onClick = onDetailsClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.textButtonColors(
+                    containerColor = OnTheWaySecondaryButton,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(
+                    text = "Detalhes",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
     }
 }
 
+private fun onTheWayDescription(courierName: String?, restaurantName: String?): String {
+    val courier = courierName?.takeIf { it.isNotBlank() }
+    val restaurant = restaurantName?.takeIf { it.isNotBlank() }
+    return when {
+        courier != null && restaurant != null ->
+            "O entregador $courier está a caminho com seu pedido da $restaurant."
+        courier != null ->
+            "O entregador $courier está a caminho com seu pedido."
+        restaurant != null ->
+            "O entregador está a caminho com seu pedido da $restaurant."
+        else ->
+            "O entregador está a caminho com seu pedido."
+    }
+}
+
 @Preview(
-    name = "Order Preparing Notification Card",
+    name = "Order On The Way Notification Card",
     showBackground = true,
     backgroundColor = 0xFF0B1020
 )
 @Composable
-private fun OrderPreparingNotificationCardPreview() {
+private fun OrderOnTheWayNotificationCardPreview() {
     PedidosTheme(darkTheme = true) {
-        OrderPreparingNotificationCard(
+        OrderOnTheWayNotificationCard(
             modifier = Modifier.padding(16.dp)
         )
     }

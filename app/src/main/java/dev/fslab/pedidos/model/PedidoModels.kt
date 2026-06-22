@@ -102,10 +102,12 @@ data class Pedido(
     @SerializedName("createdAt") val criadoEm: String?
 ) {
     // Helpers para lidar com população dinâmica
+    val restauranteNomeOrNull: String?
+        get() = (restauranteId as? Map<*, *>)?.get("nome")?.toString()?.takeIf { it.isNotBlank() }
+                ?: (restauranteId as? RestauranteSimplificado)?.nome?.takeIf { it.isNotBlank() }
+
     val restauranteNome: String
-        get() = (restauranteId as? Map<*, *>)?.get("nome")?.toString() 
-                ?: (restauranteId as? RestauranteSimplificado)?.nome 
-                ?: "Restaurante"
+        get() = restauranteNomeOrNull.orEmpty()
 
     val restauranteFoto: String?
         get() = (restauranteId as? Map<*, *>)?.get("foto_restaurante")?.toString()

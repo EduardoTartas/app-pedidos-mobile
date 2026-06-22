@@ -1,12 +1,14 @@
-package dev.fslab.pedidos.ui.screens
+﻿package dev.fslab.pedidos.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,22 +16,34 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -43,23 +57,35 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.fslab.pedidos.model.NotificationMocks
 import dev.fslab.pedidos.model.NotificationType
 import dev.fslab.pedidos.model.NotificationUiModel
+import dev.fslab.pedidos.ui.components.OrderCanceledNotificationCard
+import dev.fslab.pedidos.ui.components.OrderDeliveredNotificationCard
+import dev.fslab.pedidos.ui.components.OrderOnTheWayNotificationCard
 import dev.fslab.pedidos.ui.components.OrderPreparingNotificationCard
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
 import dev.fslab.pedidos.ui.viewmodel.NotificationViewModel
@@ -69,6 +95,16 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 import androidx.lifecycle.viewmodel.compose.viewModel
+
+private enum class OnTheWaySheetType {
+    TRACKING,
+    DETAILS
+}
+
+private data class OnTheWayNotificationSheet(
+    val type: OnTheWaySheetType,
+    val notification: NotificationUiModel
+)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -83,6 +119,9 @@ fun NotificacoesScreen(
     val errorMessage = uiState.errorMessage
     val selectedCount = uiState.selectedNotificationIds.size
     val isSelectionMode = selectedCount > 0
+    var activeOnTheWaySheet by remember { mutableStateOf<OnTheWayNotificationSheet?>(null) }
+    var activeCanceledNotification by remember { mutableStateOf<NotificationUiModel?>(null) }
+    val onTheWaySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     LaunchedEffect(Unit) {
         viewModel.carregarNotificacoes()
@@ -91,9 +130,37 @@ fun NotificacoesScreen(
     val filtros = listOf(
         null to "Todas",
         NotificationType.ORDER to "Pedidos",
-        NotificationType.PROMOTION to "Promoções",
-        NotificationType.SYSTEM to "Sistema"
+        NotificationType.PROMOTION to "Promoções"
     )
+
+    activeOnTheWaySheet?.let { sheet ->
+        ModalBottomSheet(
+            onDismissRequest = { activeOnTheWaySheet = null },
+            sheetState = onTheWaySheetState,
+            containerColor = Color(0xFF0F172A),
+            contentColor = Color.White
+        ) {
+            when (sheet.type) {
+                OnTheWaySheetType.TRACKING -> OnTheWayTrackingSheet(
+                    notification = sheet.notification
+                )
+                OnTheWaySheetType.DETAILS -> OnTheWayDetailsSheet(
+                    notification = sheet.notification
+                )
+            }
+        }
+    }
+
+    activeCanceledNotification?.let { notification ->
+        ModalBottomSheet(
+            onDismissRequest = { activeCanceledNotification = null },
+            sheetState = onTheWaySheetState,
+            containerColor = Color(0xFF0F172A),
+            contentColor = Color.White
+        ) {
+            OrderCanceledDetailsSheet(notification = notification)
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -250,13 +317,68 @@ fun NotificacoesScreen(
                                 viewModel.alternarSelecaoParaExclusao(notificacao.id)
                             }
 
-                            if (notificacao.isPreparingOrderNotification() && !isSelectionMode) {
+                            if (notificacao.isCanceledOrderNotification() && !isSelectionMode) {
+                                val openCanceledDetails = {
+                                    viewModel.marcarComoLida(notificacao.id)
+                                    activeCanceledNotification = notificacao
+                                }
+                                OrderCanceledNotificationCard(
+                                    restaurantName = notificacao.orderRestaurantName(),
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = openCanceledDetails,
+                                        onLongClick = onNotificationLongClick
+                                    ),
+                                    onDetailsClick = openCanceledDetails
+                                )
+                            } else if (notificacao.isDeliveredOrderNotification() && !isSelectionMode) {
+                                OrderDeliveredNotificationCard(
+                                    restaurantName = notificacao.orderRestaurantName(),
+                                    deliveredAt = notificacao.createdAtLabel(),
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = onNotificationClick,
+                                        onLongClick = onNotificationLongClick
+                                    ),
+                                    onOrderClick = onNotificationClick
+                                )
+                            } else if (notificacao.isOnTheWayOrderNotification() && !isSelectionMode) {
+                                OrderOnTheWayNotificationCard(
+                                    courierName = notificacao.onTheWayCourierName(),
+                                    restaurantName = notificacao.orderRestaurantName(),
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = onNotificationClick,
+                                        onLongClick = onNotificationLongClick
+                                    ),
+                                    onTrackClick = {
+                                        viewModel.marcarComoLida(notificacao.id)
+                                        activeOnTheWaySheet = OnTheWayNotificationSheet(
+                                            type = OnTheWaySheetType.TRACKING,
+                                            notification = notificacao
+                                        )
+                                    },
+                                    onDetailsClick = {
+                                        viewModel.marcarComoLida(notificacao.id)
+                                        activeOnTheWaySheet = OnTheWayNotificationSheet(
+                                            type = OnTheWaySheetType.DETAILS,
+                                            notification = notificacao
+                                        )
+                                    }
+                                )
+                            } else if (notificacao.isPreparingOrderNotification() && !isSelectionMode) {
                                 OrderPreparingNotificationCard(
                                     restaurantName = notificacao.preparingRestaurantName(),
                                     modifier = Modifier.combinedClickable(
                                         onClick = onNotificationClick,
                                         onLongClick = onNotificationLongClick
                                     )
+                                )
+                            } else if (notificacao.isConfirmedOrderNotification() && !isSelectionMode) {
+                                OrderConfirmedNotificationCard(
+                                    restaurantName = notificacao.orderRestaurantName(),
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = onNotificationClick,
+                                        onLongClick = onNotificationLongClick
+                                    ),
+                                    onDetailsClick = onNotificationClick
                                 )
                             } else {
                                 NotificationItemCard(
@@ -281,8 +403,113 @@ fun NotificacoesScreen(
 }
 
 @Composable
+private fun OrderConfirmedNotificationCard(
+    modifier: Modifier = Modifier,
+    restaurantName: String? = null,
+    onDetailsClick: () -> Unit = {}
+) {
+    val colors = LocalPedidosColors.current
+    val green = colors.primary
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF161B2E)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(green.copy(alpha = 0.14f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
+                        contentDescription = "Pedido confirmado",
+                        tint = green,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Text(
+                    text = "Confirmado",
+                    color = green,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .background(green.copy(alpha = 0.16f), RoundedCornerShape(999.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Pedido confirmado",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = restaurantName
+                    ?.let { "$it recebeu seu pedido. Em breve ele entra em preparo." }
+                    ?: "Seu pedido foi recebido. Em breve ele entra em preparo.",
+                color = Color.White.copy(alpha = 0.72f),
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            LinearProgressIndicator(
+                progress = { 0.12f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp),
+                color = green,
+                trackColor = Color(0xFF334155)
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Button(
+                onClick = onDetailsClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = green,
+                    contentColor = Color.White
+                )
+            ) {
+                Text(
+                    text = "Acompanhar pedido",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun HighlightOrderNotificationCard(
     modifier: Modifier = Modifier,
+    courierName: String? = null,
+    restaurantName: String? = null,
     onTrackClick: () -> Unit = {},
     onDetailsClick: () -> Unit = {}
 ) {
@@ -342,7 +569,7 @@ fun HighlightOrderNotificationCard(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "O entregador Emerson está a caminho com seu pedido do Burger King.",
+                text = onTheWayDescription(courierName, restaurantName),
                 color = Color.White.copy(alpha = 0.74f),
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -398,6 +625,577 @@ fun HighlightOrderNotificationCard(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun OnTheWayTrackingSheet(
+    notification: NotificationUiModel
+) {
+    val colors = LocalPedidosColors.current
+    val green = colors.primary
+    val restaurantName = notification.orderRestaurantName()
+    val courierName = notification.onTheWayCourierName()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 28.dp)
+    ) {
+        Text(
+            text = "Acompanhar pedido",
+            color = Color.White,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.ExtraBold
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = restaurantName
+                ?.let { "Seu pedido da $it saiu para entrega." }
+                ?: "Seu pedido saiu para entrega.",
+            color = Color.White.copy(alpha = 0.7f),
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        DemoDeliveryRoute()
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF161B2E)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                courierName?.let {
+                    DeliveryInfoRow(label = "Entregador", value = it)
+                }
+                restaurantName?.let {
+                    DeliveryInfoRow(label = "Restaurante", value = it)
+                }
+                DeliveryInfoRow(label = "Chegada estimada", value = "10 minutos")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        Text(
+            text = "Status do pedido",
+            color = Color.White,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        DeliveryTimelineStep(
+            title = "Pedido confirmado",
+            description = restaurantName
+                ?.let { "$it recebeu seu pedido." }
+                ?: "Seu pedido foi recebido.",
+            isDone = true
+        )
+        DeliveryTimelineStep(
+            title = "Em preparo",
+            description = "A cozinha preparou os itens.",
+            isDone = true
+        )
+        DeliveryTimelineStep(
+            title = "Saiu para entrega",
+            description = "O entregador está indo até você.",
+            isDone = true,
+            isCurrent = true
+        )
+        DeliveryTimelineStep(
+            title = "Entregue",
+            description = "Confirme o recebimento quando chegar.",
+            isDone = false
+        )
+    }
+}
+
+@Composable
+private fun OrderCanceledDetailsSheet(
+    notification: NotificationUiModel
+) {
+    val restaurantName = notification.orderRestaurantName()
+    val red = Color(0xFFEF4444)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 28.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Pedido cancelado",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    text = "Resumo da notificação",
+                    color = Color.White.copy(alpha = 0.58f),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Text(
+                text = "Cancelado",
+                color = red,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .background(red.copy(alpha = 0.16f), RoundedCornerShape(999.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF161B2E)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .background(red.copy(alpha = 0.14f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Cancel,
+                            contentDescription = null,
+                            tint = red,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Cancelamento registrado",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = restaurantName
+                                ?.let { "O pedido realizado em $it foi cancelado." }
+                                ?: "Seu pedido foi cancelado.",
+                            color = Color.White.copy(alpha = 0.68f),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 14.dp),
+                    color = Color.White.copy(alpha = 0.08f)
+                )
+
+                DeliveryInfoRow(
+                    label = "Pedido",
+                    value = notification.pedidoIdFromNotification()
+                        ?.takeLast(8)
+                        ?.uppercase()
+                        ?.let { "#$it" }
+                        ?: "-"
+                )
+                restaurantName?.let {
+                    DeliveryInfoRow(label = "Restaurante", value = it)
+                }
+                DeliveryInfoRow(label = "Status", value = "Cancelado")
+                DeliveryInfoRow(label = "Data", value = notification.createdAtLabel())
+            }
+        }
+    }
+}
+
+@Composable
+private fun OnTheWayDetailsSheet(
+    notification: NotificationUiModel
+) {
+    val colors = LocalPedidosColors.current
+    val green = colors.primary
+    val restaurantName = notification.orderRestaurantName()
+    val courierName = notification.onTheWayCourierName()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 28.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Detalhes do pedido",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    text = "Resumo demonstrativo",
+                    color = Color.White.copy(alpha = 0.58f),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Text(
+                text = "A caminho",
+                color = green,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .background(green.copy(alpha = 0.16f), RoundedCornerShape(999.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF161B2E)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                DeliveryInfoRow(
+                    label = "Pedido",
+                    value = notification.pedidoIdFromNotification()
+                        ?.takeLast(8)
+                        ?.uppercase()
+                        ?.let { "#$it" }
+                        ?: "-"
+                )
+                restaurantName?.let {
+                    DeliveryInfoRow(label = "Restaurante", value = it)
+                }
+                courierName?.let {
+                    DeliveryInfoRow(label = "Entregador", value = it)
+                }
+                DeliveryInfoRow(label = "Previsão", value = "10 minutos")
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 14.dp),
+                    color = Color.White.copy(alpha = 0.08f)
+                )
+
+                Text(
+                    text = "Itens demonstrativos",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OrderItemRow(quantity = "1x", name = "Prato principal", price = "R$ 31,90")
+                OrderItemRow(quantity = "1x", name = "Acompanhamento", price = "R$ 8,00")
+                OrderItemRow(quantity = "1x", name = "Bebida", price = "R$ 3,00")
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 14.dp),
+                    color = Color.White.copy(alpha = 0.08f)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Total",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "R$ 42,90",
+                        color = green,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DemoDeliveryRoute(
+    modifier: Modifier = Modifier
+) {
+    val green = LocalPedidosColors.current.primary
+    val transition = rememberInfiniteTransition(label = "delivery-route")
+    val progress by transition.animateFloat(
+        initialValue = 0.08f,
+        targetValue = 0.92f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 18000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "delivery-route-progress"
+    )
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(168.dp)
+            .background(Color(0xFF111827), RoundedCornerShape(20.dp))
+            .padding(16.dp)
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val start = Offset(size.width * 0.12f, size.height * 0.72f)
+            val middle = Offset(size.width * 0.50f, size.height * 0.42f)
+            val end = Offset(size.width * 0.88f, size.height * 0.28f)
+
+            drawLine(
+                color = Color.White.copy(alpha = 0.06f),
+                start = Offset(size.width * 0.06f, size.height * 0.18f),
+                end = Offset(size.width * 0.94f, size.height * 0.18f),
+                strokeWidth = 10.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            drawLine(
+                color = Color(0xFF334155),
+                start = start,
+                end = middle,
+                strokeWidth = 9.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            drawLine(
+                color = Color(0xFF334155),
+                start = middle,
+                end = end,
+                strokeWidth = 9.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            drawLine(
+                color = green,
+                start = start,
+                end = middle,
+                strokeWidth = 4.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            drawLine(
+                color = green,
+                start = middle,
+                end = end,
+                strokeWidth = 4.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+        }
+
+        RouteIconMarker(
+            icon = Icons.Filled.Restaurant,
+            contentDescription = "Origem do pedido",
+            modifier = Modifier.align(Alignment.BottomStart)
+        )
+
+        RouteIconMarker(
+            icon = Icons.Filled.Home,
+            contentDescription = "Casa do cliente",
+            modifier = Modifier.align(Alignment.TopEnd)
+        )
+
+        Box(
+            modifier = Modifier
+                .offset(
+                    x = (maxWidth - 58.dp) * progress,
+                    y = 96.dp - (60.dp * progress)
+                )
+                .size(44.dp)
+                .background(green, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.TwoWheeler,
+                contentDescription = "Moto a caminho",
+                tint = Color.White,
+                modifier = Modifier.size(25.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun RouteIconMarker(
+    icon: ImageVector,
+    contentDescription: String,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(44.dp)
+            .background(Color(0xFF020617).copy(alpha = 0.9f), CircleShape)
+            .border(
+                width = 1.dp,
+                color = LocalPedidosColors.current.primary.copy(alpha = 0.5f),
+                shape = CircleShape
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = LocalPedidosColors.current.primary,
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+
+@Composable
+private fun DeliveryInfoRow(
+    label: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            color = Color.White.copy(alpha = 0.58f),
+            style = MaterialTheme.typography.bodySmall
+        )
+        Text(
+            text = value,
+            color = Color.White,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+private fun DeliveryTimelineStep(
+    title: String,
+    description: String,
+    isDone: Boolean,
+    isCurrent: Boolean = false
+) {
+    val colors = LocalPedidosColors.current
+    val green = colors.primary
+    val dotColor = if (isDone) green else Color.White.copy(alpha = 0.18f)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .size(if (isCurrent) 28.dp else 24.dp)
+                .background(dotColor.copy(alpha = if (isDone) 0.18f else 1f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isDone) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = green,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column {
+            Text(
+                text = title,
+                color = Color.White,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = description,
+                color = Color.White.copy(alpha = 0.62f),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun OrderItemRow(
+    quantity: String,
+    name: String,
+    price: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = quantity,
+                color = LocalPedidosColors.current.primary,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = name,
+                color = Color.White.copy(alpha = 0.82f),
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Text(
+            text = price,
+            color = Color.White,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
@@ -551,13 +1349,18 @@ fun NotificationItemCard(
 
 private val NotificationType.icon: ImageVector
     get() = when (this) {
+        NotificationType.PEDIDO_CONFIRMADO -> Icons.AutoMirrored.Filled.ReceiptLong
+        NotificationType.PEDIDO_A_CAMINHO -> Icons.Filled.TwoWheeler
         NotificationType.PEDIDO_EM_PREPARO -> Icons.AutoMirrored.Filled.ReceiptLong
+        NotificationType.PEDIDO_CANCELADO -> Icons.Filled.Cancel
+        NotificationType.PEDIDO_ENTREGUE -> Icons.Filled.Check
         NotificationType.ORDER -> Icons.AutoMirrored.Filled.ReceiptLong
         NotificationType.PROMOTION -> Icons.Filled.CardGiftcard
         NotificationType.SYSTEM -> Icons.Filled.Info
     }
 
 private fun NotificationUiModel.pedidoIdFromNotification(): String? {
+    if (NotificationMocks.isMockId(id)) return null
     pedidoId?.takeIf { it.isNotBlank() }?.let { return it }
     return id.removePrefix(LOCAL_ORDER_NOTIFICATION_PREFIX)
         .takeIf { id.startsWith(LOCAL_ORDER_NOTIFICATION_PREFIX) && it.isNotBlank() }
@@ -568,20 +1371,114 @@ private const val LOCAL_ORDER_NOTIFICATION_PREFIX = "local-pedido-"
 private fun NotificationUiModel.isPreparingOrderNotification(): Boolean =
     type == NotificationType.PEDIDO_EM_PREPARO ||
         statusKey == "em_preparo" ||
+        statusKey == "preparando" ||
+        statusKey == "aceito" ||
         title.contains("preparo", ignoreCase = true) ||
+        title.contains("aceito", ignoreCase = true) ||
         description.contains("prepar", ignoreCase = true)
 
-private fun NotificationUiModel.preparingRestaurantName(): String {
-    restaurantName?.takeIf { it.isNotBlank() }?.let { return it }
+private fun NotificationUiModel.isConfirmedOrderNotification(): Boolean =
+    type == NotificationType.PEDIDO_CONFIRMADO ||
+        (
+            type == NotificationType.ORDER &&
+                (
+                    statusKey == "pedido_confirmado" ||
+                        statusKey == "confirmado" ||
+                        statusKey == "criado" ||
+                        statusKey == "pendente" ||
+                        title.contains("pedido realizado", ignoreCase = true) ||
+                        title.contains("pedido confirmado", ignoreCase = true) ||
+                        description.contains("recebeu seu pedido", ignoreCase = true) ||
+                        description.contains("enviado", ignoreCase = true)
+                    )
+            )
+
+private fun NotificationUiModel.isOnTheWayOrderNotification(): Boolean =
+    type == NotificationType.PEDIDO_A_CAMINHO ||
+        statusKey == "a_caminho" ||
+        title.contains("a caminho", ignoreCase = true) ||
+        description.contains("a caminho", ignoreCase = true)
+
+private fun NotificationUiModel.isCanceledOrderNotification(): Boolean =
+    type == NotificationType.PEDIDO_CANCELADO ||
+        statusKey == "cancelado" ||
+        title.contains("cancelado", ignoreCase = true) ||
+        description.contains("cancelado", ignoreCase = true)
+
+private fun NotificationUiModel.isDeliveredOrderNotification(): Boolean =
+    type == NotificationType.PEDIDO_ENTREGUE ||
+        (
+            type == NotificationType.ORDER &&
+                (
+                    statusKey == "entregue" ||
+                        title.contains("entregue", ignoreCase = true) ||
+                        description.contains("entregue", ignoreCase = true)
+                    )
+            )
+
+private fun NotificationUiModel.preparingRestaurantName(): String? {
+    return orderRestaurantName()
+}
+
+private fun NotificationUiModel.orderRestaurantName(): String? {
+    restaurantName?.asValidRestaurantName()?.let { return it }
 
     val patterns = listOf(
-        Regex("restaurante\\s+(.+?)\\s+(começou|iniciou)", RegexOption.IGNORE_CASE),
-        Regex("do\\s+(.+?)\\.", RegexOption.IGNORE_CASE)
+        Regex("restaurante\\s+(.+?)\\s+(começou|iniciou|recebeu|confirmou)", RegexOption.IGNORE_CASE),
+        Regex("pedido\\s+(?:do|da|de)\\s+(.+?)\\s+(?:saiu|foi|está|chegou|chegará)", RegexOption.IGNORE_CASE),
+        Regex("realizado\\s+em\\s+(.+?)\\s+foi\\s+cancelado", RegexOption.IGNORE_CASE),
+        Regex("do\\s+(.+?)\\.", RegexOption.IGNORE_CASE),
+        Regex("da\\s+(.+?)\\.", RegexOption.IGNORE_CASE)
     )
 
-    return patterns.firstNotNullOfOrNull { pattern ->
-        pattern.find(description)?.groupValues?.getOrNull(1)?.trim()
-    }?.takeIf { it.isNotBlank() } ?: "Burger House"
+    val textToSearch = listOf(description, title)
+
+    return textToSearch.firstNotNullOfOrNull { text ->
+        patterns.firstNotNullOfOrNull { pattern ->
+            pattern.find(text)?.groupValues?.getOrNull(1)?.trim()
+        }
+    }?.asValidRestaurantName()
+}
+
+private fun NotificationUiModel.onTheWayCourierName(): String? {
+    return Regex(
+        pattern = "entregador\\s+(.+?)\\s+está\\s+a\\s+caminho",
+        option = RegexOption.IGNORE_CASE
+    ).find(description)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+}
+
+private fun String.asValidRestaurantName(): String? {
+    val value = trim()
+    val normalized = value.lowercase()
+    return value.takeIf {
+        it.isNotBlank() &&
+            normalized != "restaurante" &&
+            normalized != "o restaurante" &&
+            normalized != "local" &&
+            normalized != "o local" &&
+            normalized != "lugar" &&
+            !normalized.contains("foi entregue") &&
+            !normalized.contains("entregue com sucesso")
+    }
+}
+
+private fun onTheWayDescription(courierName: String?, restaurantName: String?): String {
+    val courier = courierName?.takeIf { it.isNotBlank() }
+    val restaurant = restaurantName?.asValidRestaurantName()
+    return when {
+        courier != null && restaurant != null ->
+            "O entregador $courier está a caminho com seu pedido da $restaurant."
+        courier != null ->
+            "O entregador $courier está a caminho com seu pedido."
+        restaurant != null ->
+            "O entregador está a caminho com seu pedido da $restaurant."
+        else ->
+            "O entregador está a caminho com seu pedido."
+    }
 }
 
 private fun NotificationUiModel.createdAtLabel(): String {

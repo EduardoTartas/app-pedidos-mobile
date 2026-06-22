@@ -3,8 +3,20 @@ package dev.fslab.pedidos.model
 import com.google.gson.annotations.SerializedName
 
 enum class NotificationType {
+    @SerializedName(value = "PEDIDO_CONFIRMADO", alternate = ["pedido_confirmado", "confirmado", "criado", "pendente"])
+    PEDIDO_CONFIRMADO,
+
     @SerializedName(value = "PEDIDO_EM_PREPARO", alternate = ["em_preparo"])
     PEDIDO_EM_PREPARO,
+
+    @SerializedName(value = "PEDIDO_A_CAMINHO", alternate = ["a_caminho"])
+    PEDIDO_A_CAMINHO,
+
+    @SerializedName(value = "PEDIDO_CANCELADO", alternate = ["cancelado"])
+    PEDIDO_CANCELADO,
+
+    @SerializedName(value = "PEDIDO_ENTREGUE", alternate = ["entregue"])
+    PEDIDO_ENTREGUE,
 
     @SerializedName("ORDER")
     ORDER,
@@ -78,12 +90,26 @@ data class NotificacaoResponse(
 
 private fun String.toNotificationType(): NotificationType = when (this) {
     "em_preparo",
+    "preparando",
+    "preparo",
+    "aceito",
     "PEDIDO_EM_PREPARO" -> NotificationType.PEDIDO_EM_PREPARO
 
-    "pedido_confirmado",
     "a_caminho",
+    "saiu_para_entrega",
+    "PEDIDO_A_CAMINHO" -> NotificationType.PEDIDO_A_CAMINHO
+
+    "cancelado",
+    "PEDIDO_CANCELADO" -> NotificationType.PEDIDO_CANCELADO
+
     "entregue",
-    "cancelado" -> NotificationType.ORDER
+    "PEDIDO_ENTREGUE" -> NotificationType.PEDIDO_ENTREGUE
+
+    "pedido_confirmado",
+    "PEDIDO_CONFIRMADO",
+    "confirmado",
+    "criado",
+    "pendente" -> NotificationType.PEDIDO_CONFIRMADO
 
     "promocao",
     "promotion" -> NotificationType.PROMOTION
@@ -92,22 +118,51 @@ private fun String.toNotificationType(): NotificationType = when (this) {
 }
 
 fun NotificationType.isOrderRelated(): Boolean = when (this) {
+    NotificationType.PEDIDO_CONFIRMADO,
     NotificationType.ORDER,
-    NotificationType.PEDIDO_EM_PREPARO -> true
+    NotificationType.PEDIDO_EM_PREPARO,
+    NotificationType.PEDIDO_A_CAMINHO,
+    NotificationType.PEDIDO_CANCELADO,
+    NotificationType.PEDIDO_ENTREGUE -> true
     NotificationType.PROMOTION,
     NotificationType.SYSTEM -> false
 }
 
 object NotificationMocks {
+    private const val MOCK_CONFIRMED_ORDER_PREFIX = "mock-pedido-confirmado-"
     private const val MOCK_PREPARING_ORDER_PREFIX = "mock-pedido-em-preparo-"
+    private const val MOCK_ON_THE_WAY_ORDER_ID = "2"
+    private const val MOCK_CANCELED_ORDER_PREFIX = "mock-pedido-cancelado-"
+    private const val MOCK_DELIVERED_ORDER_PREFIX = "mock-pedido-entregue-"
+
+    fun pedidoConfirmado(
+        restaurantName: String? = null,
+        pedidoId: String = "1"
+    ) = NotificationUiModel(
+        id = "$MOCK_CONFIRMED_ORDER_PREFIX$pedidoId",
+        title = "Pedido confirmado",
+        description = restaurantName
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "$it recebeu seu pedido." }
+            ?: "Seu pedido foi recebido.",
+        createdAt = "Agora",
+        isRead = false,
+        type = NotificationType.PEDIDO_CONFIRMADO,
+        pedidoId = pedidoId,
+        restaurantName = restaurantName,
+        statusKey = "pedido_confirmado"
+    )
 
     fun pedidoEmPreparo(
-        restaurantName: String,
+        restaurantName: String?,
         pedidoId: String = "1"
     ) = NotificationUiModel(
         id = "$MOCK_PREPARING_ORDER_PREFIX$pedidoId",
         title = "Seu pedido está sendo preparado",
-        description = "O restaurante $restaurantName começou a preparar seu pedido.",
+        description = restaurantName
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "$it começou a preparar seu pedido." }
+            ?: "Seu pedido começou a ser preparado.",
         createdAt = "Agora",
         isRead = false,
         type = NotificationType.PEDIDO_EM_PREPARO,
@@ -116,15 +171,99 @@ object NotificationMocks {
         statusKey = "em_preparo"
     )
 
+    fun pedidoACaminho(
+        courierName: String? = null,
+        restaurantName: String? = null,
+        pedidoId: String = MOCK_ON_THE_WAY_ORDER_ID
+    ) = NotificationUiModel(
+        id = MOCK_ON_THE_WAY_ORDER_ID,
+        title = "Pedido a caminho!",
+        description = buildOnTheWayDescription(courierName, restaurantName),
+        createdAt = "Agora",
+        isRead = false,
+        type = NotificationType.PEDIDO_A_CAMINHO,
+        pedidoId = pedidoId,
+        restaurantName = restaurantName,
+        statusKey = "a_caminho"
+    )
+
     fun interfaceTestNotifications(
-        restaurantName: String = "Burger House",
-        pedidoId: String = "1"
+        restaurantName: String? = null,
+        pedidoId: String = MOCK_ON_THE_WAY_ORDER_ID
     ) = listOf(
+        pedidoEntregue(
+            restaurantName = restaurantName,
+            pedidoId = pedidoId
+        ),
+        pedidoACaminho(
+            restaurantName = restaurantName,
+            pedidoId = pedidoId
+        ),
         pedidoEmPreparo(
+            restaurantName = restaurantName,
+            pedidoId = pedidoId
+        ),
+        pedidoConfirmado(
             restaurantName = restaurantName,
             pedidoId = pedidoId
         )
     )
 
-    fun isMockId(id: String): Boolean = id.startsWith(MOCK_PREPARING_ORDER_PREFIX)
+    fun isMockId(id: String): Boolean =
+        id == MOCK_ON_THE_WAY_ORDER_ID ||
+            id.startsWith(MOCK_CONFIRMED_ORDER_PREFIX) ||
+            id.startsWith(MOCK_PREPARING_ORDER_PREFIX) ||
+            id.startsWith(MOCK_CANCELED_ORDER_PREFIX) ||
+            id.startsWith(MOCK_DELIVERED_ORDER_PREFIX)
+
+    fun pedidoCancelado(
+        restaurantName: String? = null,
+        pedidoId: String = "3"
+    ) = NotificationUiModel(
+        id = "$MOCK_CANCELED_ORDER_PREFIX$pedidoId",
+        title = "Pedido cancelado",
+        description = restaurantName
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "O pedido realizado em $it foi cancelado." }
+            ?: "Seu pedido foi cancelado.",
+        createdAt = "Agora",
+        isRead = false,
+        type = NotificationType.PEDIDO_CANCELADO,
+        pedidoId = pedidoId,
+        restaurantName = restaurantName,
+        statusKey = "cancelado"
+    )
+
+    fun pedidoEntregue(
+        restaurantName: String? = null,
+        pedidoId: String = "4"
+    ) = NotificationUiModel(
+        id = "$MOCK_DELIVERED_ORDER_PREFIX$pedidoId",
+        title = "Pedido entregue!",
+        description = restaurantName
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "Seu pedido de $it foi entregue com sucesso." }
+            ?: "Seu pedido foi entregue com sucesso.",
+        createdAt = "Agora",
+        isRead = false,
+        type = NotificationType.PEDIDO_ENTREGUE,
+        pedidoId = pedidoId,
+        restaurantName = restaurantName,
+        statusKey = "entregue"
+    )
+
+    private fun buildOnTheWayDescription(courierName: String?, restaurantName: String?): String {
+        val courier = courierName?.takeIf { it.isNotBlank() }
+        val restaurant = restaurantName?.takeIf { it.isNotBlank() }
+        return when {
+            courier != null && restaurant != null ->
+                "O entregador $courier está a caminho com seu pedido da $restaurant."
+            courier != null ->
+                "O entregador $courier está a caminho com seu pedido."
+            restaurant != null ->
+                "O entregador está a caminho com seu pedido da $restaurant."
+            else ->
+                "O entregador está a caminho com seu pedido."
+        }
+    }
 }
