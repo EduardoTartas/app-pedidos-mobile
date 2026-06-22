@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Badge
@@ -52,7 +53,9 @@ fun EditarPerfilScreen(
     onBack: () -> Unit,
     onDeactivateAccount: (onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit,
     onAlterarSenha: (onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit,
-    onSaveProfile: (nome: String, telefone: String, cpf: String?, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit
+    onSaveProfile: (nome: String, telefone: String, cpf: String?, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit,
+    onUploadPhoto: (java.io.File, onSuccess: (String) -> Unit, onError: (String) -> Unit) -> Unit = { _, _, _ -> },
+    onDeletePhoto: (onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit = { _, _ -> }
 ) {
     val colors = LocalPedidosColors.current
     val context = LocalContext.current
@@ -99,6 +102,7 @@ fun EditarPerfilScreen(
     var showConfirmPasswordDialog by remember { mutableStateOf(false) }
     var showPasswordEmailSentDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var showDeletePhotoDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
 
@@ -106,7 +110,32 @@ fun EditarPerfilScreen(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri -> 
             if (uri != null) {
-                Toast.makeText(context, "Foto selecionada. Upload em desenvolvimento.", Toast.LENGTH_SHORT).show()
+                isLoading = true
+                scope.launch {
+                    try {
+                        // Create a temporary file to hold the image
+                        val file = java.io.File(context.cacheDir, "profile_pic_${System.currentTimeMillis()}.jpg")
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            file.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        
+                        onUploadPhoto(file, 
+                            { url ->
+                                isLoading = false
+                                Toast.makeText(context, "Foto de perfil atualizada!", Toast.LENGTH_SHORT).show()
+                            }, 
+                            { error ->
+                                isLoading = false
+                                errorMessage = error
+                            }
+                        )
+                    } catch (e: Exception) {
+                        isLoading = false
+                        errorMessage = "Erro ao processar imagem da galeria"
+                    }
+                }
             }
         }
     )
@@ -196,6 +225,27 @@ fun EditarPerfilScreen(
                         tint = colors.textOnPrimary,
                         modifier = Modifier.size(16.dp)
                     )
+                }
+
+                // Botão de deletar foto (só aparece se já tiver foto)
+                if (!user?.fotoPerfil.isNullOrBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(Color.Red)
+                            .border(width = 2.dp, color = colors.surface, shape = CircleShape)
+                            .clickable { showDeletePhotoDialog = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Remover foto do usuario",
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
             }
 
@@ -422,6 +472,78 @@ fun EditarPerfilScreen(
                     )
                 }
             )
+        }
+
+        if (showDeletePhotoDialog) {
+            Dialog(onDismissRequest = { showDeletePhotoDialog = false }) {
+                Surface(
+                    shape = RoundedCornerShape(32.dp),
+                    color = colors.background,
+                    tonalElevation = 8.dp
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Warning,
+                            contentDescription = "Aviso",
+                            tint = Color.Red,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Text(
+                            "Remover Foto",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = colors.textPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "Tem certeza que deseja remover sua foto de perfil?",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.textSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { showDeletePhotoDialog = false },
+                                modifier = Modifier.weight(1f).height(50.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, colors.inputBorder)
+                            ) {
+                                Text("Cancelar", color = colors.textSecondary, fontWeight = FontWeight.Bold)
+                            }
+                            Button(
+                                onClick = {
+                                    showDeletePhotoDialog = false
+                                    isLoading = true
+                                    onDeletePhoto(
+                                        {
+                                            isLoading = false
+                                            Toast.makeText(context, "Foto removida!", Toast.LENGTH_SHORT).show()
+                                        },
+                                        { err ->
+                                            isLoading = false
+                                            errorMessage = err
+                                        }
+                                    )
+                                },
+                                modifier = Modifier.weight(1f).height(50.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                            ) {
+                                Text("Remover", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         if (showConfirmSaveDialog) {

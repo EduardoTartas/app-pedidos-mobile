@@ -21,7 +21,9 @@ import dev.fslab.pedidos.network.NPaaSRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.content.Context
-
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.MultipartBody
 sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()
@@ -201,6 +203,66 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 is NetworkResult.Error -> {
                     onError(result.message)
                 }
+                else -> {}
+            }
+        }
+    }
+
+    fun uploadProfilePicture(file: java.io.File, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val user = _currentUser.value ?: return@launch
+            
+            val mediaType = "image/jpeg".toMediaTypeOrNull()
+            val requestFile = file.asRequestBody(mediaType)
+            val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
+            
+            val result = NetworkUtils.safeApiCall { 
+                RetrofitClient.usuarioApi.uploadFoto(user.id, body) 
+            }
+            
+            when (result) {
+                is NetworkResult.Success -> {
+                    val outerMap = result.data.data as? Map<*, *>
+                    val dadosMap = outerMap?.get("dados") as? Map<*, *>
+                    val url = dadosMap?.get("foto_perfil") as? String
+                    
+                    if (url != null) {
+                        val updatedUser = user.copy(fotoPerfil = url)
+                        _currentUser.value = updatedUser
+                        _authState.value = AuthState.Success(updatedUser)
+                        try {
+                            AuthPreferences.saveUser(getApplication(), gson.toJson(updatedUser))
+                        } catch (e: Exception) { }
+                        onSuccess(url)
+                    } else {
+                        onError("URL da imagem não retornada pelo servidor.")
+                    }
+                }
+                is NetworkResult.Error -> onError(result.message)
+                else -> {}
+            }
+        }
+    }
+
+    fun deleteProfilePicture(onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            val user = _currentUser.value ?: return@launch
+            
+            val result = NetworkUtils.safeApiCall { 
+                RetrofitClient.usuarioApi.deleteFoto(user.id) 
+            }
+            
+            when (result) {
+                is NetworkResult.Success -> {
+                    val updatedUser = user.copy(fotoPerfil = null)
+                    _currentUser.value = updatedUser
+                    _authState.value = AuthState.Success(updatedUser)
+                    try {
+                        AuthPreferences.saveUser(getApplication(), gson.toJson(updatedUser))
+                    } catch (e: Exception) { }
+                    onSuccess()
+                }
+                is NetworkResult.Error -> onError(result.message)
                 else -> {}
             }
         }
