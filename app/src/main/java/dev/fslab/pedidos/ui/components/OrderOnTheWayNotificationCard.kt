@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.dp
 import dev.fslab.pedidos.ui.theme.PedidosTheme
 
 private val OnTheWayCardBackground = Color(0xFF161B2E)
-private val OnTheWayGreen = Color(0xFF22C55E)
 private val OnTheWayTrack = Color(0xFF334155)
 private val OnTheWaySecondaryButton = Color(0xFF26324A)
 
@@ -49,6 +48,7 @@ fun OrderOnTheWayNotificationCard(
     onTrackClick: () -> Unit = {},
     onDetailsClick: () -> Unit = {}
 ) {
+    val OnTheWayGreen = dev.fslab.pedidos.ui.theme.LocalPedidosColors.current.primary
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),

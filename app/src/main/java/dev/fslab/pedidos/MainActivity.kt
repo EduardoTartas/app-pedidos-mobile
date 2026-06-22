@@ -389,7 +389,7 @@ fun PedidosApp(activity: ComponentActivity) {
                     ),
                     deepLinks = listOf(
                         androidx.navigation.navDeepLink { uriPattern = "rango://recover?token={token}" },
-                        androidx.navigation.navDeepLink { uriPattern = "https://rango-api-qa.eduardotartas.dpdns.org/app-redirect/recover?token={token}" }
+                        androidx.navigation.navDeepLink { uriPattern = "https://rango-api.eduardotartas.dpdns.org/app-redirect/recover?token={token}" }
                     )
                 ) { backStackEntry ->
                     val email = backStackEntry.arguments?.getString("email") ?: ""
@@ -420,7 +420,7 @@ fun PedidosApp(activity: ComponentActivity) {
                     ),
                     deepLinks = listOf(
                         androidx.navigation.navDeepLink { uriPattern = "rango://verify?token={token}" },
-                        androidx.navigation.navDeepLink { uriPattern = "https://rango-api-qa.eduardotartas.dpdns.org/app-redirect/verify?token={token}" }
+                        androidx.navigation.navDeepLink { uriPattern = "https://rango-api.eduardotartas.dpdns.org/app-redirect/verify?token={token}" }
                     )
                 ) { backStackEntry ->
                     val token = backStackEntry.arguments?.getString("token") ?: ""
