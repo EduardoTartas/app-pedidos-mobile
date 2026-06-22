@@ -83,6 +83,7 @@ import androidx.compose.ui.unit.dp
 import dev.fslab.pedidos.model.NotificationType
 import dev.fslab.pedidos.model.NotificationUiModel
 import dev.fslab.pedidos.ui.components.OrderCanceledNotificationCard
+import dev.fslab.pedidos.ui.components.OrderDeliveredNotificationCard
 import dev.fslab.pedidos.ui.components.OrderOnTheWayNotificationCard
 import dev.fslab.pedidos.ui.components.OrderPreparingNotificationCard
 import dev.fslab.pedidos.ui.theme.LocalPedidosColors
@@ -327,6 +328,16 @@ fun NotificacoesScreen(
                                         onLongClick = onNotificationLongClick
                                     ),
                                     onDetailsClick = openCanceledDetails
+                                )
+                            } else if (notificacao.isDeliveredOrderNotification() && !isSelectionMode) {
+                                OrderDeliveredNotificationCard(
+                                    restaurantName = notificacao.orderRestaurantName(),
+                                    deliveredAt = notificacao.createdAtLabel(),
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = onNotificationClick,
+                                        onLongClick = onNotificationLongClick
+                                    ),
+                                    onOrderClick = onNotificationClick
                                 )
                             } else if (notificacao.isOnTheWayOrderNotification() && !isSelectionMode) {
                                 OrderOnTheWayNotificationCard(
@@ -1386,6 +1397,14 @@ private fun NotificationUiModel.isCanceledOrderNotification(): Boolean =
         statusKey == "cancelado" ||
         title.contains("cancelado", ignoreCase = true) ||
         description.contains("cancelado", ignoreCase = true)
+
+private fun NotificationUiModel.isDeliveredOrderNotification(): Boolean =
+    type == NotificationType.ORDER &&
+        (
+            statusKey == "entregue" ||
+                title.contains("entregue", ignoreCase = true) ||
+                description.contains("entregue", ignoreCase = true)
+            )
 
 private fun NotificationUiModel.preparingRestaurantName(): String? {
     return orderRestaurantName()
