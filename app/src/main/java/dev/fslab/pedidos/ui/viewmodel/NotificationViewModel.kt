@@ -463,6 +463,7 @@ private fun NotificationUiModel.orderStatusGroupKey(): String? =
             .removePrefix("local-pedido-")
             .removePrefix("mock-pedido-em-preparo-")
             .removePrefix("mock-pedido-cancelado-")
+            .removePrefix("mock-pedido-entregue-")
             .takeIf { normalizedId -> normalizedId != id && normalizedId.isNotBlank() }
 
 private fun NotificationUiModel.orderStatusPriority(): Int {
@@ -476,7 +477,8 @@ private fun NotificationUiModel.orderStatusPriority(): Int {
             titleText.contains("cancelado") ||
             descriptionText.contains("cancelado") -> 100
 
-        status == "entregue" ||
+        type == NotificationType.PEDIDO_ENTREGUE ||
+            status == "entregue" ||
             titleText.contains("entregue") ||
             descriptionText.contains("entregue") -> 90
 

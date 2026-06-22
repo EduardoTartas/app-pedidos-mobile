@@ -1351,6 +1351,7 @@ private val NotificationType.icon: ImageVector
         NotificationType.PEDIDO_A_CAMINHO -> Icons.Filled.TwoWheeler
         NotificationType.PEDIDO_EM_PREPARO -> Icons.AutoMirrored.Filled.ReceiptLong
         NotificationType.PEDIDO_CANCELADO -> Icons.Filled.Cancel
+        NotificationType.PEDIDO_ENTREGUE -> Icons.Filled.Check
         NotificationType.ORDER -> Icons.AutoMirrored.Filled.ReceiptLong
         NotificationType.PROMOTION -> Icons.Filled.CardGiftcard
         NotificationType.SYSTEM -> Icons.Filled.Info
@@ -1399,11 +1400,14 @@ private fun NotificationUiModel.isCanceledOrderNotification(): Boolean =
         description.contains("cancelado", ignoreCase = true)
 
 private fun NotificationUiModel.isDeliveredOrderNotification(): Boolean =
-    type == NotificationType.ORDER &&
+    type == NotificationType.PEDIDO_ENTREGUE ||
         (
-            statusKey == "entregue" ||
-                title.contains("entregue", ignoreCase = true) ||
-                description.contains("entregue", ignoreCase = true)
+            type == NotificationType.ORDER &&
+                (
+                    statusKey == "entregue" ||
+                        title.contains("entregue", ignoreCase = true) ||
+                        description.contains("entregue", ignoreCase = true)
+                    )
             )
 
 private fun NotificationUiModel.preparingRestaurantName(): String? {
