@@ -130,7 +130,7 @@ fun OrderCanceledNotificationCard(
 private fun canceledDescription(restaurantName: String?): String {
     val restaurant = restaurantName?.takeIf { it.isNotBlank() }
     return restaurant
-        ?.let { "O pedido realizado em $it foi cancelado." }
+        ?.let { "Seu pedido de $it foi cancelado." }
         ?: "Seu pedido foi cancelado."
 }
 

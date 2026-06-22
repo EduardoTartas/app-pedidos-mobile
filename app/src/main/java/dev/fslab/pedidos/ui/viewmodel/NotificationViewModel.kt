@@ -34,6 +34,8 @@ class NotificationViewModel(
 ) : ViewModel() {
 
     private var localNotifications: List<NotificationUiModel> = emptyList()
+    private var removedLocalOrMockNotificationIds: Set<String> = emptySet()
+    private var removedLocalOrMockOrderKeys: Set<String> = emptySet()
 
     private val _uiState = MutableStateFlow(NotificationUiState(isLoading = true))
     val uiState: StateFlow<NotificationUiState> = _uiState.asStateFlow()
@@ -48,7 +50,11 @@ class NotificationViewModel(
             when (val result = repository.listarNotificacoes()) {
                 is NetworkResult.Success -> {
                     publishState(
-                        notifications = mergeLocalNotifications(withDebugInterfaceMocks(result.data.onlyVisibleNotifications())),
+                        notifications = mergeLocalNotifications(
+                            withoutRemovedLocalOrMockNotifications(
+                                withDebugInterfaceMocks(result.data.onlyVisibleNotifications())
+                            )
+                        ),
                         selectedCategory = _uiState.value.selectedCategory,
                         selectedNotificationId = _uiState.value.selectedNotification?.id
                     )
@@ -56,7 +62,11 @@ class NotificationViewModel(
                 is NetworkResult.Error -> {
                     if (BuildConfig.DEBUG) {
                         publishState(
-                            notifications = mergeLocalNotifications(withDebugInterfaceMocks(emptyList())),
+                            notifications = mergeLocalNotifications(
+                                withoutRemovedLocalOrMockNotifications(
+                                    withDebugInterfaceMocks(emptyList())
+                                )
+                            ),
                             selectedCategory = _uiState.value.selectedCategory,
                             selectedNotificationId = _uiState.value.selectedNotification?.id
                         )
@@ -89,6 +99,12 @@ class NotificationViewModel(
         val remoteIds = ids - localIds
 
         if (localIds.isNotEmpty()) {
+            val currentLocalOrMockNotifications = _uiState.value.notifications
+                .filter { it.id in localIds }
+            removedLocalOrMockNotificationIds += localIds
+            removedLocalOrMockOrderKeys += currentLocalOrMockNotifications
+                .mapNotNull { it.orderStatusGroupKey() }
+                .toSet()
             localNotifications = localNotifications.filterNot { it.id in localIds }
         }
 
@@ -311,8 +327,26 @@ class NotificationViewModel(
         val existingIds = notifications.map { it.id }.toSet()
         val missingMocks = interfaceTestNotifications
             .filterNot { it.id in existingIds }
+            .filterNot { it.id in removedLocalOrMockNotificationIds }
+            .filterNot { notification ->
+                notification.orderStatusGroupKey()
+                    ?.let { it in removedLocalOrMockOrderKeys } == true
+            }
 
         return missingMocks + notifications
+    }
+
+    private fun withoutRemovedLocalOrMockNotifications(
+        notifications: List<NotificationUiModel>
+    ): List<NotificationUiModel> {
+        return notifications.filterNot { notification ->
+            isLocalOrMockNotification(notification.id) &&
+                (
+                    notification.id in removedLocalOrMockNotificationIds ||
+                        notification.orderStatusGroupKey()
+                            ?.let { it in removedLocalOrMockOrderKeys } == true
+                    )
+        }
     }
 
     private fun isLocalOrMockNotification(id: String): Boolean {
@@ -389,7 +423,9 @@ class NotificationViewModel(
                 normalized != "o restaurante" &&
                 normalized != "lugar" &&
                 normalized != "local" &&
-                normalized != "o local"
+                normalized != "o local" &&
+                !normalized.contains("foi entregue") &&
+                !normalized.contains("entregue com sucesso")
         }
     }
 
@@ -416,7 +452,7 @@ class NotificationViewModel(
             filteredNotifications = filteredNotifications,
             selectedCategory = selectedCategory,
             selectedNotification = notifications.find { it.id == selectedNotificationId },
-            unreadCount = notifications.count { !it.isRead },
+            unreadCount = visibleNotifications.count { !it.isRead },
             isLoading = false,
             isMarkingAsRead = false,
             isDeleting = false,

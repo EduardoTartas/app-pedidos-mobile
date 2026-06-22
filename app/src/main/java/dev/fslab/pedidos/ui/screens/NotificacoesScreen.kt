@@ -80,6 +80,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.fslab.pedidos.model.NotificationMocks
 import dev.fslab.pedidos.model.NotificationType
 import dev.fslab.pedidos.model.NotificationUiModel
 import dev.fslab.pedidos.ui.components.OrderCanceledNotificationCard
@@ -1359,6 +1360,7 @@ private val NotificationType.icon: ImageVector
     }
 
 private fun NotificationUiModel.pedidoIdFromNotification(): String? {
+    if (NotificationMocks.isMockId(id)) return null
     pedidoId?.takeIf { it.isNotBlank() }?.let { return it }
     return id.removePrefix(LOCAL_ORDER_NOTIFICATION_PREFIX)
         .takeIf { id.startsWith(LOCAL_ORDER_NOTIFICATION_PREFIX) && it.isNotBlank() }
@@ -1458,7 +1460,9 @@ private fun String.asValidRestaurantName(): String? {
             normalized != "o restaurante" &&
             normalized != "local" &&
             normalized != "o local" &&
-            normalized != "lugar"
+            normalized != "lugar" &&
+            !normalized.contains("foi entregue") &&
+            !normalized.contains("entregue com sucesso")
     }
 }
 

@@ -145,10 +145,20 @@ fun OrderDeliveredNotificationCard(
 }
 
 private fun deliveredDescription(restaurantName: String?): String {
-    val restaurant = restaurantName?.takeIf { it.isNotBlank() }
+    val restaurant = restaurantName?.asValidRestaurantName()
     return restaurant
         ?.let { "Seu pedido de $it foi entregue com sucesso." }
         ?: "Seu pedido foi entregue com sucesso."
+}
+
+private fun String.asValidRestaurantName(): String? {
+    val value = trim()
+    val normalized = value.lowercase()
+    return value.takeIf {
+        it.isNotBlank() &&
+            !normalized.contains("foi entregue") &&
+            !normalized.contains("entregue com sucesso")
+    }
 }
 
 @Preview(
